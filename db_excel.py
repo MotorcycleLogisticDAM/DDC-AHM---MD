@@ -325,14 +325,14 @@ class ExcelDatabase:
         return records
 
     def _find_last_data_row(self, ws, start_row=2):
-        """Mencari nomor baris terakhir yang benar-benar berisi data di kolom A dan B."""
-        last_r = start_row - 1
-        for r in range(start_row, ws.max_row + 1):
+        """Mencari nomor baris terakhir yang benar-benar berisi data secara cepat (scan mundur)."""
+        max_r = ws.max_row
+        for r in range(max_r, start_row - 1, -1):
             v1 = ws.cell(r, 1).value
-            v2 = ws.cell(r, 2).value
-            if v1 is not None and str(v1).strip() != "" and v2 is not None and str(v2).strip() != "":
-                last_r = r
-        return last_r
+            v4 = ws.cell(r, 4).value
+            if (v1 is not None and str(v1).strip() != "") or (v4 is not None and str(v4).strip() != ""):
+                return r
+        return start_row - 1
 
     def append_sl_row(self, tanggal, nopol, sopir, xpdc, plant, gudang, qty):
         """Menambahkan baris pengiriman baru ke bagian paling bawah sheet 'SL'."""
@@ -340,7 +340,8 @@ class ExcelDatabase:
         wb = openpyxl.load_workbook(self.excel_path)
         ws = wb["SL"]
         next_row = self._find_last_data_row(ws, start_row=2) + 1
-        ws.cell(next_row, 1, dt)
+        c_tgl = ws.cell(next_row, 1, dt)
+        c_tgl.number_format = "d-mmm-yy"
         ws.cell(next_row, 2, str(nopol).upper().strip())
         ws.cell(next_row, 3, str(sopir).upper().strip())
         ws.cell(next_row, 4, str(xpdc).upper().strip())
@@ -350,12 +351,19 @@ class ExcelDatabase:
         ws.cell(next_row, 8, int(dt.month))
         ws.cell(next_row, 9, int(dt.day))
         ws.cell(next_row, 10, int(dt.year))
-        wb.save(self.excel_path)
-        wb.close()
+        try:
+            wb.save(self.excel_path)
+            wb.close()
+        except PermissionError:
+            wb.close()
+            raise PermissionError(
+                f"File '{os.path.basename(self.excel_path)}' sedang dibuka atau dikunci oleh program lain (seperti Microsoft Excel). "
+                f"Mohon tutup Microsoft Excel terlebih dahulu agar data dapat disimpan."
+            )
         return next_row
 
     def append_sl_bulk(self, rows_list):
-        """Menambahkan banyak baris pengiriman baru sekaligus ke bagian bawah sheet 'SL'."""
+        """Menambahkan banyak baris pengiriman baru sekaligus ke bagian bawah sheet 'SL' pada file DDC.xlsx."""
         wb = openpyxl.load_workbook(self.excel_path)
         ws = wb["SL"]
         start_row = self._find_last_data_row(ws, start_row=2) + 1
@@ -367,11 +375,12 @@ class ExcelDatabase:
                 if not dt_str:
                     continue
                 dt = datetime.strptime(dt_str, "%Y-%m-%d")
-                qty = to_int(r.get("QTY", r.get("QTY (UNIT)")), 0)
+                qty = to_int(r.get("QTY", r.get("QTY (UNIT)", 0)), 0)
                 if qty == 0:
                     continue
 
-                ws.cell(current_row, 1, dt)
+                c_tgl = ws.cell(current_row, 1, dt)
+                c_tgl.number_format = "d-mmm-yy"
                 ws.cell(current_row, 2, str(r.get("NOPOL", "")).upper().strip())
                 ws.cell(current_row, 3, str(r.get("SOPIR", "")).upper().strip())
                 ws.cell(current_row, 4, str(r.get("XPDC", "")).upper().strip())
@@ -385,8 +394,15 @@ class ExcelDatabase:
             except Exception:
                 pass
 
-        wb.save(self.excel_path)
-        wb.close()
+        try:
+            wb.save(self.excel_path)
+            wb.close()
+        except PermissionError:
+            wb.close()
+            raise PermissionError(
+                f"File '{os.path.basename(self.excel_path)}' sedang dibuka atau dikunci oleh program lain (seperti Microsoft Excel). "
+                f"Mohon tutup Microsoft Excel terlebih dahulu agar data dapat disimpan."
+            )
         return current_row - start_row
 
     def get_do_data(self):

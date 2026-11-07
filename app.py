@@ -411,7 +411,14 @@ def api_summary():
 def api_get_sheet(sheet_name):
     max_rows = int(request.args.get("max_rows", 200))
     cols, rows = db.read_any_sheet(sheet_name, max_rows=max_rows)
-    return jsonify({"status": "ok", "sheet_name": sheet_name, "columns": cols, "rows": rows})
+    total_rows = len(db.get_sl_data()) if sheet_name.upper() == "SL" else len(rows)
+    return jsonify({
+        "status": "ok",
+        "sheet_name": sheet_name,
+        "columns": cols,
+        "rows": rows,
+        "total_rows": total_rows
+    })
 
 
 @app.route("/api/add_sheet", methods=["POST"])
@@ -433,20 +440,31 @@ def api_add_sheet():
 
 @app.route("/api/add_sl", methods=["POST"])
 def api_add_sl():
-    p = request.get_json(force=True)
-    row_num = db.append_sl_row(
-        tanggal=p["tanggal"],
-        nopol=p["nopol"],
-        sopir=p["sopir"],
-        xpdc=p["xpdc"],
-        plant=p["plant"],
-        gudang=p["gudang"],
-        qty=int(p["qty"]),
-    )
-    return jsonify({
-        "status": "ok",
-        "message": f"Data aktual pengiriman berhasil ditambahkan ke Sheet SL (Baris ke-{row_num})!",
-    })
+    try:
+        p = request.get_json(force=True)
+        db.create_backup()
+        row_num = db.append_sl_row(
+            tanggal=p["tanggal"],
+            nopol=p["nopol"],
+            sopir=p["sopir"],
+            xpdc=p["xpdc"],
+            plant=p["plant"],
+            gudang=p["gudang"],
+            qty=int(p["qty"]),
+        )
+        total_sl = len(db.get_sl_data())
+        return jsonify({
+            "status": "ok",
+            "row_num": row_num,
+            "total_sl": total_sl,
+            "message": f"Data aktual pengiriman berhasil di-update ke Sheet SL pada file DDC.xlsx (Baris ke-{row_num}, Total: {total_sl:,} baris)!",
+        })
+    except PermissionError as e:
+        return jsonify({"status": "error", "message": str(e)}), 409
+    except PermissionError as e:
+        return jsonify({"status": "error", "message": str(e)}), 409
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
@@ -462,41 +480,73 @@ def api_upload_sl():
     try:
         import openpyxl
         wb = openpyxl.load_workbook(file, data_only=True)
-        ws = wb.active
         if "SL" in wb.sheetnames:
             ws = wb["SL"]
+        elif "SL_UPLOAD" in wb.sheetnames:
+            ws = wb["SL_UPLOAD"]
+        else:
+            ws = wb.active
         
         rows_list = []
         header = []
         for i, row in enumerate(ws.iter_rows(values_only=True)):
             if i == 0:
-                header = [str(c).strip().upper() for c in row if c]
+                header = [str(c).strip().upper() if c is not None else "" for c in row]
                 continue
             
-            if not row or row[0] is None:
+            if not row or all(c is None or str(c).strip() == "" for c in row):
                 continue
                 
-            row_dict = {}
+            raw_dict = {}
             for j, col_name in enumerate(header):
-                if j < len(row):
-                    row_dict[col_name] = row[j]
+                if j < len(row) and col_name:
+                    raw_dict[col_name] = row[j]
             
-            if "TANGGAL" in row_dict and "XPDC" in row_dict and "PLANT" in row_dict:
-                rows_list.append(row_dict)
+            # Normalisasi nama kolom jika ada variasi nama (misal Ekspedisi -> XPDC)
+            norm_dict = {}
+            for k, v in raw_dict.items():
+                k_clean = str(k).strip().upper()
+                if k_clean in ("TANGGAL", "DATE", "TGL", "TGL PENGIRIMAN"):
+                    norm_dict["TANGGAL"] = v
+                elif k_clean in ("NOPOL", "NO POLISI", "NO. POLISI", "PLAT", "NOPOL TRUK"):
+                    norm_dict["NOPOL"] = v
+                elif k_clean in ("SOPIR", "DRIVER", "SUPIR", "NAMA SOPIR"):
+                    norm_dict["SOPIR"] = v
+                elif k_clean in ("XPDC", "EKSPEDISI", "TRANSPORTER", "VENDOR"):
+                    norm_dict["XPDC"] = v
+                elif k_clean in ("PLANT", "PABRIK"):
+                    norm_dict["PLANT"] = v
+                elif k_clean in ("GUDANG", "GUDANG TUJUAN", "DESTINASI", "TUJUAN"):
+                    norm_dict["GUDANG"] = v
+                elif k_clean in ("QTY", "QTY (UNIT)", "JUMLAH", "UNIT", "QUANTITY"):
+                    norm_dict["QTY"] = v
+                else:
+                    norm_dict[k_clean] = v
+                    
+            if "TANGGAL" in norm_dict and "XPDC" in norm_dict and "PLANT" in norm_dict:
+                rows_list.append(norm_dict)
                 
         wb.close()
         
         if not rows_list:
-            return jsonify({"status": "error", "message": "Format file tidak sesuai. Pastikan ada baris header: TANGGAL, NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY."}), 400
+            return jsonify({
+                "status": "error",
+                "message": "Format file tidak sesuai atau data kosong. Pastikan kolom: TANGGAL (contoh: 31-Okt-26), NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY."
+            }), 400
             
         db.create_backup()
         added = db.append_sl_bulk(rows_list)
+        total_sl = len(db.get_sl_data())
         
         return jsonify({
             "status": "ok", 
-            "message": f"Berhasil menambahkan {added} data pengiriman (batch) ke Sheet SL!"
+            "added": added,
+            "total_sl": total_sl,
+            "message": f"Berhasil meng-update {added} data pengiriman ke Sheet SL pada file DDC.xlsx! Total data saat ini: {total_sl:,} baris."
         })
         
+    except PermissionError as e:
+        return jsonify({"status": "error", "message": str(e)}), 409
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -526,7 +576,8 @@ def api_download_template_sl():
 
 @app.route("/api/download_excel", methods=["GET"])
 def api_download_excel():
-    return send_file(EXCEL_PATH, as_attachment=True, download_name="DDC.xlsx")
+    target_path = getattr(db, "excel_path", EXCEL_PATH)
+    return send_file(target_path, as_attachment=True, download_name="DDC.xlsx")
 
 
 if __name__ == "__main__":
