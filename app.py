@@ -6,7 +6,7 @@ Kompatibel penuh dengan Python 3.11, 3.12, 3.13, 3.14, dan 3.15+ di Windows, Mac
 
 import os
 from flask import Flask, render_template, request, jsonify, send_file
-from db_excel import ExcelDatabase, PLANTS, EXPEDITIONS, parse_date_str
+from db_excel import ExcelDatabase, PLANTS, EXPEDITIONS, parse_date_str, format_date_d_mmm_yy
 from engine_ddc import (
     calculate_monthly_quota,
     calculate_and_balance_daily_quota,
@@ -16,6 +16,46 @@ from engine_ddc import (
 app = Flask(__name__)
 EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", "DDC.xlsx")
 db = ExcelDatabase(EXCEL_PATH)
+
+
+def get_calendar_info():
+    """Mengembalikan informasi penanggalan kalender sistem (WIB UTC+7) dan aturan operasional DO & SL."""
+    from datetime import datetime, timezone, timedelta
+    WIB = timezone(timedelta(hours=7))
+    now_wib = datetime.now(WIB)
+    
+    h_date = now_wib.date()
+    h_minus_1 = h_date - timedelta(days=1)
+    h_plus_1 = h_date + timedelta(days=1)
+
+    MONTH_NAMES_ID_FULL = {
+        1: "Januari", 2: "Februari", 3: "Maret", 4: "April",
+        5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus",
+        9: "September", 10: "Oktober", 11: "November", 12: "Desember"
+    }
+    DAYS_ID = {
+        0: "Senin", 1: "Selasa", 2: "Rabu", 3: "Kamis",
+        4: "Jumat", 5: "Sabtu", 6: "Minggu"
+    }
+    
+    h_str = h_date.strftime("%Y-%m-%d")
+    h_m1_str = h_minus_1.strftime("%Y-%m-%d")
+    h_p1_str = h_plus_1.strftime("%Y-%m-%d")
+
+    return {
+        "status": "ok",
+        "calendar_date": h_str,
+        "calendar_display": f"{DAYS_ID.get(now_wib.weekday(), '')}, {now_wib.day:02d} {MONTH_NAMES_ID_FULL.get(now_wib.month, '')} {now_wib.year}",
+        "calendar_date_formatted": format_date_d_mmm_yy(h_str),
+        "do_date_h_minus_1": h_m1_str,
+        "do_date_formatted": format_date_d_mmm_yy(h_m1_str),
+        "sl_date_h_plus_1": h_p1_str,
+        "sl_date_formatted": format_date_d_mmm_yy(h_p1_str),
+        "rules": [
+            "DO akan di rilis H-1 dari tanggal kalender",
+            "SL akan di upload H+1 dari tanggal kalender"
+        ]
+    }
 
 
 @app.route("/")
@@ -28,6 +68,7 @@ def api_init():
     sheets = db.get_sheet_names()
     do_records = db.get_do_data()
     do_dates = sorted(list({r["TANGGAL_STR"] for r in do_records}))
+    cal_info = get_calendar_info()
     return jsonify({
         "status": "ok",
         "excel_path": EXCEL_PATH,
@@ -36,7 +77,13 @@ def api_init():
         "expeditions": EXPEDITIONS,
         "do_dates": do_dates,
         "default_date": do_dates[-1] if do_dates else "2026-10-30",
+        "calendar": cal_info,
     })
+
+
+@app.route("/api/calendar", methods=["GET"])
+def api_calendar():
+    return jsonify(get_calendar_info())
 
 
 @app.route("/api/monthly_quota", methods=["GET"])

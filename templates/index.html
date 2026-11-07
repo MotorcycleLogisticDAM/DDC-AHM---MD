@@ -95,10 +95,26 @@
 
   <!-- MAIN CONTENT -->
   <div class="page-wrapper">
-    <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none border-bottom bg-white">
-      <div class="container-xl">
-        <div class="navbar-nav flex-row order-md-last ms-auto py-2">
-          <span class="badge bg-azure-lt py-2 px-3 fs-5"><i class="ti ti-brand-python me-1"></i> Python Engine + Excel DB</span>
+    <header class="navbar navbar-expand-md d-print-none border-bottom bg-white py-2">
+      <div class="container-xl d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <!-- WIDGET KALENDER SISTEM & RULES PENANGGALAN -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="badge bg-primary text-white px-3 py-2 fs-6 fw-bold shadow-sm" id="cal-badge-today" title="Tanggal Hari Ini Berdasarkan Kalender Sistem">
+            <i class="ti ti-calendar me-1"></i> Kalender (H): <span id="cal-today-text">Memuat kalender...</span>
+          </div>
+          <div class="badge bg-blue-lt px-2 py-2" id="cal-badge-do" title="Aturan: DO dirilis H-1 dari tanggal kalender">
+            <i class="ti ti-file-text me-1"></i> Rilis DO (H-1): <b id="cal-do-text">-</b>
+          </div>
+          <div class="badge bg-teal-lt px-2 py-2" id="cal-badge-sl" title="Aturan: SL di-upload H+1 dari tanggal kalender">
+            <i class="ti ti-truck me-1"></i> Upload SL (H+1): <b id="cal-sl-text">-</b>
+          </div>
+          <span class="badge bg-yellow-lt py-1 px-2 small d-none d-xl-inline-block text-dark fw-bold" title="Rules Penanggalan Logistik DDC">
+            <i class="ti ti-info-circle me-1"></i> Rules: DO (H-1) &bull; SL (H+1)
+          </span>
+        </div>
+
+        <div class="navbar-nav flex-row order-md-last ms-auto align-items-center gap-2">
+          <span class="badge bg-azure-lt py-1 px-3 fs-6"><i class="ti ti-brand-python me-1"></i> Python Engine + Excel DB</span>
         </div>
       </div>
     </header>
@@ -115,19 +131,25 @@
             <div class="row row-cards">
               <div class="col-lg-12">
                 <div class="card mb-3">
-                  <div class="card-header bg-blue-lt d-flex justify-content-between align-items-center">
-                    <h3 class="card-title fw-bold mb-0">Tambah / Update Delivery Order (DO) AHM</h3>
+                  <div class="card-header bg-blue-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0">Tambah / Update Delivery Order (DO) AHM</h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-primary text-white me-1"><i class="ti ti-calendar me-1"></i>Rule 1</span>
+                        DO dirilis <b>H-1</b> dari tanggal kalender sistem (Target: <span id="lbl-do-h1-badge" class="fw-bold text-primary">06-Nov-26</span>)
+                      </div>
+                    </div>
                     <span class="badge bg-blue text-white" id="add-do-total-badge">Total Input DO: 0 Unit</span>
                   </div>
                   <div class="card-body">
                     <div class="row g-2 align-items-end">
                       <div class="col-md-2">
-                        <label class="form-label small mb-1 fw-bold">Tanggal DO</label>
-                        <input type="date" id="add-do-tgl" class="form-control form-control-sm" value="2026-10-31" onchange="onChangeAddDoDate()">
+                        <label class="form-label small mb-1 fw-bold">Tanggal DO (H-1 Kalender)</label>
+                        <input type="date" id="add-do-tgl" class="form-control form-control-sm" value="2026-11-06" onchange="onChangeAddDoDate()">
                       </div>
                       <div class="col-md-1">
                         <label class="form-label small mb-1 fw-bold">Bulan (Angka)</label>
-                        <input type="number" id="add-do-bulan" class="form-control form-control-sm text-center fw-bold bg-azure-lt" min="1" max="12" value="10">
+                        <input type="number" id="add-do-bulan" class="form-control form-control-sm text-center fw-bold bg-azure-lt" min="1" max="12" value="11">
                       </div>
                       <div class="col"><label class="small text-secondary mb-1 d-block">FM1</label><input type="number" id="add-do-FM1" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
                       <div class="col"><label class="small text-secondary mb-1 d-block">FM2</label><input type="number" id="add-do-FM2" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
@@ -143,7 +165,7 @@
                       </div>
                     </div>
                     <div class="small text-secondary mt-2">
-                      <i class="ti ti-info-circle me-1"></i>Kolom <b>Bulan (Angka)</b> otomatis terisi angka bulan (1–12) sesuai Tanggal DO dan langsung tersimpan ke kolom <code>BULAN</code> di Sheet <code>DO</code>. Klik baris tanggal pada tabel di bawah jika ingin memuat kembali angka DO tanggal tersebut ke form.
+                      <i class="ti ti-info-circle me-1"></i><b>Aturan DO:</b> Dirilis H-1 dari kalender sistem. Kolom <b>Bulan (Angka)</b> otomatis terisi sesuai Tanggal DO dan tersimpan ke kolom <code>BULAN</code> di Sheet <code>DO</code>. Klik baris tanggal pada tabel di bawah jika ingin memuat kembali angka DO tanggal tersebut.
                     </div>
                   </div>
                 </div>
@@ -195,12 +217,18 @@
               <!-- FORM TAMBAH TRANSAKSI SL (MANUAL) -->
               <div class="col-lg-12">
                 <div class="card mb-3">
-                  <div class="card-header bg-azure-lt">
-                    <h3 class="card-title fw-bold">Tambah Pengiriman Aktual Baru ke Sheet 'SL' (Manual)</h3>
+                  <div class="card-header bg-azure-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0">Tambah Pengiriman Aktual Baru ke Sheet 'SL' (Manual)</h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
+                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman
+                      </div>
+                    </div>
                   </div>
                   <div class="card-body">
                     <div class="row g-2">
-                      <div class="col-md-2"><label class="form-label small mb-1">Tanggal</label><input type="date" id="sl-tgl" class="form-control form-control-sm" value="2026-10-31"></div>
+                      <div class="col-md-2"><label class="form-label small mb-1 fw-bold">Tanggal Pengiriman SL</label><input type="date" id="sl-tgl" class="form-control form-control-sm" value="2026-10-31"></div>
                       <div class="col-md-2"><label class="form-label small mb-1">No. Polisi Truk</label><input type="text" id="sl-nopol" class="form-control form-control-sm" placeholder="B 9123 UWY"></div>
                       <div class="col-md-2"><label class="form-label small mb-1">Nama Sopir</label><input type="text" id="sl-sopir" class="form-control form-control-sm" placeholder="BUDI"></div>
                       <div class="col-md-2">
@@ -233,8 +261,14 @@
               <!-- FORM UPLOAD DATA AKTUAL BATCH -->
               <div class="col-lg-12">
                 <div class="card mb-3">
-                  <div class="card-header bg-teal-lt">
-                    <h3 class="card-title fw-bold">Upload Data Aktual Batch (Excel .xlsx)</h3>
+                  <div class="card-header bg-teal-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0">Upload Data Aktual Batch (Excel .xlsx)</h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
+                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman
+                      </div>
+                    </div>
                   </div>
                   <div class="card-body">
                     <div class="mb-3 text-secondary small">
@@ -398,9 +432,20 @@
             <div class="card mb-3">
               <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
-                  <div class="col-md-3">
-                    <label class="form-label mb-1">Tanggal Laporan (Up to Date H-1)</label>
-                    <input type="date" id="sum-date" class="form-control form-control-sm" value="2026-10-31">
+                  <div class="col-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label mb-0 fw-bold">Tanggal Laporan (Up to Date H-1)</label>
+                      <span class="badge bg-yellow-lt py-0 px-1 text-dark" style="font-size: 11px;">Rule: DO H-1</span>
+                    </div>
+                    <input type="date" id="sum-date" class="form-control form-control-sm mb-1" value="2026-10-31">
+                    <div class="d-flex gap-1">
+                      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setSummaryDate('2026-10-31')">
+                        <i class="ti ti-history me-1"></i>Data Terakhir (31-Okt)
+                      </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setSummaryDateToCalendarH1()">
+                        <i class="ti ti-calendar me-1"></i>H-1 Kalender (<span id="lbl-btn-cal-h1">06-Nov</span>)
+                      </button>
+                    </div>
                   </div>
                   <div class="col-md-3">
                     <label class="form-label mb-1">Cut-off Kuota 3 Bulan Sebelumnya</label>
@@ -410,7 +455,7 @@
                     <label class="form-label mb-1">Unfilled H-1 (Unit)</label>
                     <input type="number" id="sum-unfilled" class="form-control form-control-sm" value="379">
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-md-3">
                     <button class="btn btn-primary btn-sm w-100" onclick="loadSummary()">
                       <i class="ti ti-calculator me-1"></i> Hitung Summary
                     </button>
@@ -949,9 +994,59 @@ function fmtNum(n) {
   return Number(n || 0).toLocaleString("id-ID");
 }
 
+let currentCalendarInfo = null;
+
+function setSummaryDate(d) {
+  const sumDateEl = document.getElementById("sum-date");
+  if (sumDateEl) {
+    sumDateEl.value = d;
+    loadSummary();
+  }
+}
+
+function setSummaryDateToCalendarH1() {
+  if (currentCalendarInfo && currentCalendarInfo.do_date_h_minus_1) {
+    setSummaryDate(currentCalendarInfo.do_date_h_minus_1);
+  }
+}
+
 async function initApp() {
   const res = await fetch("/api/init");
   const data = await res.json();
+
+  // Populate Calendar Info & Aturan Operasional
+  if (data.calendar) {
+    currentCalendarInfo = data.calendar;
+    const cal = data.calendar;
+
+    const elCalToday = document.getElementById("cal-today-text");
+    if (elCalToday) elCalToday.textContent = `${cal.calendar_display} (${cal.calendar_date_formatted})`;
+
+    const elCalDo = document.getElementById("cal-do-text");
+    if (elCalDo) elCalDo.textContent = `${cal.do_date_formatted}`;
+
+    const elCalSl = document.getElementById("cal-sl-text");
+    if (elCalSl) elCalSl.textContent = `${cal.sl_date_formatted}`;
+
+    const elLblBtnCalH1 = document.getElementById("lbl-btn-cal-h1");
+    if (elLblBtnCalH1) elLblBtnCalH1.textContent = cal.do_date_formatted;
+
+    const elLblDoH1Badge = document.getElementById("lbl-do-h1-badge");
+    if (elLblDoH1Badge) elLblDoH1Badge.textContent = `${cal.do_date_formatted} (${cal.do_date_h_minus_1})`;
+
+    // Form DO default ke H-1 kalender
+    const inputDoTgl = document.getElementById("add-do-tgl");
+    if (inputDoTgl && cal.do_date_h_minus_1) {
+      inputDoTgl.value = cal.do_date_h_minus_1;
+      onChangeAddDoDate();
+    }
+
+    // Form SL manual default ke H+1 kalender
+    const inputSlTgl = document.getElementById("sl-tgl");
+    if (inputSlTgl && cal.sl_date_h_plus_1) {
+      inputSlTgl.value = cal.sl_date_h_plus_1;
+    }
+  }
 
   // Populate DO dates
   const selDate = document.getElementById("dq-date-select");
@@ -982,7 +1077,7 @@ async function initApp() {
   await calculateDailyQuota(false);
   await loadSheetPreview();
   await loadDOTable();
-  await loadSLTable();
+  onChangeAddDoDate();
   await loadPerDayTab();
 }
 
