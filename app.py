@@ -396,6 +396,10 @@ def api_summary():
     )
     target_pct_dict = {x: mq["pct_matrix"][x]["TARGET_PCT"] for x in EXPEDITIONS}
 
+    # Cek apakah ada Target Bulanan Perencanaan yang tersimpan di sistem
+    planned = db.get_target_bulanan(tahun=rep_year, bulan=rep_month)
+    planned_targets = planned.get("TARGETS") if planned else None
+
     summ = calculate_summary_and_performance(
         sl_records,
         do_records,
@@ -403,8 +407,81 @@ def api_summary():
         target_pct_dict,
         report_date_str=report_date,
         unfilled_h_minus_1=unfilled_h_1,
+        planned_monthly_target=planned_targets,
     )
+    if planned:
+        summ["planned_target_info"] = {
+            "tahun": planned.get("TAHUN"),
+            "bulan": planned.get("BULAN"),
+            "total_target": planned.get("TOTAL_TARGET"),
+            "updated_at": planned.get("UPDATED_AT"),
+            "catatan": planned.get("CATATAN", ""),
+        }
     return jsonify({"status": "ok", "data": summ})
+
+
+@app.route("/api/target_bulanan", methods=["GET"])
+def api_get_target_bulanan():
+    year = int(request.args.get("year", 2026))
+    month = int(request.args.get("month", 10))
+    total_target_param = request.args.get("total_target", None)
+
+    planned = db.get_target_bulanan(tahun=year, bulan=month)
+    all_targets = db.get_all_target_bulanan()
+
+    sl_records = db.get_sl_data()
+    mq = calculate_monthly_quota(sl_records, target_month=month, target_year=year)
+    quota_pct = {x: mq["pct_matrix"][x]["TARGET_PCT"] for x in EXPEDITIONS}
+
+    tot_target_val = 0
+    if total_target_param and str(total_target_param).strip().isdigit():
+        tot_target_val = int(total_target_param)
+    elif planned and planned.get("TOTAL_TARGET"):
+        tot_target_val = int(planned.get("TOTAL_TARGET"))
+    else:
+        tot_target_val = 85000
+
+    from engine_ddc import _round_preserving_sum
+    suggested = _round_preserving_sum(
+        {x: quota_pct.get(x, 0.0) * tot_target_val for x in EXPEDITIONS},
+        tot_target_val,
+    )
+
+    from engine_ddc import MONTH_NAMES_ID
+    return jsonify({
+        "status": "ok",
+        "year": year,
+        "month": month,
+        "month_name": MONTH_NAMES_ID.get(month, str(month)),
+        "current_target": planned,
+        "all_targets": all_targets,
+        "quota_3m_pct": {x: round(quota_pct.get(x, 0.0) * 100, 2) for x in EXPEDITIONS},
+        "suggested_total": tot_target_val,
+        "suggested_allocation": suggested,
+    })
+
+
+@app.route("/api/save_target_bulanan", methods=["POST"])
+def api_save_target_bulanan():
+    payload = request.get_json(force=True)
+    year = int(payload.get("year", 2026))
+    month = int(payload.get("month", 10))
+    targets = payload.get("targets", {})
+    total_target = payload.get("total_target", None)
+    catatan = payload.get("catatan", "")
+
+    saved = db.save_target_bulanan(
+        tahun=year,
+        bulan=month,
+        target_per_xpdc_dict=targets,
+        total_target=total_target,
+        catatan=catatan,
+    )
+    return jsonify({
+        "status": "ok",
+        "message": f"Target Bulanan periode {month}/{year} berhasil disimpan!",
+        "data": saved,
+    })
 
 
 @app.route("/api/sheet/<sheet_name>", methods=["GET"])

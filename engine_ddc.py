@@ -400,6 +400,7 @@ def calculate_summary_and_performance(
     monthly_quota_pct,
     report_date_str="2026-10-31",
     unfilled_h_minus_1=0,
+    planned_monthly_target=None,
 ):
     """Menghitung Output 3.A (DISTRIBUTION SUMMARY) & 3.B (ANALISA PERFORMANCE)."""
     rep_str = parse_date_str(report_date_str) or "2026-10-31"
@@ -440,6 +441,8 @@ def calculate_summary_and_performance(
     tot_mtd_act = 0
     tot_upto_tgt = 0
 
+    has_plan = bool(planned_monthly_target and isinstance(planned_monthly_target, dict) and any(int(v) > 0 for v in planned_monthly_target.values()))
+
     for x in EXPEDITIONS:
         q_pct = float(monthly_quota_pct.get(x, 0.0))
         d_tgt = sum(int(r["GRAND_TOTAL"]) for r in alloc_daily if r["XPDC"] == x)
@@ -457,7 +460,13 @@ def calculate_summary_and_performance(
             upto_tgt = int(round(total_target_do_upto * q_pct))
 
         sisa_eksp = int(round(sisa_do_month * q_pct))
-        mtd_full_tgt = upto_tgt + sisa_eksp
+        
+        # Jika ada Target Perencanaan Bulanan yang disimpan, tampilkan di kolom TARGET BULAN
+        if has_plan and x in planned_monthly_target and int(planned_monthly_target[x]) > 0:
+            mtd_full_tgt = int(planned_monthly_target[x])
+        else:
+            mtd_full_tgt = upto_tgt + sisa_eksp
+
         mtd_act = sum(int(r["QTY"]) for r in sl_upto if r["XPDC"] == x)
         mtd_ach = (mtd_act / mtd_full_tgt) if mtd_full_tgt > 0 else 0.0
 
@@ -477,7 +486,7 @@ def calculate_summary_and_performance(
             "MTD_ACH_PCT": round(mtd_ach * 100, 2),
             "QUOTA_PCT": round(q_pct * 100, 2),
             "TARGET_UPTO": upto_tgt,
-            "SISA_TARGET": sisa_eksp,
+            "SISA_TARGET": max(0, mtd_full_tgt - upto_tgt),
         })
 
         gap_upto = mtd_act - upto_tgt
@@ -506,6 +515,7 @@ def calculate_summary_and_performance(
         "report_date": rep_str,
         "month_name": MONTH_NAMES_ID.get(rep_month, str(rep_month)),
         "year": rep_year,
+        "has_planned_target": has_plan,
         "unfilled_box": {
             "unfilled_h_minus_1": int(unfilled_h_minus_1),
             "do_ahm": do_daily_total,
