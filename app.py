@@ -383,13 +383,6 @@ def api_summary():
     report_date = parse_date_str(request.args.get("report_date", "2026-10-31")) or "2026-10-31"
     cutoff_date = request.args.get("cutoff_date", "2026-09-29") or None
     unfilled_h_1 = int(request.args.get("unfilled_h_1", 379))
-    target_total = request.args.get("target_total", None)
-    target_total_val = None
-    if target_total is not None and str(target_total).strip() != "":
-        try:
-            target_total_val = int(str(target_total).replace(",", "").replace(".", "").strip())
-        except (ValueError, TypeError):
-            target_total_val = None
 
     rep_year = int(report_date[:4])
     rep_month = int(report_date[5:7])
@@ -410,7 +403,6 @@ def api_summary():
         target_pct_dict,
         report_date_str=report_date,
         unfilled_h_minus_1=unfilled_h_1,
-        monthly_target_total=target_total_val,
     )
     return jsonify({"status": "ok", "data": summ})
 

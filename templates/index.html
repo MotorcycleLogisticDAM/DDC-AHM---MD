@@ -274,30 +274,19 @@
             <div class="card mb-3">
               <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
-                  <div class="col-md-2">
-                    <label class="form-label mb-1">Tanggal Laporan (H-1)</label>
+                  <div class="col-md-3">
+                    <label class="form-label mb-1">Tanggal Laporan (Up to Date H-1)</label>
                     <input type="date" id="sum-date" class="form-control form-control-sm" value="2026-10-31">
                   </div>
-                  <div class="col-md-2">
-                    <label class="form-label mb-1">Cut-off Kuota 3 Bulan</label>
+                  <div class="col-md-3">
+                    <label class="form-label mb-1">Cut-off Kuota 3 Bulan Sebelumnya</label>
                     <input type="date" id="sum-cutoff" class="form-control form-control-sm" value="2026-09-29">
                   </div>
                   <div class="col-md-2">
                     <label class="form-label mb-1">Unfilled H-1 (Unit)</label>
                     <input type="number" id="sum-unfilled" class="form-control form-control-sm" value="379">
                   </div>
-                  <div class="col-md-3">
-                    <label class="form-label mb-1 fw-bold text-primary">
-                      <i class="ti ti-target me-1"></i>Target Bulanan (Total Unit)
-                    </label>
-                    <div class="input-group input-group-sm">
-                      <input type="number" id="sum-target-total" class="form-control form-control-sm fw-bold" placeholder="Contoh: 85000" onkeydown="if(event.key==='Enter') loadSummary()">
-                      <button class="btn btn-outline-primary" type="button" onclick="openTargetBulananModal()" title="Buka Menu Setting Target Bulanan">
-                        <i class="ti ti-settings me-1"></i> Setting Target
-                      </button>
-                    </div>
-                  </div>
-                  <div class="col-md-3">
+                  <div class="col-md-2">
                     <button class="btn btn-primary btn-sm w-100" onclick="loadSummary()">
                       <i class="ti ti-calculator me-1"></i> Hitung Summary
                     </button>
@@ -342,9 +331,8 @@
 
             <!-- 3.A DISTRIBUTION SUMMARY TABLE -->
             <div class="card mb-3">
-              <div class="card-header bg-primary-lt d-flex justify-content-between align-items-center">
-                <h3 class="card-title fw-bold mb-0">3.A DISTRIBUTION SUMMARY (Pencapaian Harian H-1 & Bulanan MTD)</h3>
-                <span class="badge bg-primary text-white" id="badge-target-bulan-info">Target Bulanan: -</span>
+              <div class="card-header bg-primary-lt">
+                <h3 class="card-title fw-bold">3.A DISTRIBUTION SUMMARY (Pencapaian Harian H-1 & Bulanan MTD)</h3>
               </div>
               <div class="table-responsive">
                 <table class="table table-bordered table-sm table-vcenter mb-0">
@@ -358,7 +346,7 @@
                       <th class="num-col">TARGET</th>
                       <th class="num-col">ACTUAL</th>
                       <th class="num-col">% ACH</th>
-                      <th class="num-col bg-azure-lt">TARGET BULAN</th>
+                      <th class="num-col">TARGET BULAN</th>
                       <th class="num-col">ACTUAL MTD</th>
                       <th class="num-col">% MTD</th>
                     </tr>
@@ -818,57 +806,6 @@
   </div>
 </div>
 
-<!-- MODAL SETTING TARGET BULANAN -->
-<div class="modal modal-blur fade" id="modal-target-bulanan" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title fw-bold">
-          <i class="ti ti-target me-2"></i>Setting Target Bulanan (Total Distribusi)
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label fw-bold">Total Target Distribusi Bulanan (Unit)</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="ti ti-truck-delivery"></i></span>
-            <input type="number" id="modal-target-input" class="form-control form-control-lg fw-bold" placeholder="Contoh: 85000" oninput="calculateModalTargetBreakdown()">
-            <button class="btn btn-primary" type="button" onclick="calculateModalTargetBreakdown()">
-              <i class="ti ti-calculator me-1"></i> Hitung Alokasi
-            </button>
-          </div>
-          <small class="text-secondary mt-1 d-block">
-            Masing-masing target ekspedisi di-generate secara proporsional dan presisi integer berdasarkan kuota 3 bulan terakhir.
-          </small>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-bordered table-sm table-vcenter mb-0">
-            <thead class="bg-light">
-              <tr>
-                <th>EKSPEDISI</th>
-                <th class="num-col">% KUOTA 3 BULAN</th>
-                <th class="num-col bg-azure-lt fw-bold">TARGET GENERATE (UNIT)</th>
-                <th class="num-col">% SHARE TARGET</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-modal-target-breakdown">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-primary ms-auto" onclick="applyModalTargetToSummary()">
-          <i class="ti ti-check me-1"></i> Terapkan ke Dashboard Summary
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
 <script>
 const PLANTS = ["FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9"];
@@ -913,12 +850,6 @@ async function initApp() {
     selSheet.appendChild(opt);
   });
 
-  // Inisialisasi Target Bulanan dari localStorage jika ada
-  const savedTarget = localStorage.getItem("ddc_monthly_target_total");
-  if (savedTarget && document.getElementById("sum-target-total")) {
-    document.getElementById("sum-target-total").value = savedTarget;
-  }
-
   await loadSummary();
   await loadMonthlyQuota();
   await loadSLTable();
@@ -933,34 +864,9 @@ async function loadSummary() {
   const repDate = document.getElementById("sum-date").value;
   const cutoff = document.getElementById("sum-cutoff").value;
   const unfilled = document.getElementById("sum-unfilled").value;
-  let targetTotal = document.getElementById("sum-target-total") ? document.getElementById("sum-target-total").value : "";
-  if (!targetTotal && localStorage.getItem("ddc_monthly_target_total")) {
-    targetTotal = localStorage.getItem("ddc_monthly_target_total");
-    if (document.getElementById("sum-target-total")) {
-      document.getElementById("sum-target-total").value = targetTotal;
-    }
-  }
-
-  const res = await fetch(`/api/summary?report_date=${repDate}&cutoff_date=${cutoff}&unfilled_h_1=${unfilled}&target_total=${encodeURIComponent(targetTotal || '')}`);
+  const res = await fetch(`/api/summary?report_date=${repDate}&cutoff_date=${cutoff}&unfilled_h_1=${unfilled}`);
   const json = await res.json();
   const d = json.data;
-
-  if (d.setting_target_total && document.getElementById("sum-target-total")) {
-    if (!document.getElementById("sum-target-total").value) {
-      document.getElementById("sum-target-total").value = d.setting_target_total;
-    }
-    localStorage.setItem("ddc_monthly_target_total", document.getElementById("sum-target-total").value);
-  }
-
-  // Simpan data breakdown kuota untuk modal setting
-  if (d.monthly_quota_breakdown) {
-    window.lastSummaryQuotaBreakdown = d.monthly_quota_breakdown;
-  }
-
-  const badgeTgt = document.getElementById("badge-target-bulan-info");
-  if (badgeTgt && d.distribution_totals) {
-    badgeTgt.textContent = `Target Total Bulanan: ${fmtNum(d.distribution_totals.MTD_TARGET)} Unit`;
-  }
 
   document.getElementById("kpi-unfilled-h1").textContent = fmtNum(d.unfilled_box.unfilled_h_minus_1);
   document.getElementById("kpi-do-ahm").textContent = fmtNum(d.unfilled_box.do_ahm);
@@ -968,7 +874,7 @@ async function loadSummary() {
   document.getElementById("kpi-act-dist").textContent = fmtNum(d.unfilled_box.act_dist);
   document.getElementById("kpi-unfilled-h").textContent = fmtNum(d.unfilled_box.unfilled_h);
 
-  // Render 3.A (7 Kolom Sederhana: XPDC, DAILY TARGET, ACTUAL, %ACH, MTD TARGET, ACTUAL, %MTD)
+  // Render 3.A (Kolom KONTRIBUSI AKTUAL & KALKULASI NEW TARGET MTD dihilangkan)
   const tbDist = document.getElementById("tbody-dist-summary");
   tbDist.innerHTML = "";
   d.distribution_summary.forEach(r => {
@@ -977,7 +883,7 @@ async function loadSummary() {
       <td class="num-col">${fmtNum(r.DAILY_TARGET)}</td>
       <td class="num-col">${fmtNum(r.DAILY_ACTUAL)}</td>
       <td class="num-col fw-bold">${r.DAILY_ACH_PCT.toFixed(2)}%</td>
-      <td class="num-col fw-bold bg-azure-lt">${fmtNum(r.MTD_TARGET)}</td>
+      <td class="num-col">${fmtNum(r.MTD_TARGET)}</td>
       <td class="num-col">${fmtNum(r.MTD_ACTUAL)}</td>
       <td class="num-col fw-bold text-success">${r.MTD_ACH_PCT.toFixed(2)}%</td>
     </tr>`;
@@ -988,12 +894,12 @@ async function loadSummary() {
     <td class="num-col">${fmtNum(dt.DAILY_TARGET)}</td>
     <td class="num-col">${fmtNum(dt.DAILY_ACTUAL)}</td>
     <td class="num-col">${dt.DAILY_ACH_PCT.toFixed(2)}%</td>
-    <td class="num-col bg-azure-lt text-primary">${fmtNum(dt.MTD_TARGET)}</td>
+    <td class="num-col">${fmtNum(dt.MTD_TARGET)}</td>
     <td class="num-col">${fmtNum(dt.MTD_ACTUAL)}</td>
     <td class="num-col text-success">${dt.MTD_ACH_PCT.toFixed(2)}%</td>
   </tr>`;
 
-  // Render 3.B (5 Kolom: XPDC, TARGET UPTO, ACTUAL UPTO, GAP, %ACH)
+  // Render 3.B (Kolom % SHARE TARGET dihilangkan)
   const tbPerf = document.getElementById("tbody-perf-summary");
   tbPerf.innerHTML = "";
   d.performance_analysis.forEach(r => {
@@ -1029,92 +935,6 @@ async function loadSummary() {
     },
     options: { responsive: true, plugins: { legend: { position: "bottom" } } }
   });
-}
-
-function openTargetBulananModal() {
-  const currentVal = (document.getElementById("sum-target-total") && document.getElementById("sum-target-total").value) || localStorage.getItem("ddc_monthly_target_total") || "85000";
-  document.getElementById("modal-target-input").value = currentVal;
-  calculateModalTargetBreakdown();
-  const modalEl = document.getElementById("modal-target-bulanan");
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  modal.show();
-}
-
-function calculateModalTargetBreakdown() {
-  const rawVal = document.getElementById("modal-target-input").value;
-  const tot = parseInt(rawVal) || 0;
-  const tb = document.getElementById("tbody-modal-target-breakdown");
-  tb.innerHTML = "";
-
-  const breakdown = window.lastSummaryQuotaBreakdown || [];
-  if (breakdown.length === 0) {
-    tb.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Data kuota 3 bulan belum tersedia. Jalankan "Hitung Summary" terlebih dahulu.</td></tr>`;
-    return;
-  }
-
-  // Pure round preserving sum in JS
-  const keys = breakdown.map(b => b.XPDC);
-  const qMap = {};
-  breakdown.forEach(b => { qMap[b.XPDC] = b.QUOTA_PCT / 100.0; });
-
-  const rawTargets = {};
-  const floors = {};
-  let floorSum = 0;
-  keys.forEach(k => {
-    const fVal = qMap[k] * tot;
-    rawTargets[k] = fVal;
-    floors[k] = Math.floor(Math.max(0, fVal));
-    floorSum += floors[k];
-  });
-  let rem = tot - floorSum;
-  if (rem > 0) {
-    const fracs = [...keys].sort((a, b) => (rawTargets[b] - floors[b]) - (rawTargets[a] - floors[a]));
-    for (let i = 0; i < Math.min(rem, fracs.length); i++) {
-      floors[fracs[i]]++;
-    }
-  } else if (rem < 0) {
-    const fracs = [...keys].sort((a, b) => (rawTargets[a] - floors[a]) - (rawTargets[b] - floors[b]));
-    for (const k of fracs) {
-      while (rem < 0 && floors[k] > 0) {
-        floors[k]--;
-        rem++;
-      }
-    }
-  }
-
-  let totalGenerated = 0;
-  keys.forEach(k => {
-    const targetU = floors[k];
-    totalGenerated += targetU;
-    const qPct = (qMap[k] * 100).toFixed(2);
-    const sPct = tot > 0 ? ((targetU / tot) * 100).toFixed(2) : "0.00";
-    tb.innerHTML += `<tr>
-      <td class="fw-bold">${k}</td>
-      <td class="num-col">${qPct}%</td>
-      <td class="num-col fw-bold bg-azure-lt">${fmtNum(targetU)}</td>
-      <td class="num-col">${sPct}%</td>
-    </tr>`;
-  });
-
-  tb.innerHTML += `<tr class="bg-light fw-bold">
-    <td>TOTAL</td>
-    <td class="num-col">100.00%</td>
-    <td class="num-col bg-azure-lt text-primary">${fmtNum(totalGenerated)}</td>
-    <td class="num-col">100.00%</td>
-  </tr>`;
-}
-
-function applyModalTargetToSummary() {
-  const tot = document.getElementById("modal-target-input").value;
-  if (tot && parseInt(tot) > 0) {
-    document.getElementById("sum-target-total").value = tot;
-    localStorage.setItem("ddc_monthly_target_total", tot);
-  }
-  const modalEl = document.getElementById("modal-target-bulanan");
-  const modal = bootstrap.Modal.getInstance(modalEl);
-  if (modal) modal.hide();
-  loadSummary();
-}
 }
 
 async function loadMonthlyQuota() {
