@@ -1347,13 +1347,31 @@ async function loadDOTable() {
   updateAddDoTotalBadge();
 }
 
+function formatIndoDate(val) {
+  if (!val) return "";
+  const s = String(val).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const d = m[3];
+    const mIdx = parseInt(m[2], 10) - 1;
+    const yy = m[1].slice(-2);
+    return `${d}-${months[mIdx] || m[2]}-${yy}`;
+  }
+  return s;
+}
+
 async function loadSLTable() {
   const res = await fetch(`/api/sheet/SL?max_rows=100`);
   const d = await res.json();
   const th = document.getElementById("thead-sl-preview");
   const tb = document.getElementById("tbody-sl-preview");
   th.innerHTML = `<tr>${d.columns.map(c => `<th>${c}</th>`).join("")}</tr>`;
-  tb.innerHTML = d.rows.map(r => `<tr>${d.columns.map(c => `<td>${r[c] || ""}</td>`).join("")}</tr>`).join("");
+  tb.innerHTML = d.rows.map(r => `<tr>${d.columns.map(c => {
+    let val = r[c] || "";
+    if (c === "TANGGAL") val = formatIndoDate(val);
+    return `<td>${val}</td>`;
+  }).join("")}</tr>`).join("");
 }
 
 async function submitNewDO() {

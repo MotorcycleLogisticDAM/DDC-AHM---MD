@@ -38,6 +38,33 @@ def parse_date_str(val):
         return None
 
 
+MONTH_ABBR_ID = {
+    1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr",
+    5: "Mei", 6: "Jun", 7: "Jul", 8: "Agu",
+    9: "Sep", 10: "Okt", 11: "Nov", 12: "Des"
+}
+
+
+def format_date_d_mmm_yy(val):
+    """
+    Mengubah format tanggal 'YYYY-MM-DD' atau datetime/date menjadi 'DD-Mmm-YY',
+    contoh: '2026-10-31' -> '31-Okt-26'.
+    """
+    if not val:
+        return ""
+    t_str = parse_date_str(val) if not isinstance(val, str) or "-" not in val else val
+    if not t_str or len(t_str) < 10:
+        return str(val)
+    try:
+        parts = t_str[:10].split("-")
+        y, m, d = parts[0], int(parts[1]), parts[2]
+        m_name = MONTH_ABBR_ID.get(m, f"{m:02d}")
+        yy = y[-2:]
+        return f"{d}-{m_name}-{yy}"
+    except Exception:
+        return str(val)
+
+
 def to_int(val, default=0):
     """Mengubah nilai angka atau rumus aritmatika sederhana Excel (misal '=2167-50') menjadi integer."""
     if val is None or val == "":
@@ -140,7 +167,7 @@ class ExcelDatabase:
             cols = ["TANGGAL", "NOPOL", "SOPIR", "XPDC", "PLANT", "GUDANG", "QTY", "MONTH", "DAY", "YEAR"]
             rows = [
                 {
-                    "TANGGAL": r["TANGGAL_STR"],
+                    "TANGGAL": format_date_d_mmm_yy(r["TANGGAL_STR"]),
                     "NOPOL": r.get("NOPOL", ""),
                     "SOPIR": r.get("SOPIR", ""),
                     "XPDC": r["XPDC"],
