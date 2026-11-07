@@ -400,6 +400,7 @@ def calculate_summary_and_performance(
     monthly_quota_pct,
     report_date_str="2026-10-31",
     unfilled_h_minus_1=0,
+    monthly_target_total=None,
 ):
     """Menghitung Output 3.A (DISTRIBUTION SUMMARY) & 3.B (ANALISA PERFORMANCE)."""
     rep_str = parse_date_str(report_date_str) or "2026-10-31"
@@ -431,12 +432,26 @@ def calculate_summary_and_performance(
     total_target_do_upto = sum(int(r["QTY"]) for r in do_upto)
     sisa_do_month = max(0, total_target_do_month - total_target_do_upto)
 
+    # Menentukan Total Distribusi Bulanan (Setting Target Bulanan)
+    if monthly_target_total is not None and int(monthly_target_total) > 0:
+        tot_target_month = int(monthly_target_total)
+    elif total_target_do_month > 0:
+        tot_target_month = total_target_do_month
+    else:
+        tot_target_month = 85000
+
+    # Generate Target Bulanan per Ekspedisi berdasarkan Kuota 3 Bulan Terakhir
+    target_by_xpdc = _round_preserving_sum(
+        {x: float(monthly_quota_pct.get(x, 0.0)) * tot_target_month for x in EXPEDITIONS},
+        tot_target_month,
+    )
+
     dist_rows = []
     perf_rows = []
 
     tot_daily_tgt = 0
     tot_daily_act = 0
-    tot_mtd_tgt_full = 0
+    tot_mtd_tgt_full = tot_target_month
     tot_mtd_act = 0
     tot_upto_tgt = 0
 
@@ -456,14 +471,12 @@ def calculate_summary_and_performance(
         if upto_tgt == 0 and total_target_do_upto > 0:
             upto_tgt = int(round(total_target_do_upto * q_pct))
 
-        sisa_eksp = int(round(sisa_do_month * q_pct))
-        mtd_full_tgt = upto_tgt + sisa_eksp
+        mtd_full_tgt = target_by_xpdc.get(x, 0)
         mtd_act = sum(int(r["QTY"]) for r in sl_upto if r["XPDC"] == x)
         mtd_ach = (mtd_act / mtd_full_tgt) if mtd_full_tgt > 0 else 0.0
 
         tot_daily_tgt += d_tgt
         tot_daily_act += d_act
-        tot_mtd_tgt_full += mtd_full_tgt
         tot_mtd_act += mtd_act
         tot_upto_tgt += upto_tgt
 
@@ -477,7 +490,7 @@ def calculate_summary_and_performance(
             "MTD_ACH_PCT": round(mtd_ach * 100, 2),
             "QUOTA_PCT": round(q_pct * 100, 2),
             "TARGET_UPTO": upto_tgt,
-            "SISA_TARGET": sisa_eksp,
+            "SISA_TARGET": max(0, mtd_full_tgt - upto_tgt),
         })
 
         gap_upto = mtd_act - upto_tgt
@@ -506,6 +519,15 @@ def calculate_summary_and_performance(
         "report_date": rep_str,
         "month_name": MONTH_NAMES_ID.get(rep_month, str(rep_month)),
         "year": rep_year,
+        "setting_target_total": tot_target_month,
+        "monthly_quota_breakdown": [
+            {
+                "XPDC": x,
+                "QUOTA_PCT": round(float(monthly_quota_pct.get(x, 0.0)) * 100, 2),
+                "TARGET_BULAN": target_by_xpdc.get(x, 0),
+            }
+            for x in EXPEDITIONS
+        ],
         "unfilled_box": {
             "unfilled_h_minus_1": int(unfilled_h_minus_1),
             "do_ahm": do_daily_total,
@@ -520,13 +542,14 @@ def calculate_summary_and_performance(
             "DAILY_ACH_PCT": round((tot_daily_act / tot_daily_tgt * 100), 2)
             if tot_daily_tgt > 0
             else (100.0 if tot_daily_act > 0 else 0.0),
-            "MTD_TARGET": tot_mtd_tgt_full,
+            "MTD_TARGET": tot_target_month,
             "MTD_ACTUAL": tot_mtd_act,
-            "MTD_ACH_PCT": round((tot_mtd_act / tot_mtd_tgt_full * 100), 2)
-            if tot_mtd_tgt_full > 0
+            "MTD_ACH_PCT": round((tot_mtd_act / tot_target_month * 100), 2)
+            if tot_target_month > 0
             else 0.0,
             "TARGET_UPTO": tot_upto_tgt,
-            "SISA_TARGET": max(0, tot_mtd_tgt_full - tot_upto_tgt),
+            "SISA_TARGET": max(0, tot_target_month - tot_upto_tgt),
+            "setting_target_total": tot_target_month,
         },
         "performance_analysis": perf_rows,
         "performance_totals": {
