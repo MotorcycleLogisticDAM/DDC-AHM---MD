@@ -16,8 +16,27 @@ PLANTS = ["FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9"]
 EXPEDITIONS = ["TUNAS MUDA", "RJTM", "LBK", "WSS", "PUNINAR"]
 
 
+MONTH_LOOKUP = {
+    "jan": 1, "januari": 1, "january": 1,
+    "feb": 2, "februari": 2, "february": 2,
+    "mar": 3, "maret": 3, "march": 3,
+    "apr": 4, "april": 4,
+    "mei": 5, "may": 5,
+    "jun": 6, "juni": 6, "june": 6,
+    "jul": 7, "juli": 7, "july": 7,
+    "agu": 8, "agustus": 8, "aug": 8, "august": 8,
+    "sep": 9, "september": 9,
+    "okt": 10, "oktober": 10, "oct": 10, "october": 10,
+    "nov": 11, "november": 11,
+    "des": 12, "desember": 12, "dec": 12, "december": 12,
+}
+
+
 def parse_date_str(val):
-    """Mengubah nilai tanggal Excel (datetime / string) menjadi string 'YYYY-MM-DD'."""
+    """
+    Mengubah nilai tanggal Excel (datetime / string / format '31-Okt-26' / 'DD-Mmm-YY')
+    menjadi string 'YYYY-MM-DD'.
+    """
     if val is None or val == "":
         return None
     if isinstance(val, datetime):
@@ -27,6 +46,21 @@ def parse_date_str(val):
     s = str(val).strip()
     if not s or s.lower() in ("nan", "nat", "none"):
         return None
+
+    # 1. Parsing format dengan nama/singkatan bulan (misal: '31-Okt-26', '31-Okt-2026', '04-Okt-26')
+    m_regex = re.match(r"^(\d{1,2})[-/\s]([a-zA-Z]+)[-/\s](\d{2,4})$", s)
+    if m_regex:
+        d = int(m_regex.group(1))
+        mon_str = m_regex.group(2).lower()
+        y_str = m_regex.group(3)
+        if mon_str in MONTH_LOOKUP:
+            mon = MONTH_LOOKUP[mon_str]
+            y = int(y_str)
+            if y < 100:
+                y += 2000
+            return f"{y:04d}-{mon:02d}-{d:02d}"
+
+    # 2. Parsing format tanggal standar numerik
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y"):
         try:
             return datetime.strptime(s[:19], fmt).strftime("%Y-%m-%d")

@@ -508,9 +508,17 @@ def api_download_template_sl():
     ws = wb.active
     ws.title = "SL_UPLOAD"
     ws.append(["TANGGAL", "NOPOL", "SOPIR", "XPDC", "PLANT", "GUDANG", "QTY"])
-    ws.append(["2026-10-04", "B 1234 CD", "BUDI", "TUNAS MUDA", "FM6", "KARAWANG", 64])
-    ws.append(["2026-10-04", "B 9999 XX", "ANDI", "RJTM", "FM8", "BANDUNG", 54])
+    ws.append(["31-Okt-26", "B 1234 CD", "BUDI", "TUNAS MUDA", "FM6", "KARAWANG", 64])
+    ws.append(["31-Okt-26", "B 9999 XX", "ANDI", "RJTM", "FM8", "BANDUNG", 54])
     
+    ws.column_dimensions["A"].width = 15
+    ws.column_dimensions["B"].width = 14
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 16
+    ws.column_dimensions["E"].width = 10
+    ws.column_dimensions["F"].width = 15
+    ws.column_dimensions["G"].width = 10
+
     out = BytesIO()
     wb.save(out)
     out.seek(0)
