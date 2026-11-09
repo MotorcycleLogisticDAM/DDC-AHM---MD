@@ -340,50 +340,71 @@ def calculate_and_balance_daily_quota(
             for x in EXPEDITIONS:
                 bal_int[x]["FM6A"] = fm6a_alloc[x]
 
+        # ATURAN KHUSUS FM8:
+        # 1. Jika DO > 5 Truk (total min 54 s.d. max 64 per truk, > 5 * 54 = 270 unit):
+        #    Dibagi rata ke semua 5 ekspedisi (TUNAS MUDA, RJTM, LBK, WSS, PUNINAR) dikali alokasi DO.
+        # 2. Jika kurang dari itu dan <= 44 unit:
+        #    Alokasi min & maksimal 44 unit dikirimkan ke TUNAS MUDA menggunakan armada truk engkel.
+        # 3. Jika 44 < DO <= 270 unit:
+        #    TUNAS MUDA mendapatkan 44 unit (truk engkel), dan sisanya didistribusikan ke ekspedisi lain.
+        do_fm8 = do_clean["FM8"]
+        if do_fm8 > 0:
+            if do_fm8 > 5 * 54:
+                # DO > 5 truk: dibagi rata ke semua 5 ekspedisi
+                fm8_alloc = _round_preserving_sum(
+                    {x: do_fm8 / 5.0 for x in EXPEDITIONS},
+                    do_fm8,
+                )
+                for x in EXPEDITIONS:
+                    bal_int[x]["FM8"] = fm8_alloc[x]
+            elif do_fm8 <= 44:
+                # <= 44 unit: dialokasikan ke TUNAS MUDA (armada engkel)
+                bal_int["TUNAS MUDA"]["FM8"] = do_fm8
+            else:
+                # Di antara 44 s.d. 270 unit: 44 unit engkel ke TUNAS MUDA, sisanya ke ekspedisi lain
+                bal_int["TUNAS MUDA"]["FM8"] = 44
+                rem_f8 = do_fm8 - 44
+                curr_temp = {
+                    x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM8", "FM9"])
+                    for x in EXPEDITIONS
+                }
+                need_f8 = {
+                    x: max(0, target_units_int[x] - curr_temp[x])
+                    for x in EXPEDITIONS if x != "TUNAS MUDA"
+                }
+                tot_need_f8 = sum(need_f8.values()) or 1
+                f8_rem_alloc = _round_preserving_sum(
+                    {x: (need_f8.get(x, 0) / tot_need_f8) * rem_f8 for x in EXPEDITIONS if x != "TUNAS MUDA"},
+                    rem_f8,
+                )
+                for x, val in f8_rem_alloc.items():
+                    bal_int[x]["FM8"] = val
+
+        # ATURAN KHUSUS FM6:
+        # Jika Plant 6 perlu balancing akhir dari Ekspedisi LBK, WSS, PUNINAR:
+        # Tambahkan ekspedisi TUNAS MUDA dan RJTM dengan kapasitas minimal 54 per truk
+        # maksimal 64 per truk dikali alokasi DO harian.
+        do_fm6 = do_clean["FM6"]
         current_alloc = {
-            x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM9"])
+            x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM8", "FM9"])
             for x in EXPEDITIONS
         }
         rem_need = {
-            x: max(0, target_units_int[x] - current_alloc[x]) for x in EXPEDITIONS
+            x: max(0, target_units_int[x] - current_alloc[x])
+            for x in EXPEDITIONS
         }
+        tot_rem = sum(rem_need.values())
 
-        need_group_b = sum(rem_need[x] for x in ["LBK", "WSS", "PUNINAR"])
-        if need_group_b > do_clean["FM6"] and do_clean["FM8"] > 0:
-            spill_to_fm8 = min(do_clean["FM8"], need_group_b - do_clean["FM6"])
-            w_b = {x: rem_need[x] for x in ["LBK", "WSS", "PUNINAR"]}
-            wb_sum = sum(w_b.values()) or 1
-            b_fm8 = _round_preserving_sum(
-                {x: (w_b.get(x, 0) / wb_sum) * spill_to_fm8 for x in ["LBK", "WSS", "PUNINAR"]},
-                spill_to_fm8,
-            )
-            for x, val in b_fm8.items():
-                bal_int[x]["FM8"] = val
-                rem_need[x] = max(0, rem_need[x] - val)
-
-        rem_fm8 = do_clean["FM8"] - sum(bal_int[x]["FM8"] for x in EXPEDITIONS)
-        if rem_fm8 > 0:
-            w_a = {x: max(1, rem_need[x]) for x in ["TUNAS MUDA", "RJTM"]}
-            wa_sum = sum(w_a.values())
-            a_fm8 = _round_preserving_sum(
-                {x: (w_a[x] / wa_sum) * rem_fm8 for x in ["TUNAS MUDA", "RJTM"]},
-                rem_fm8,
-            )
-            for x, val in a_fm8.items():
-                bal_int[x]["FM8"] += val
-                rem_need[x] = max(0, rem_need[x] - val)
-
-        if do_clean["FM6"] > 0:
-            tot_rem = sum(rem_need.values())
+        if do_fm6 > 0:
             if tot_rem > 0:
                 fm6_alloc = _round_preserving_sum(
-                    {x: (rem_need[x] / tot_rem) * do_clean["FM6"] for x in EXPEDITIONS},
-                    do_clean["FM6"],
+                    {x: (rem_need[x] / tot_rem) * do_fm6 for x in EXPEDITIONS},
+                    do_fm6,
                 )
             else:
                 fm6_alloc = _round_preserving_sum(
-                    {x: target_pct[x] * do_clean["FM6"] for x in EXPEDITIONS},
-                    do_clean["FM6"],
+                    {x: target_pct[x] * do_fm6 for x in EXPEDITIONS},
+                    do_fm6,
                 )
             for x in EXPEDITIONS:
                 bal_int[x]["FM6"] = fm6_alloc[x]
@@ -396,7 +417,15 @@ def calculate_and_balance_daily_quota(
         for p in PLANTS:
             u = int(bal_int[x][p])
             if u == 0:
-                trailer_checks[x][p] = {"trailers": 0, "valid": True, "note": "-"}
+                trailer_checks[x][p] = {"trailers": 0, "valid": True, "type": "none", "note": "-"}
+            elif p == "FM8" and u <= 44:
+                # Armada truk engkel khusus FM8 (min dan max 44 unit)
+                trailer_checks[x][p] = {
+                    "trailers": 1,
+                    "valid": True,
+                    "type": "engkel",
+                    "note": f"1 Engkel ({u} u)",
+                }
             else:
                 min_k = math.ceil(u / 64.0)
                 max_k = math.floor(u / 54.0)
@@ -404,14 +433,17 @@ def calculate_and_balance_daily_quota(
                     trailer_checks[x][p] = {
                         "trailers": min_k,
                         "valid": True,
+                        "type": "trailer",
                         "note": f"{min_k} Truk (~{u/min_k:.0f} u)",
                     }
                 else:
-                    est_k = max(1, round(u / 59.0))
+                    est_k = max(min_k, round(u / 59.0))
+                    is_ok = (54 <= u / est_k <= 64) if est_k > 0 else False
                     trailer_checks[x][p] = {
                         "trailers": est_k,
-                        "valid": False,
-                        "note": f"Non-ideal ({u} u)",
+                        "valid": is_ok,
+                        "type": "trailer",
+                        "note": f"{est_k} Truk (~{u/est_k:.0f} u)",
                     }
 
     return {
