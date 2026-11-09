@@ -190,6 +190,144 @@ def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct):
     return rows
 
 
+def solve_fm8_allocation(do_fm8, target_units, curr_alloc):
+    """
+    Kalkulasi Alokasi FM8 (Plant 8) sesuai batasan armada:
+    1. Ekspedisi RJTM, LBK, WSS, PUNINAR (Khusus Trailer):
+       - Minimal alokasi 54 unit dan maksimal 64 unit (1 rit trailer)
+       - Jika lebih dari itu dikali 2: rentang 108 s.d. 128 unit (2 rit trailer)
+       - Jika lebih dari itu dikali 3: rentang 162 s.d. 192 unit (3 rit trailer), dst.
+       - Atau 0 unit jika tidak dialokasikan di FM8 pada hari itu.
+    2. Ekspedisi TUNAS MUDA (Pilihan Engkel atau Trailer):
+       - 44 unit (1 rit engkel), jika lebih dari itu dikali 2 (88 unit, 2 rit engkel), 132 unit, dst.
+       - Atau 54 s.d. 64 unit (1 rit trailer), jika lebih dari itu dikali 2 (108 s.d. 128 unit, 2 rit trailer), dst.
+       - Atau 0 unit jika tidak dialokasikan di FM8 pada hari itu.
+    """
+    if do_fm8 <= 0:
+        return {x: 0 for x in EXPEDITIONS}
+
+    if do_fm8 <= 44:
+        alloc = {x: 0 for x in EXPEDITIONS}
+        alloc["TUNAS MUDA"] = do_fm8
+        return alloc
+
+    rem_need = {x: max(0.0, target_units[x] - curr_alloc[x]) for x in EXPEDITIONS}
+    others = ["RJTM", "LBK", "WSS", "PUNINAR"]
+
+    tm_options = []
+    # Engkel: 44, 88, 132...
+    for m in [1, 2, 3]:
+        v = m * 44
+        if v <= do_fm8:
+            tm_options.append(("engkel", m, v, v))
+    # Trailer: 1 rit (54..64), 2 rit (108..128), etc.
+    for k in [1, 2, 3]:
+        min_v = k * 54
+        max_v = k * 64
+        if min_v <= do_fm8:
+            tm_options.append(("trailer", k, min_v, min(do_fm8, max_v)))
+
+    if do_fm8 >= 54:
+        tm_options.append(("none", 0, 0, 0))
+
+    best_alloc = None
+    best_score = float("inf")
+    max_k = 3 if do_fm8 > 400 else 2
+
+    for tm_type, tm_trips, tm_min, tm_max in tm_options:
+        for k_rj in range(0, max_k + 1):
+            for k_lbk in range(0, max_k + 1):
+                for k_wss in range(0, max_k + 1):
+                    for k_pun in range(0, max_k + 1):
+                        trips_other = {"RJTM": k_rj, "LBK": k_lbk, "WSS": k_wss, "PUNINAR": k_pun}
+                        tot_k_other = sum(trips_other.values())
+
+                        min_other = tot_k_other * 54
+                        max_other = tot_k_other * 64
+
+                        if tm_type == "engkel":
+                            tm_u = tm_min
+                            rem = do_fm8 - tm_u
+                            if min_other <= rem <= max_other:
+                                if tot_k_other > 0:
+                                    base = {x: trips_other[x] * 54 for x in others}
+                                    slack = rem - min_other
+                                    alloc_other = dict(base)
+                                    for x in sorted(others, key=lambda o: rem_need[o], reverse=True):
+                                        if trips_other[x] > 0 and slack > 0:
+                                            add = min(slack, trips_other[x] * 10)
+                                            alloc_other[x] += add
+                                            slack -= add
+                                else:
+                                    if rem != 0:
+                                        continue
+                                    alloc_other = {x: 0 for x in others}
+
+                                alloc_total = dict(alloc_other)
+                                alloc_total["TUNAS MUDA"] = tm_u
+
+                                active_count = (1 if tm_trips > 0 else 0) + sum(1 for k in trips_other.values() if k > 0)
+                                penalty = 0
+                                if do_fm8 > 270:
+                                    if active_count < 5:
+                                        penalty += (5 - active_count) * 100000
+                                elif do_fm8 > 100:
+                                    if active_count < 2:
+                                        penalty += 50000
+
+                                ideal_ratio = do_fm8 / sum(rem_need.values()) if sum(rem_need.values()) > 0 else 0.2
+                                var_score = sum((alloc_total[x] - rem_need[x] * ideal_ratio) ** 2 for x in EXPEDITIONS)
+
+                                score = penalty + var_score
+                                if score < best_score:
+                                    best_score = score
+                                    best_alloc = alloc_total
+
+                        elif tm_type == "trailer":
+                            tot_k = tm_trips + tot_k_other
+                            if tot_k == 0:
+                                continue
+                            min_all = tot_k * 54
+                            max_all = tot_k * 64
+                            if min_all <= do_fm8 <= max_all:
+                                all_trips = dict(trips_other)
+                                all_trips["TUNAS MUDA"] = tm_trips
+                                base = {x: all_trips[x] * 54 for x in EXPEDITIONS}
+                                slack = do_fm8 - min_all
+                                alloc_total = dict(base)
+                                for x in sorted(EXPEDITIONS, key=lambda o: rem_need[o], reverse=True):
+                                    if all_trips[x] > 0 and slack > 0:
+                                        add = min(slack, all_trips[x] * 10)
+                                        alloc_total[x] += add
+                                        slack -= add
+
+                                active_count = sum(1 for k in all_trips.values() if k > 0)
+                                penalty = 0
+                                if do_fm8 > 270:
+                                    if active_count < 5:
+                                        penalty += (5 - active_count) * 100000
+                                elif do_fm8 > 100:
+                                    if active_count < 2:
+                                        penalty += 50000
+
+                                ideal_ratio = do_fm8 / sum(rem_need.values()) if sum(rem_need.values()) > 0 else 0.2
+                                var_score = sum((alloc_total[x] - rem_need[x] * ideal_ratio) ** 2 for x in EXPEDITIONS)
+
+                                score = penalty + var_score
+                                if score < best_score:
+                                    best_score = score
+                                    best_alloc = alloc_total
+
+    if best_alloc is None:
+        if do_fm8 <= 44:
+            best_alloc = {x: 0 for x in EXPEDITIONS}
+            best_alloc["TUNAS MUDA"] = do_fm8
+        else:
+            best_alloc = _round_preserving_sum({x: do_fm8 / 5.0 for x in EXPEDITIONS}, do_fm8)
+
+    return best_alloc
+
+
 def calculate_and_balance_daily_quota(
     do_dict,
     pct_matrix,
@@ -341,44 +479,17 @@ def calculate_and_balance_daily_quota(
                 bal_int[x]["FM6A"] = fm6a_alloc[x]
 
         # ATURAN KHUSUS FM8:
-        # 1. Jika DO > 5 Truk (total min 54 s.d. max 64 per truk, > 5 * 54 = 270 unit):
-        #    Dibagi rata ke semua 5 ekspedisi (TUNAS MUDA, RJTM, LBK, WSS, PUNINAR) dikali alokasi DO.
-        # 2. Jika kurang dari itu dan <= 44 unit:
-        #    Alokasi min & maksimal 44 unit dikirimkan ke TUNAS MUDA menggunakan armada truk engkel.
-        # 3. Jika 44 < DO <= 270 unit:
-        #    TUNAS MUDA mendapatkan 44 unit (truk engkel), dan sisanya didistribusikan ke ekspedisi lain.
+        # RJTM, LBK, WSS, PUNINAR: Minimal 54 unit dan maksimal 64 unit (1 rit trailer); jika lebih dari itu dikali 2 (108 s.d. 128 unit, 2 rit trailer), dst.
+        # TUNAS MUDA: 44 unit (1 rit engkel), jika lebih dari itu dikali 2 (88 unit); atau 54 sampai 64 unit (1 rit trailer), jika lebih dari itu dikali 2 (108-128 unit).
         do_fm8 = do_clean["FM8"]
         if do_fm8 > 0:
-            if do_fm8 > 5 * 54:
-                # DO > 5 truk: dibagi rata ke semua 5 ekspedisi
-                fm8_alloc = _round_preserving_sum(
-                    {x: do_fm8 / 5.0 for x in EXPEDITIONS},
-                    do_fm8,
-                )
-                for x in EXPEDITIONS:
-                    bal_int[x]["FM8"] = fm8_alloc[x]
-            elif do_fm8 <= 44:
-                # <= 44 unit: dialokasikan ke TUNAS MUDA (armada engkel)
-                bal_int["TUNAS MUDA"]["FM8"] = do_fm8
-            else:
-                # Di antara 44 s.d. 270 unit: 44 unit engkel ke TUNAS MUDA, sisanya ke ekspedisi lain
-                bal_int["TUNAS MUDA"]["FM8"] = 44
-                rem_f8 = do_fm8 - 44
-                curr_temp = {
-                    x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM8", "FM9"])
-                    for x in EXPEDITIONS
-                }
-                need_f8 = {
-                    x: max(0, target_units_int[x] - curr_temp[x])
-                    for x in EXPEDITIONS if x != "TUNAS MUDA"
-                }
-                tot_need_f8 = sum(need_f8.values()) or 1
-                f8_rem_alloc = _round_preserving_sum(
-                    {x: (need_f8.get(x, 0) / tot_need_f8) * rem_f8 for x in EXPEDITIONS if x != "TUNAS MUDA"},
-                    rem_f8,
-                )
-                for x, val in f8_rem_alloc.items():
-                    bal_int[x]["FM8"] = val
+            curr_temp = {
+                x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM9"])
+                for x in EXPEDITIONS
+            }
+            fm8_alloc = solve_fm8_allocation(do_fm8, target_units_int, curr_temp)
+            for x in EXPEDITIONS:
+                bal_int[x]["FM8"] = fm8_alloc[x]
 
         # ATURAN KHUSUS FM6:
         # Jika Plant 6 perlu balancing akhir dari Ekspedisi LBK, WSS, PUNINAR:
@@ -416,35 +527,80 @@ def calculate_and_balance_daily_quota(
         trailer_checks[x] = {}
         for p in PLANTS:
             u = int(bal_int[x][p])
-            if u == 0:
-                trailer_checks[x][p] = {"trailers": 0, "valid": True, "type": "none", "note": "-"}
-            elif p == "FM8" and u <= 44:
-                # Armada truk engkel khusus FM8 (min dan max 44 unit)
-                trailer_checks[x][p] = {
-                    "trailers": 1,
-                    "valid": True,
-                    "type": "engkel",
-                    "note": f"1 Engkel ({u} u)",
-                }
-            else:
-                min_k = math.ceil(u / 64.0)
-                max_k = math.floor(u / 54.0)
-                if min_k <= max_k and min_k >= 1:
-                    trailer_checks[x][p] = {
-                        "trailers": min_k,
-                        "valid": True,
-                        "type": "trailer",
-                        "note": f"{min_k} Truk (~{u/min_k:.0f} u)",
-                    }
+            if p == "FM8":
+                if u == 0:
+                    trailer_checks[x][p] = {"trailers": 0, "valid": True, "type": "none", "note": "-"}
+                elif x == "TUNAS MUDA":
+                    # TUNAS MUDA: 44 unit (1 engkel), 88 unit (2 engkel), atau trailer (54-64, 108-128, dst.)
+                    if u % 44 == 0 and u > 0:
+                        m = u // 44
+                        trailer_checks[x][p] = {
+                            "trailers": m,
+                            "valid": True,
+                            "type": "engkel",
+                            "note": f"{m} Engkel ({u} u)",
+                        }
+                    else:
+                        min_k = math.ceil(u / 64.0)
+                        max_k = math.floor(u / 54.0)
+                        if min_k <= max_k and min_k >= 1:
+                            trailer_checks[x][p] = {
+                                "trailers": min_k,
+                                "valid": True,
+                                "type": "trailer",
+                                "note": f"{min_k} Truk (~{u/min_k:.0f} u)",
+                            }
+                        else:
+                            est_k = max(min_k, round(u / 59.0))
+                            is_ok = (54 <= u / est_k <= 64) if est_k > 0 else False
+                            trailer_checks[x][p] = {
+                                "trailers": est_k,
+                                "valid": is_ok,
+                                "type": "trailer",
+                                "note": f"{est_k} Truk (~{u/est_k:.0f} u)",
+                            }
                 else:
-                    est_k = max(min_k, round(u / 59.0))
-                    is_ok = (54 <= u / est_k <= 64) if est_k > 0 else False
-                    trailer_checks[x][p] = {
-                        "trailers": est_k,
-                        "valid": is_ok,
-                        "type": "trailer",
-                        "note": f"{est_k} Truk (~{u/est_k:.0f} u)",
-                    }
+                    # RJTM, LBK, WSS, PUNINAR: Trailer min 54 s.d. 64 u/truk, kelipatan 2 rit (108-128), dst.
+                    min_k = math.ceil(u / 64.0)
+                    max_k = math.floor(u / 54.0)
+                    if min_k <= max_k and min_k >= 1:
+                        trailer_checks[x][p] = {
+                            "trailers": min_k,
+                            "valid": True,
+                            "type": "trailer",
+                            "note": f"{min_k} Truk (~{u/min_k:.0f} u)",
+                        }
+                    else:
+                        est_k = max(min_k, round(u / 59.0))
+                        is_ok = (54 <= u / est_k <= 64) if est_k > 0 else False
+                        trailer_checks[x][p] = {
+                            "trailers": est_k,
+                            "valid": is_ok,
+                            "type": "trailer",
+                            "note": f"{est_k} Truk (~{u/est_k:.0f} u)",
+                        }
+            else:
+                if u == 0:
+                    trailer_checks[x][p] = {"trailers": 0, "valid": True, "type": "none", "note": "-"}
+                else:
+                    min_k = math.ceil(u / 64.0)
+                    max_k = math.floor(u / 54.0)
+                    if min_k <= max_k and min_k >= 1:
+                        trailer_checks[x][p] = {
+                            "trailers": min_k,
+                            "valid": True,
+                            "type": "trailer",
+                            "note": f"{min_k} Truk (~{u/min_k:.0f} u)",
+                        }
+                    else:
+                        est_k = max(min_k, round(u / 59.0))
+                        is_ok = (54 <= u / est_k <= 64) if est_k > 0 else False
+                        trailer_checks[x][p] = {
+                            "trailers": est_k,
+                            "valid": is_ok,
+                            "type": "trailer",
+                            "note": f"{est_k} Truk (~{u/est_k:.0f} u)",
+                        }
 
     return {
         "do_per_plant": do_clean,
