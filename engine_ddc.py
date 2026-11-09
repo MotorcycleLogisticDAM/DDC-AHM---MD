@@ -328,6 +328,78 @@ def solve_fm8_allocation(do_fm8, target_units, curr_alloc):
     return best_alloc
 
 
+def solve_fm6a_allocation(do_fm6a, pct_matrix, target_units, curr_alloc):
+    """
+    Kalkulasi Alokasi Plant 6A (FM6A) sesuai batasan armada:
+    - Ekspedisi sasaran: LBK, WSS, PUNINAR (TUNAS MUDA dan RJTM = 0).
+    - Standar muatan: minimal 54 unit dan maksimal 64 unit (1 rit trailer).
+    - Jika DO FM6A >= 3 * 54 = 162 unit: dialokasikan ke 3 ekspedisi (LBK, WSS, PUNINAR).
+    - Jika angka min kurang dari 3 ekspedisi (< 162 unit) dan >= 2 * 54 = 108 unit:
+      berikan ke 2 ekspedisi (ekspedisi ke-3 mendapatkan 0 unit).
+    - Jika kurang dari 2 ekspedisi (< 108 unit):
+      berikan ke 1 ekspedisi (dua ekspedisi lainnya mendapatkan 0 unit).
+    """
+    g_b = ["LBK", "WSS", "PUNINAR"]
+    alloc = {x: 0 for x in EXPEDITIONS}
+    if do_fm6a <= 0:
+        return alloc
+
+    rem_need = {x: max(0.0, target_units[x] - curr_alloc[x]) for x in g_b}
+    # Urutkan berdasarkan sisa kebutuhan unit tertinggi, lalu bobot kuota bulanan
+    sorted_gb = sorted(
+        g_b,
+        key=lambda x: (rem_need[x], pct_matrix[x]["FM6A"] or 0),
+        reverse=True,
+    )
+
+    if do_fm6a >= 3 * 54:
+        n_active = 3
+    elif do_fm6a >= 2 * 54:
+        n_active = 2
+    else:
+        n_active = 1
+
+    active_xpdc = sorted_gb[:n_active]
+
+    if n_active == 1:
+        alloc[active_xpdc[0]] = do_fm6a
+        return alloc
+
+    weights = {x: pct_matrix[x]["FM6A"] or (1.0 / n_active) for x in active_xpdc}
+    w_sum = sum(weights.values()) or 1.0
+
+    # Cek jika volume pas dalam rentang 1 trailer untuk tiap ekspedisi aktif (54*n s.d. 64*n)
+    if 54 * n_active <= do_fm6a <= 64 * n_active:
+        base = {x: 54 for x in active_xpdc}
+        slack = do_fm6a - 54 * n_active
+        slack_alloc = _round_preserving_sum(
+            {x: (weights[x] / w_sum) * slack for x in active_xpdc},
+            slack,
+        )
+        for x in active_xpdc:
+            alloc[x] = base[x] + slack_alloc[x]
+        return alloc
+
+    raw_alloc = _round_preserving_sum(
+        {x: (weights[x] / w_sum) * do_fm6a for x in active_xpdc},
+        do_fm6a,
+    )
+
+    if all(raw_alloc[x] >= 54 for x in active_xpdc):
+        for x in active_xpdc:
+            alloc[x] = raw_alloc[x]
+    else:
+        rem = do_fm6a - n_active * 54
+        extra = _round_preserving_sum(
+            {x: (weights[x] / w_sum) * rem for x in active_xpdc},
+            rem,
+        )
+        for x in active_xpdc:
+            alloc[x] = 54 + extra[x]
+
+    return alloc
+
+
 def calculate_and_balance_daily_quota(
     do_dict,
     pct_matrix,
@@ -467,13 +539,17 @@ def calculate_and_balance_daily_quota(
             for x in EXPEDITIONS:
                 bal_int[x]["FM7"] = fm7_alloc[x]
 
+        # ATURAN KHUSUS FM6A:
+        # Untuk ketiga ekspedisi (LBK, WSS, PUNINAR) minimal 54 unit dan maksimal 64 unit.
+        # Jika angka min kurang dari 3 ekspedisi (< 162 unit) berikan ke 2 ekspedisi.
+        # Jika kurang dari 2 ekspedisi (< 108 unit) berikan ke 1 ekspedisi.
         if do_clean["FM6A"] > 0:
-            g_b = ["LBK", "WSS", "PUNINAR"]
-            w_6a = {x: pct_matrix[x]["FM6A"] or (1.0 / 3.0) for x in g_b}
-            w_sum = sum(w_6a.values())
-            fm6a_alloc = _round_preserving_sum(
-                {x: (w_6a.get(x, 0.0) / w_sum) * do_clean["FM6A"] for x in EXPEDITIONS},
-                do_clean["FM6A"],
+            curr_temp_6a = {
+                x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM7", "FM9"])
+                for x in EXPEDITIONS
+            }
+            fm6a_alloc = solve_fm6a_allocation(
+                do_clean["FM6A"], pct_matrix, target_units_int, curr_temp_6a
             )
             for x in EXPEDITIONS:
                 bal_int[x]["FM6A"] = fm6a_alloc[x]
