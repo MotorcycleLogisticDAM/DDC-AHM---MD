@@ -842,22 +842,15 @@
                     <label class="form-label small mb-1 fw-bold">Tahun</label>
                     <input type="number" id="pd-year" class="form-control form-control-sm" value="2026" onchange="loadPerDayTab()">
                   </div>
-                  <div class="col-md-2">
-                    <label class="form-label small mb-1 fw-bold">Filter Tanggal</label>
+                  <div class="col-md-3">
+                    <label class="form-label small mb-1 fw-bold">Filter Tanggal Operasional</label>
                     <input type="date" id="pd-date" class="form-control form-control-sm" onchange="loadPerDayTab()">
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-md-3">
                     <label class="form-label small mb-1 fw-bold">Urutan Tanggal</label>
                     <select id="pd-sort" class="form-select form-select-sm" onchange="loadPerDayTab()">
                       <option value="newest" selected>Terbaru di Atas</option>
                       <option value="chronological">Kronologis (Sesuai Excel)</option>
-                    </select>
-                  </div>
-                  <div class="col-md-2">
-                    <label class="form-label small mb-1 fw-bold">Mode Tampilan Kolom</label>
-                    <select id="pd-layout" class="form-select form-select-sm" onchange="renderPerDayLayout()">
-                      <option value="two_cols" selected>2 Kolom Excel (H-1 & H)</option>
-                      <option value="single_col">1 Kolom Lebar Penuh</option>
                     </select>
                   </div>
                   <div class="col-md-2 d-flex gap-1">
@@ -870,25 +863,29 @@
                   </div>
                 </div>
                 <div class="small text-secondary mt-2" id="pd-info-bar">
-                  Menampilkan data hasil adjust Kuota Harian yang disimpan ke Sheet <b>PER DAY</b> (2 Blok Tabel Berdampingan: <b>H-1</b> &amp; <b>H</b>).
+                  Menampilkan data hasil monitoring & adjustment Kuota Harian yang disimpan ke Sheet <b>PER DAY</b> (Tampilan Lebar Penuh).
                 </div>
               </div>
             </div>
 
-            <!-- CONTAINER 2 KOLOM BERDAMPINGAN SESUAI SHEET PER DAY DI EXCEL -->
-            <div class="row row-cards" id="pd-two-cols-container">
-              <!-- KOLOM 1 (KIRI): MONITORING QUOTA HARIAN (unit) H-1 -->
-              <div class="col-lg-6" id="pd-col-left">
-                <div class="card mb-3">
+            <!-- CONTAINER LEBAR PENUH (FULL WIDTH) -->
+            <div class="row row-cards" id="pd-full-container">
+              <div class="col-12" id="pd-col-main">
+                <div class="card mb-3 shadow-sm">
                   <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                    <h3 class="card-title fw-bold text-white mb-0 small">MONITORING QUOTA HARIAN (unit) — <span class="badge bg-azure text-white">H-1</span></h3>
-                    <span class="small fw-bold text-warning" id="pd-month-label-left">MONTH : OCTOBER</span>
+                    <h3 class="card-title fw-bold text-white mb-0 small">
+                      <i class="ti ti-columns me-1"></i> MONITORING QUOTA HARIAN (unit)
+                    </h3>
+                    <span class="small fw-bold text-warning" id="pd-month-label-left">MONTH : NOVEMBER 2026</span>
                   </div>
                   <div class="card-body p-0">
-                    <!-- TABEL MTD KIRI -->
-                    <div class="p-2 bg-azure-lt fw-bold small border-bottom">Rekap Akumulasi Bulanan (MTD) — Kolom H-1</div>
+                    <!-- TABEL MTD LEBAR PENUH -->
+                    <div class="p-2 bg-azure-lt fw-bold small border-bottom d-flex justify-content-between align-items-center">
+                      <span><i class="ti ti-chart-bar me-1"></i> Rekap Akumulasi Bulanan (MTD)</span>
+                      <span class="badge bg-azure text-white small">Akumulasi Bulan Berjalan</span>
+                    </div>
                     <div class="table-responsive">
-                      <table class="table table-bordered table-sm mb-0" style="font-size: 0.78rem;">
+                      <table class="table table-bordered table-sm mb-0" style="font-size: 0.8rem;">
                         <thead class="bg-light">
                           <tr>
                             <th>MTD</th><th>EKSPEDISI</th>
@@ -901,10 +898,13 @@
                       </table>
                     </div>
 
-                    <!-- TABEL RINCIAN HARIAN KIRI -->
-                    <div class="p-2 bg-light fw-bold small border-top border-bottom mt-2">Rincian Kuota Harian Tersimpan (Per Tanggal) — Kolom H-1</div>
-                    <div class="table-responsive" style="max-height: 520px;">
-                      <table class="table table-bordered table-hover table-sm mb-0" style="font-size: 0.78rem;">
+                    <!-- TABEL RINCIAN HARIAN LEBAR PENUH -->
+                    <div class="p-2 bg-light fw-bold small border-top border-bottom mt-2 d-flex justify-content-between align-items-center">
+                      <span><i class="ti ti-calendar-event me-1"></i> Rincian Kuota Harian Tersimpan (Per Tanggal)</span>
+                      <span class="text-secondary small">Klik tombol <b>[Adjust]</b> pada baris ekspedisi untuk penyesuaian kuota DO</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 650px;">
+                      <table class="table table-bordered table-hover table-sm mb-0" style="font-size: 0.8rem;">
                         <thead class="bg-light sticky-top">
                           <tr>
                             <th>TANGGAL</th><th>EKSPEDISI</th>
@@ -918,53 +918,6 @@
                           </tr>
                         </thead>
                         <tbody id="tbody-pd-daily-left"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- KOLOM 2 (KANAN): MONITORING QUOTA HARIAN (unit) H -->
-              <div class="col-lg-6" id="pd-col-right">
-                <div class="card mb-3">
-                  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
-                    <h3 class="card-title fw-bold text-white mb-0 small">MONITORING QUOTA HARIAN (unit) — <span class="badge bg-green text-white">H</span></h3>
-                    <span class="small fw-bold text-warning" id="pd-month-label-right">MONTH : OCTOBER</span>
-                  </div>
-                  <div class="card-body p-0">
-                    <!-- TABEL MTD KANAN -->
-                    <div class="p-2 bg-green-lt fw-bold small border-bottom">Rekap Akumulasi Bulanan (MTD) — Kolom H</div>
-                    <div class="table-responsive">
-                      <table class="table table-bordered table-sm mb-0" style="font-size: 0.78rem;">
-                        <thead class="bg-light">
-                          <tr>
-                            <th>MTD</th><th>EKSPEDISI</th>
-                            <th class="num-col">FM1</th><th class="num-col">FM2</th><th class="num-col">FM6</th>
-                            <th class="num-col">FM6A</th><th class="num-col">FM7</th><th class="num-col">FM8</th>
-                            <th class="num-col">FM9</th><th class="num-col bg-yellow-lt">Grand Total</th><th class="num-col">%</th>
-                          </tr>
-                        </thead>
-                        <tbody id="tbody-pd-mtd-right"></tbody>
-                      </table>
-                    </div>
-
-                    <!-- TABEL RINCIAN HARIAN KANAN -->
-                    <div class="p-2 bg-light fw-bold small border-top border-bottom mt-2">Rincian Kuota Harian Tersimpan (Per Tanggal) — Kolom H</div>
-                    <div class="table-responsive" style="max-height: 520px;">
-                      <table class="table table-bordered table-hover table-sm mb-0" style="font-size: 0.78rem;">
-                        <thead class="bg-light sticky-top">
-                          <tr>
-                            <th>TANGGAL</th><th>EKSPEDISI</th>
-                            <th class="num-col">FM1</th><th class="num-col">FM2</th><th class="num-col">FM6</th>
-                            <th class="num-col">FM6A</th><th class="num-col">FM7</th><th class="num-col">FM8</th>
-                            <th class="num-col">FM9</th>
-                            <th class="num-col bg-yellow-lt">Grand Total</th>
-                            <th class="num-col">%</th>
-                            <th>KETERANGAN / STATUS</th>
-                            <th class="text-center">AKSI</th>
-                          </tr>
-                        </thead>
-                        <tbody id="tbody-pd-daily-right"></tbody>
                       </table>
                     </div>
                   </div>
@@ -2044,16 +1997,7 @@ async function submitNewDO() {
 
 
 function renderPerDayLayout() {
-  const mode = document.getElementById("pd-layout").value;
-  const colLeft = document.getElementById("pd-col-left");
-  const colRight = document.getElementById("pd-col-right");
-  if (mode === "single_col") {
-    colLeft.className = "col-lg-12";
-    colRight.className = "col-lg-12";
-  } else {
-    colLeft.className = "col-lg-6";
-    colRight.className = "col-lg-6";
-  }
+  // Tampilan Menu Per Day kini selalu 1 kolom lebar penuh (Full Width)
 }
 
 async function openDateInKuotaHarian(tgl) {
@@ -2077,16 +2021,14 @@ async function loadPerDayTab() {
   const d = await res.json();
 
   const lblLeft = document.getElementById("pd-month-label-left");
-  const lblRight = document.getElementById("pd-month-label-right");
   if (lblLeft) lblLeft.textContent = `MONTH : ${d.month_name} ${d.year}`;
-  if (lblRight) lblRight.textContent = `MONTH : ${d.month_name} ${d.year}`;
 
   const infoBar = document.getElementById("pd-info-bar");
   if (infoBar) {
     infoBar.innerHTML = `Terhubung langsung ke Sheet <b>PER DAY</b> — Menampilkan <b>${fmtNum(d.total_dates)}</b> tanggal operasional (<b>${fmtNum(d.total_rows)}</b> baris ekspedisi) dengan Total Akumulasi MTD: <b>${fmtNum(d.mtd_totals.GRAND_TOTAL)} unit</b>. Klik baris tanggal untuk mengedit di menu <b>Kuota Harian</b>.`;
   }
 
-  // Render Tabel MTD (Kiri H-1 & Kanan H)
+  // Render Tabel MTD (Lebar Penuh)
   let mtdHtml = "";
   d.mtd_rows.forEach((r, idx) => {
     mtdHtml += `<tr>
@@ -2106,10 +2048,10 @@ async function loadPerDayTab() {
     <td class="num-col bg-azure-lt">${mt.PCT.toFixed(2)}%</td>
   </tr>`;
 
-  document.getElementById("tbody-pd-mtd-left").innerHTML = mtdHtml;
-  document.getElementById("tbody-pd-mtd-right").innerHTML = mtdHtml;
+  const mtdEl = document.getElementById("tbody-pd-mtd-left");
+  if (mtdEl) mtdEl.innerHTML = mtdHtml;
 
-  // Render Tabel Harian per Tanggal (Kiri H-1 & Kanan H) sesuai format blok tanggal di Sheet PER DAY
+  // Render Tabel Harian per Tanggal (Lebar Penuh)
   let dailyHtml = "";
   d.daily_groups.forEach(grp => {
     grp.rows.forEach((r, idx) => {
@@ -2177,8 +2119,8 @@ async function loadPerDayTab() {
     dailyHtml = `<tr><td colspan="13" class="text-center text-secondary py-3">Belum ada data Kuota Harian tersimpan untuk filter ini.</td></tr>`;
   }
 
-  document.getElementById("tbody-pd-daily-left").innerHTML = dailyHtml;
-  document.getElementById("tbody-pd-daily-right").innerHTML = dailyHtml;
+  const dailyEl = document.getElementById("tbody-pd-daily-left");
+  if (dailyEl) dailyEl.innerHTML = dailyHtml;
 }
 
 // =========================================================================
