@@ -488,22 +488,33 @@ def api_perday():
 
 @app.route("/api/adjust_daily_quota", methods=["POST"])
 def api_adjust_daily_quota():
-    """Endpoint untuk menyesuaikan (batal, kurang, tambah) kuota harian tersimpan per plant & ekspedisi."""
+    """Endpoint untuk menyesuaikan (batal, kurang, tambah, set, reset) kuota harian tersimpan per ekspedisi."""
     payload = request.get_json(force=True)
     tanggal = parse_date_str(payload.get("tanggal"))
     xpdc = payload.get("xpdc")
     plant_adjustments = payload.get("plant_adjustments", {})
     keterangan = payload.get("keterangan", "")
+    adj_type = payload.get("type") or payload.get("adj_type")
+    amount = payload.get("amount", 0)
+    target_plant = payload.get("target_plant")
 
     if not tanggal or not xpdc:
         return jsonify({"status": "error", "message": "Tanggal dan Ekspedisi harus diisi!"}), 400
 
     try:
         db.create_backup()
-        res = db.adjust_daily_allocation(tanggal, xpdc, plant_adjustments, keterangan)
+        res = db.adjust_daily_allocation(
+            tanggal,
+            xpdc,
+            plant_adjustments=plant_adjustments,
+            keterangan=keterangan,
+            adj_type=adj_type,
+            amount=amount,
+            target_plant=target_plant
+        )
         return jsonify({
             "status": "ok",
-            "message": f"Adjustment kuota {xpdc} tanggal {tanggal} berhasil disimpan! (Total Awal: {res['total_awal']:,}, Adj: {res['adjustment']:+d}, Akhir: {res['total_final']:,} unit - {res['keterangan']})",
+            "message": f"Adjustment kuota {xpdc} tanggal {tanggal} berhasil disimpan! ({res['keterangan']})",
             "data": res
         })
     except Exception as e:

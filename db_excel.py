@@ -884,11 +884,12 @@ class ExcelDatabase:
         wb.close()
         return True
 
-    def adjust_daily_allocation(self, tanggal_str, xpdc, plant_adjustments, keterangan=None):
+    def adjust_daily_allocation(self, tanggal_str, xpdc, plant_adjustments=None, keterangan=None, adj_type=None, amount=0, target_plant=None):
         """
-        Melakukan penyesuaian (pembatalan, pengurangan, penambahan) kuota pada ekspedisi & tanggal tertentu
-        pada sheet 'ALOKASI_HARIAN' dan 'PER DAY'.
-        plant_adjustments: dict per plant, contoh: {"FM6": -20} atau {"FM6": {"adj": -20}} atau {"FM6": {"final": 90}}
+        Melakukan penyesuaian (pembatalan, pengurangan, penambahan, set, reset) kuota
+        pada ekspedisi & tanggal tertentu pada sheet 'ALOKASI_HARIAN' dan 'PER DAY'.
+        Mendukung penyesuaian level ekspedisi (adj_type + amount + target_plant)
+        maupun format dict plant_adjustments.
         """
         import json
         clean_tgl = parse_date_str(tanggal_str)
@@ -918,39 +919,152 @@ class ExcelDatabase:
                     "final": int(target_rec.get(p, 0))
                 }
 
-        # Terapkan adjustment per plant
         reasons_list = []
-        for p, adj_info in plant_adjustments.items():
-            p_upper = str(p).strip().upper()
-            if p_upper not in PLANTS:
-                continue
 
-            base_awal = int(details[p_upper].get("awal", target_rec.get(p_upper, 0)))
+        # A. Mode Aksi Per Ekspedisi (adj_type: tambah, kurang, batal, set, direct, reset)
+        if adj_type:
+            action = str(adj_type).strip().lower()
+            tp = str(target_plant or "").strip().upper()
+            if tp not in PLANTS:
+                tp = "ALL"
 
-            if isinstance(adj_info, dict):
-                if "final" in adj_info:
-                    new_final = max(0, int(adj_info["final"]))
-                    diff = new_final - base_awal
-                elif "adj" in adj_info:
-                    diff = int(adj_info["adj"])
-                    new_final = max(0, base_awal + diff)
+            if action == "reset":
+                if tp == "ALL":
+                    for p in PLANTS:
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": 0, "final": base}
+                        target_rec[p] = base
+                    if not keterangan:
+                        keterangan = "Normal"
                 else:
-                    diff = 0
-                    new_final = base_awal
-            else:
-                diff = int(adj_info)
-                new_final = max(0, base_awal + diff)
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    details[tp] = {"awal": base, "adj": 0, "final": base}
+                    target_rec[tp] = base
+                    if not keterangan:
+                        keterangan = f"Reset {tp} Normal"
 
-            details[p_upper] = {
-                "awal": base_awal,
-                "adj": diff,
-                "final": new_final
-            }
-            target_rec[p_upper] = new_final
+            elif action == "batal":
+                if tp == "ALL":
+                    for p in PLANTS:
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": -base, "final": 0}
+                        target_rec[p] = 0
+                    if not keterangan:
+                        keterangan = "Pembatalan DO Seluruh Plant"
+                else:
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    details[tp] = {"awal": base, "adj": -base, "final": 0}
+                    target_rec[tp] = 0
+                    if not keterangan:
+                        keterangan = f"Pembatalan DO {tp}"
 
-            if diff != 0:
-                sign = f"+{diff}" if diff > 0 else str(diff)
-                reasons_list.append(f"{p_upper} ({sign} u)")
+            elif action == "tambah":
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    cur_final = int(target_rec.get(tp, 0))
+                    new_final = cur_final + amt
+                    diff = new_final - base
+                    details[tp] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[tp] = new_final
+                    if not keterangan:
+                        keterangan = f"Penambahan DO (+{amt} u {tp})"
+                else:
+                    active_plants = [p for p in PLANTS if int(target_rec.get(p, 0)) > 0]
+                    chosen_p = max(active_plants, key=lambda p: int(target_rec[p])) if active_plants else "FM6"
+                    base = int(details[chosen_p].get("awal", target_rec.get(chosen_p, 0)))
+                    cur_final = int(target_rec.get(chosen_p, 0))
+                    new_final = cur_final + amt
+                    diff = new_final - base
+                    details[chosen_p] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[chosen_p] = new_final
+                    if not keterangan:
+                        keterangan = f"Penambahan DO (+{amt} u {chosen_p})"
+
+            elif action == "kurang":
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    cur_final = int(target_rec.get(tp, 0))
+                    new_final = max(0, cur_final - amt)
+                    diff = new_final - base
+                    actual_sub = cur_final - new_final
+                    details[tp] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[tp] = new_final
+                    if not keterangan:
+                        keterangan = f"Pengurangan DO (-{actual_sub} u {tp})"
+                else:
+                    rem = amt
+                    active_plants = sorted([p for p in PLANTS if int(target_rec.get(p, 0)) > 0], key=lambda p: int(target_rec[p]), reverse=True)
+                    subs = []
+                    for p in active_plants:
+                        if rem <= 0:
+                            break
+                        cur_val = int(target_rec.get(p, 0))
+                        take = min(cur_val, rem)
+                        new_val = cur_val - take
+                        rem -= take
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": new_val - base, "final": new_val}
+                        target_rec[p] = new_val
+                        if take > 0:
+                            subs.append(f"{p} -{take}u")
+                    if not keterangan:
+                        desc = ", ".join(subs) if subs else f"-{amt} u"
+                        keterangan = f"Pengurangan DO ({desc})"
+
+            elif action in ("set", "direct"):
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    diff = amt - base
+                    details[tp] = {"awal": base, "adj": diff, "final": amt}
+                    target_rec[tp] = amt
+                    if not keterangan:
+                        keterangan = f"Set DO {tp} = {amt} u"
+                else:
+                    active_plants = [p for p in PLANTS if int(target_rec.get(p, 0)) > 0]
+                    chosen_p = active_plants[0] if len(active_plants) == 1 else "FM6"
+                    base = int(details[chosen_p].get("awal", target_rec.get(chosen_p, 0)))
+                    diff = amt - base
+                    details[chosen_p] = {"awal": base, "adj": diff, "final": amt}
+                    target_rec[chosen_p] = amt
+                    if not keterangan:
+                        keterangan = f"Set DO = {amt} u ({chosen_p})"
+
+        # B. Mode Format Dict plant_adjustments (Fallback / Detailed)
+        elif plant_adjustments and isinstance(plant_adjustments, dict):
+            for p, adj_info in plant_adjustments.items():
+                p_upper = str(p).strip().upper()
+                if p_upper not in PLANTS:
+                    continue
+
+                base_awal = int(details[p_upper].get("awal", target_rec.get(p_upper, 0)))
+
+                if isinstance(adj_info, dict):
+                    if "final" in adj_info:
+                        new_final = max(0, int(adj_info["final"]))
+                        diff = new_final - base_awal
+                    elif "adj" in adj_info:
+                        diff = int(adj_info["adj"])
+                        new_final = max(0, base_awal + diff)
+                    else:
+                        diff = 0
+                        new_final = base_awal
+                else:
+                    diff = int(adj_info)
+                    new_final = max(0, base_awal + diff)
+
+                details[p_upper] = {
+                    "awal": base_awal,
+                    "adj": diff,
+                    "final": new_final
+                }
+                target_rec[p_upper] = new_final
+
+                if diff != 0:
+                    sign = f"+{diff}" if diff > 0 else str(diff)
+                    reasons_list.append(f"{p_upper} ({sign} u)")
 
         # Hitung Grand Total dan Total Awal
         target_rec["GRAND_TOTAL"] = sum(int(target_rec[p]) for p in PLANTS)
@@ -964,7 +1078,7 @@ class ExcelDatabase:
             if target_rec["ADJUSTMENT"] == 0:
                 target_rec["KETERANGAN"] = "Normal"
             else:
-                adj_desc = ", ".join(reasons_list) if reasons_list else f"Adj: {target_rec['ADJUSTMENT']}"
+                adj_desc = ", ".join(reasons_list) if reasons_list else f"Adj: {target_rec['ADJUSTMENT']:+d} u"
                 target_rec["KETERANGAN"] = f"Penyesuaian: {adj_desc}"
 
         target_rec["DETAILS_JSON"] = json.dumps(details)
