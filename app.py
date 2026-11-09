@@ -427,7 +427,9 @@ def api_perday():
 
 @app.route("/api/summary", methods=["GET"])
 def api_summary():
-    report_date = parse_date_str(request.args.get("report_date", "2026-10-31")) or "2026-10-31"
+    cal_info = get_calendar_info()
+    default_rep_date = cal_info.get("do_date_h_minus_1", "2026-11-08")
+    report_date = parse_date_str(request.args.get("report_date", default_rep_date)) or default_rep_date
     cutoff_date = request.args.get("cutoff_date", "2026-09-29") or None
     unfilled_h_1 = int(request.args.get("unfilled_h_1", 379))
 

@@ -434,16 +434,16 @@
                 <div class="row g-2 align-items-end">
                   <div class="col-md-4">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                      <label class="form-label mb-0 fw-bold">Tanggal Laporan (Up to Date H-1)</label>
+                      <label class="form-label mb-0 fw-bold">Tanggal Laporan (Up to Date H-1 Kalender)</label>
                       <span class="badge bg-yellow-lt py-0 px-1 text-dark" style="font-size: 11px;">Rule: DO H-1</span>
                     </div>
-                    <input type="date" id="sum-date" class="form-control form-control-sm mb-1" value="2026-10-31">
+                    <input type="date" id="sum-date" class="form-control form-control-sm mb-1" value="2026-11-08">
                     <div class="d-flex gap-1">
-                      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setSummaryDate('2026-10-31')">
-                        <i class="ti ti-history me-1"></i>Data Terakhir (31-Okt)
+                      <button type="button" class="btn btn-primary btn-sm py-0 px-2 fw-bold" id="btn-sum-h1-kalender" onclick="setSummaryDateToCalendarH1()">
+                        <i class="ti ti-calendar me-1"></i>H-1 Kalender (<span id="lbl-btn-cal-h1">08-Nov</span>)
                       </button>
-                      <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setSummaryDateToCalendarH1()">
-                        <i class="ti ti-calendar me-1"></i>H-1 Kalender (<span id="lbl-btn-cal-h1">06-Nov</span>)
+                      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="btn-sum-last-data" onclick="setSummaryDate('2026-10-31')">
+                        <i class="ti ti-history me-1"></i>Data Terakhir (31-Okt)
                       </button>
                     </div>
                   </div>
@@ -500,8 +500,14 @@
 
             <!-- 3.A DISTRIBUTION SUMMARY TABLE -->
             <div class="card mb-3">
-              <div class="card-header bg-primary-lt d-flex justify-content-between align-items-center">
-                <h3 class="card-title fw-bold mb-0">3.A DISTRIBUTION SUMMARY (Pencapaian Harian H-1 & Bulanan MTD)</h3>
+              <div class="card-header bg-primary-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                  <h3 class="card-title fw-bold mb-0">3.A DISTRIBUTION SUMMARY (Pencapaian Harian H-1 & Bulanan MTD)</h3>
+                  <div class="small text-secondary mt-1">
+                    <span class="badge bg-blue text-white me-1" id="badge-summary-repdate"><i class="ti ti-calendar me-1"></i>Up to Date: -</span>
+                    Laporan kinerja distribusi akumulasi MTD s.d. tanggal rilis H-1
+                  </div>
+                </div>
                 <span class="badge bg-primary text-white" id="badge-summary-target-info">Target Bulan: Berjalan</span>
               </div>
               <div class="table-responsive">
@@ -530,8 +536,9 @@
             <div class="row row-cards">
               <div class="col-lg-7">
                 <div class="card">
-                  <div class="card-header bg-teal-lt">
-                    <h3 class="card-title fw-bold">3.B ANALISA PERFORMANCE PER EKSPEDISI (Target vs Aktual s.d. H-1)</h3>
+                  <div class="card-header bg-teal-lt d-flex justify-content-between align-items-center">
+                    <h3 class="card-title fw-bold mb-0">3.B ANALISA PERFORMANCE PER EKSPEDISI (Target vs Aktual s.d. H-1)</h3>
+                    <span class="badge bg-teal text-white" id="badge-perf-repdate">Up to Date H-1</span>
                   </div>
                   <div class="table-responsive">
                     <table class="table table-bordered table-sm table-vcenter mb-0">
@@ -996,12 +1003,36 @@ function fmtNum(n) {
 
 let currentCalendarInfo = null;
 
+function updateSummaryButtonState() {
+  const sumDateEl = document.getElementById("sum-date");
+  const btnH1 = document.getElementById("btn-sum-h1-kalender");
+  const btnLast = document.getElementById("btn-sum-last-data");
+  if (!sumDateEl) return;
+  const val = sumDateEl.value;
+  const h1Val = currentCalendarInfo ? currentCalendarInfo.do_date_h_minus_1 : "";
+  if (btnH1) {
+    if (val === h1Val) {
+      btnH1.className = "btn btn-primary btn-sm py-0 px-2 fw-bold";
+    } else {
+      btnH1.className = "btn btn-outline-primary btn-sm py-0 px-2";
+    }
+  }
+  if (btnLast) {
+    if (val === "2026-10-31") {
+      btnLast.className = "btn btn-secondary btn-sm py-0 px-2 fw-bold";
+    } else {
+      btnLast.className = "btn btn-outline-secondary btn-sm py-0 px-2";
+    }
+  }
+}
+
 function setSummaryDate(d) {
   const sumDateEl = document.getElementById("sum-date");
   if (sumDateEl) {
     sumDateEl.value = d;
-    loadSummary();
   }
+  updateSummaryButtonState();
+  loadSummary();
 }
 
 function setSummaryDateToCalendarH1() {
@@ -1046,6 +1077,13 @@ async function initApp() {
     if (inputSlTgl && cal.sl_date_h_plus_1) {
       inputSlTgl.value = cal.sl_date_h_plus_1;
     }
+
+    // Tanggal Laporan Dashboard Summary otomatis default ke Up to Date H-1 kalender
+    const inputSumDate = document.getElementById("sum-date");
+    if (inputSumDate && cal.do_date_h_minus_1) {
+      inputSumDate.value = cal.do_date_h_minus_1;
+    }
+    updateSummaryButtonState();
   }
 
   // Populate DO dates
@@ -1085,9 +1123,22 @@ async function loadSummary() {
   const repDate = document.getElementById("sum-date").value;
   const cutoff = document.getElementById("sum-cutoff").value;
   const unfilled = document.getElementById("sum-unfilled").value;
+  updateSummaryButtonState();
+
   const res = await fetch(`/api/summary?report_date=${repDate}&cutoff_date=${cutoff}&unfilled_h_1=${unfilled}`);
   const json = await res.json();
   const d = json.data;
+
+  // Status Badge Tanggal Laporan
+  const badgeRep = document.getElementById("badge-summary-repdate");
+  if (badgeRep) {
+    const isH1 = (currentCalendarInfo && repDate === currentCalendarInfo.do_date_h_minus_1);
+    badgeRep.innerHTML = `<i class="ti ti-calendar me-1"></i>Up to Date: <b>${repDate}</b> ${isH1 ? '<span class="badge bg-primary text-white ms-1">H-1 Kalender</span>' : ''}`;
+  }
+  const badgePerf = document.getElementById("badge-perf-repdate");
+  if (badgePerf) {
+    badgePerf.textContent = `s.d. ${repDate}`;
+  }
 
   // Status Badge Perencanaan Target
   const badgeTgt = document.getElementById("badge-summary-target-info");
