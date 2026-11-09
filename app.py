@@ -446,6 +446,10 @@ def api_perday():
                 gt += v
             row_d["GRAND_TOTAL"] = gt
             row_d["PCT"] = round((gt / d_tot_all * 100.0), 2) if d_tot_all > 0 else 0.0
+            row_d["TOTAL_AWAL"] = int(r_in.get("TOTAL_AWAL", gt))
+            row_d["ADJUSTMENT"] = int(r_in.get("ADJUSTMENT", 0))
+            row_d["KETERANGAN"] = str(r_in.get("KETERANGAN", "Normal"))
+            row_d["DETAILS_JSON"] = str(r_in.get("DETAILS_JSON", "{}"))
             group_rows.append(row_d)
             flat_rows.append(row_d)
 
@@ -453,6 +457,9 @@ def api_perday():
         for p in PLANTS:
             d_totals[p] = sum(int(r[p]) for r in group_rows)
         d_totals["GRAND_TOTAL"] = d_tot_all
+        d_totals["TOTAL_AWAL"] = sum(int(r.get("TOTAL_AWAL", r["GRAND_TOTAL"])) for r in group_rows)
+        d_totals["ADJUSTMENT"] = sum(int(r.get("ADJUSTMENT", 0)) for r in group_rows)
+        d_totals["KETERANGAN"] = "-"
         d_totals["PCT"] = 100.0 if d_tot_all > 0 else 0.0
 
         daily_groups.append({
@@ -477,6 +484,31 @@ def api_perday():
         "daily_groups": daily_groups,
         "flat_rows": flat_rows,
     })
+
+
+@app.route("/api/adjust_daily_quota", methods=["POST"])
+def api_adjust_daily_quota():
+    """Endpoint untuk menyesuaikan (batal, kurang, tambah) kuota harian tersimpan per plant & ekspedisi."""
+    payload = request.get_json(force=True)
+    tanggal = parse_date_str(payload.get("tanggal"))
+    xpdc = payload.get("xpdc")
+    plant_adjustments = payload.get("plant_adjustments", {})
+    keterangan = payload.get("keterangan", "")
+
+    if not tanggal or not xpdc:
+        return jsonify({"status": "error", "message": "Tanggal dan Ekspedisi harus diisi!"}), 400
+
+    try:
+        db.create_backup()
+        res = db.adjust_daily_allocation(tanggal, xpdc, plant_adjustments, keterangan)
+        return jsonify({
+            "status": "ok",
+            "message": f"Adjustment kuota {xpdc} tanggal {tanggal} berhasil disimpan! (Total Awal: {res['total_awal']:,}, Adj: {res['adjustment']:+d}, Akhir: {res['total_final']:,} unit - {res['keterangan']})",
+            "data": res
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route("/api/summary", methods=["GET"])
 def api_summary():

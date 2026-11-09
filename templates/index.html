@@ -910,7 +910,13 @@
                             <th>TANGGAL</th><th>EKSPEDISI</th>
                             <th class="num-col">FM1</th><th class="num-col">FM2</th><th class="num-col">FM6</th>
                             <th class="num-col">FM6A</th><th class="num-col">FM7</th><th class="num-col">FM8</th>
-                            <th class="num-col">FM9</th><th class="num-col bg-yellow-lt">Grand Total</th><th class="num-col">%</th>
+                            <th class="num-col">FM9</th>
+                            <th class="num-col">TOTAL AWAL</th>
+                            <th class="num-col">ADJ (+/-)</th>
+                            <th class="num-col bg-yellow-lt">TOTAL AKHIR</th>
+                            <th class="num-col">%</th>
+                            <th>KETERANGAN / STATUS</th>
+                            <th class="text-center">AKSI</th>
                           </tr>
                         </thead>
                         <tbody id="tbody-pd-daily-left"></tbody>
@@ -953,7 +959,13 @@
                             <th>TANGGAL</th><th>EKSPEDISI</th>
                             <th class="num-col">FM1</th><th class="num-col">FM2</th><th class="num-col">FM6</th>
                             <th class="num-col">FM6A</th><th class="num-col">FM7</th><th class="num-col">FM8</th>
-                            <th class="num-col">FM9</th><th class="num-col bg-yellow-lt">Grand Total</th><th class="num-col">%</th>
+                            <th class="num-col">FM9</th>
+                            <th class="num-col">TOTAL AWAL</th>
+                            <th class="num-col">ADJ (+/-)</th>
+                            <th class="num-col bg-yellow-lt">TOTAL AKHIR</th>
+                            <th class="num-col">%</th>
+                            <th>KETERANGAN / STATUS</th>
+                            <th class="text-center">AKSI</th>
                           </tr>
                         </thead>
                         <tbody id="tbody-pd-daily-right"></tbody>
@@ -2105,26 +2117,69 @@ async function loadPerDayTab() {
   let dailyHtml = "";
   d.daily_groups.forEach(grp => {
     grp.rows.forEach((r, idx) => {
-      dailyHtml += `<tr style="cursor:pointer;" onclick="openDateInKuotaHarian('${r.TANGGAL}')" title="Klik untuk membuka/mengedit tanggal ${r.TANGGAL} di menu Kuota Harian">
+      let details = {};
+      try { details = JSON.parse(r.DETAILS_JSON || "{}"); } catch(e) {}
+
+      const plantTds = PLANTS.map(p => {
+        const pVal = r[p] || 0;
+        const pDet = details[p];
+        if (pDet && pDet.adj && pDet.adj !== 0) {
+          const badgeClass = pDet.adj > 0 ? "bg-success-lt text-success" : "bg-danger-lt text-danger";
+          const sign = pDet.adj > 0 ? "+" : "";
+          return `<td class="num-col">${fmtNum(pVal)} <span class="badge ${badgeClass} ms-1" style="font-size:0.65rem;" title="Awal: ${fmtNum(pDet.awal)}, Adj: ${sign}${fmtNum(pDet.adj)}">${sign}${fmtNum(pDet.adj)}</span></td>`;
+        }
+        return `<td class="num-col">${fmtNum(pVal)}</td>`;
+      }).join("");
+
+      const totAwal = r.TOTAL_AWAL !== undefined ? r.TOTAL_AWAL : r.GRAND_TOTAL;
+      const adjVal = r.ADJUSTMENT !== undefined ? r.ADJUSTMENT : 0;
+      let adjBadge = `<span class="badge bg-secondary-lt text-secondary">0</span>`;
+      if (adjVal > 0) adjBadge = `<span class="badge bg-success text-white">+${fmtNum(adjVal)}</span>`;
+      else if (adjVal < 0) adjBadge = `<span class="badge bg-danger text-white">${fmtNum(adjVal)}</span>`;
+
+      const ket = r.KETERANGAN || "Normal";
+      let ketBadge = ket !== "Normal" ? `<span class="badge bg-warning-lt text-dark" title="${escapeHtml(ket)}">${escapeHtml(ket)}</span>` : `<span class="text-muted small">Normal</span>`;
+
+      // JSON stringified row data untuk modal
+      const rowDataJson = JSON.stringify(r).replace(/"/g, '&quot;');
+
+      dailyHtml += `<tr>
         <td class="fw-bold text-nowrap">${r.TANGGAL}</td>
         <td class="fw-bold text-nowrap">${r.EKSPEDISI}</td>
-        ${PLANTS.map(p => `<td class="num-col">${fmtNum(r[p])}</td>`).join("")}
+        ${plantTds}
+        <td class="num-col">${fmtNum(totAwal)}</td>
+        <td class="num-col text-center">${adjBadge}</td>
         <td class="num-col fw-bold bg-yellow-lt">${fmtNum(r.GRAND_TOTAL)}</td>
         <td class="num-col fw-bold">${r.PCT.toFixed(2)}%</td>
+        <td class="small text-truncate" style="max-width: 130px;">${ketBadge}</td>
+        <td class="text-center text-nowrap">
+          <button class="btn btn-xs btn-outline-cyan py-0 px-2" onclick="openAdjustDailyQuotaModal('${r.TANGGAL}', '${r.EKSPEDISI}', ${rowDataJson})" title="Penyesuaian kuota harian"><i class="ti ti-edit"></i> Adjust</button>
+        </td>
       </tr>`;
     });
+
     const gt = grp.totals;
+    const totAwalAll = gt.TOTAL_AWAL !== undefined ? gt.TOTAL_AWAL : gt.GRAND_TOTAL;
+    const totAdjAll = gt.ADJUSTMENT !== undefined ? gt.ADJUSTMENT : 0;
+    let totAdjBadge = `<span class="badge bg-secondary-lt text-secondary">0</span>`;
+    if (totAdjAll > 0) totAdjBadge = `<span class="badge bg-success text-white">+${fmtNum(totAdjAll)}</span>`;
+    else if (totAdjAll < 0) totAdjBadge = `<span class="badge bg-danger text-white">${fmtNum(totAdjAll)}</span>`;
+
     dailyHtml += `<tr class="bg-azure-lt fw-bold" style="border-bottom: 2px solid #94a3b8;">
       <td>${gt.TANGGAL}</td>
       <td>TOTAL HARIAN</td>
       ${PLANTS.map(p => `<td class="num-col">${fmtNum(gt[p])}</td>`).join("")}
+      <td class="num-col">${fmtNum(totAwalAll)}</td>
+      <td class="num-col text-center">${totAdjBadge}</td>
       <td class="num-col bg-yellow-lt">${fmtNum(gt.GRAND_TOTAL)}</td>
       <td class="num-col">100.00%</td>
+      <td>-</td>
+      <td></td>
     </tr>`;
   });
 
   if (!dailyHtml) {
-    dailyHtml = `<tr><td colspan="11" class="text-center text-secondary py-3">Belum ada data Kuota Harian tersimpan untuk filter ini.</td></tr>`;
+    dailyHtml = `<tr><td colspan="15" class="text-center text-secondary py-3">Belum ada data Kuota Harian tersimpan untuk filter ini.</td></tr>`;
   }
 
   document.getElementById("tbody-pd-daily-left").innerHTML = dailyHtml;
@@ -2328,6 +2383,170 @@ async function saveDoAdjustment() {
   }
 }
 
+// =========================================================================
+// FITUR ADJUSTMENT KUOTA HARIAN (PER DAY / ALOKASI_HARIAN PER EKSPEDISI)
+// =========================================================================
+let currentAdjpContext = {
+  tanggal: "",
+  xpdc: "",
+  row: null,
+  plants: {}
+};
+
+function openAdjustDailyQuotaModal(tgl, xpdc, rowData) {
+  currentAdjpContext.tanggal = tgl;
+  currentAdjpContext.xpdc = xpdc;
+  currentAdjpContext.row = rowData;
+  currentAdjpContext.plants = {};
+
+  let details = {};
+  try { details = JSON.parse(rowData.DETAILS_JSON || "{}"); } catch(e) {}
+
+  document.getElementById("m-adjp-tgl-text").textContent = tgl;
+  document.getElementById("m-adjp-xpdc-badge").textContent = xpdc;
+  document.getElementById("m-adjp-total-awal-text").textContent = fmtNum(rowData.TOTAL_AWAL || rowData.GRAND_TOTAL);
+  document.getElementById("m-adjp-keterangan").value = (rowData.KETERANGAN && rowData.KETERANGAN !== "Normal" ? rowData.KETERANGAN : "");
+
+  let tbodyHtml = "";
+  PLANTS.forEach(p => {
+    const valCurr = rowData[p] || 0;
+    const pDet = details[p] || {};
+    const awal = pDet.awal !== undefined ? pDet.awal : valCurr;
+    const adj = pDet.adj !== undefined ? pDet.adj : 0;
+    const finalVal = valCurr;
+
+    currentAdjpContext.plants[p] = {
+      awal: awal,
+      adj: adj,
+      final: finalVal
+    };
+
+    tbodyHtml += `<tr>
+      <td class="fw-bold text-center bg-light">${p}</td>
+      <td class="text-end fw-semibold">${fmtNum(awal)}</td>
+      <td>
+        <input type="number" id="m-adjp-input-${p}" class="form-control form-control-sm text-end" value="${adj}" oninput="onAdjpPlantInput('${p}')">
+      </td>
+      <td class="text-center">
+        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-1 me-1" onclick="setAdjpPlantBatal('${p}')" title="Set Qty Akhir = 0 (Batal)">Batal</button>
+        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="setAdjpPlantReset('${p}')" title="Reset ke Qty Awal">Reset</button>
+      </td>
+      <td class="text-end fw-bold bg-yellow-lt" id="m-adjp-final-${p}">${fmtNum(finalVal)}</td>
+    </tr>`;
+  });
+
+  document.getElementById("m-adjp-tbody-plants").innerHTML = tbodyHtml;
+  recalcAdjpPreview();
+
+  const modalEl = document.getElementById("modal-adjust-daily-quota");
+  if (modalEl && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+}
+
+function onAdjpPlantInput(p) {
+  const inputEl = document.getElementById(`m-adjp-input-${p}`);
+  const adj = parseInt(inputEl.value || "0", 10);
+  const awal = currentAdjpContext.plants[p].awal;
+  const finalVal = Math.max(0, awal + adj);
+  currentAdjpContext.plants[p].adj = adj;
+  currentAdjpContext.plants[p].final = finalVal;
+  document.getElementById(`m-adjp-final-${p}`).textContent = fmtNum(finalVal);
+  recalcAdjpPreview();
+}
+
+function setAdjpPlantBatal(p) {
+  const awal = currentAdjpContext.plants[p].awal;
+  const adj = -awal;
+  document.getElementById(`m-adjp-input-${p}`).value = adj;
+  onAdjpPlantInput(p);
+}
+
+function setAdjpPlantReset(p) {
+  document.getElementById(`m-adjp-input-${p}`).value = 0;
+  onAdjpPlantInput(p);
+}
+
+function setAdjpReason(reason) {
+  document.getElementById("m-adjp-keterangan").value = reason;
+}
+
+function recalcAdjpPreview() {
+  let totAwal = 0;
+  let totAdj = 0;
+  let totFinal = 0;
+
+  PLANTS.forEach(p => {
+    const info = currentAdjpContext.plants[p];
+    if (info) {
+      totAwal += info.awal;
+      totAdj += info.adj;
+      totFinal += info.final;
+    }
+  });
+
+  document.getElementById("m-adjp-calc-formula").textContent = `${fmtNum(totAwal)} ${totAdj >= 0 ? '+' : '-'} ${fmtNum(Math.abs(totAdj))} = ${fmtNum(totFinal)}`;
+  document.getElementById("m-adjp-preview-final").textContent = `${fmtNum(totFinal)} Unit`;
+
+  let statusText = "Normal";
+  if (totAdj < 0) statusText = `Pengurangan (${fmtNum(totAdj)} unit)`;
+  else if (totAdj > 0) statusText = `Penambahan (+${fmtNum(totAdj)} unit)`;
+  document.getElementById("m-adjp-preview-status").textContent = `Status: ${statusText}`;
+}
+
+async function savePerDayAdjustment() {
+  const btn = document.getElementById("btn-save-adjp");
+  const origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...`;
+
+  try {
+    const tgl = currentAdjpContext.tanggal;
+    const xpdc = currentAdjpContext.xpdc;
+    const ket = document.getElementById("m-adjp-keterangan").value.trim();
+
+    const plantAdjPayload = {};
+    PLANTS.forEach(p => {
+      plantAdjPayload[p] = {
+        awal: currentAdjpContext.plants[p].awal,
+        adj: currentAdjpContext.plants[p].adj,
+        final: currentAdjpContext.plants[p].final
+      };
+    });
+
+    const res = await fetch("/api/adjust_daily_quota", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tanggal: tgl,
+        xpdc: xpdc,
+        plant_adjustments: plantAdjPayload,
+        keterangan: ket
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.status !== "ok") {
+      throw new Error(data.message || "Gagal menyimpan adjustment kuota harian!");
+    }
+
+    alert(data.message || "Adjustment kuota berhasil disimpan!");
+    const modalEl = document.getElementById("modal-adjust-daily-quota");
+    if (modalEl && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }
+
+    await loadPerDayTab();
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", initApp);
 </script>
 
@@ -2412,6 +2631,83 @@ window.addEventListener("DOMContentLoaded", initApp);
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
         <button type="button" class="btn btn-primary btn-sm" id="btn-save-adj-do" onclick="saveDoAdjustment()">
           <i class="ti ti-device-floppy me-1"></i> Simpan Adjustment DO
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADJUSTMENT KUOTA HARIAN (PER DAY / ALOKASI_HARIAN PER EKSPEDISI) -->
+<div class="modal modal-blur fade" id="modal-adjust-daily-quota" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header bg-cyan-lt">
+        <h5 class="modal-title fw-bold">
+          <i class="ti ti-adjustments-horizontal me-1"></i> Adjustment Kuota Harian Tersimpan (Per Day)
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-cyan py-2 mb-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <span class="badge bg-cyan text-white fs-6 me-2" id="m-adjp-xpdc-badge">TUNAS MUDA</span>
+              Tanggal Kuota: <b id="m-adjp-tgl-text">-</b>
+            </div>
+            <div>
+              Total Kuota Awal: <b class="fs-6 text-dark" id="m-adjp-total-awal-text">0</b> Unit
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive mb-3 border rounded">
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem;">
+            <thead class="bg-light text-center">
+              <tr>
+                <th style="width: 80px;">PLANT</th>
+                <th style="width: 110px;">QTY AWAL</th>
+                <th style="width: 140px;">PENYESUAIAN (+/-)</th>
+                <th style="width: 120px;">AKSI CEPAT</th>
+                <th style="width: 110px;" class="bg-yellow-lt">QTY AKHIR</th>
+              </tr>
+            </thead>
+            <tbody id="m-adjp-tbody-plants">
+              <!-- Baris per plant akan dirender via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-md-12">
+            <label class="form-label small fw-bold mb-1">Pilihan Cepat Alasan / Keterangan Penyesuaian:</label>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjpReason('Pembatalan Unit Plant')">Pembatalan Unit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjpReason('Pengurangan Armada/Rit')">Pengurangan Rit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjpReason('Penambahan DO Urgent')">Penambahan Urgent</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjpReason('Kendala Unit Belum Siap')">Kendala Unit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjpReason('Revisi Alokasi Harian')">Revisi Alokasi</button>
+            </div>
+            <input type="text" id="m-adjp-keterangan" class="form-control form-control-sm" placeholder="Contoh: Pembatalan 20 unit di FM6">
+          </div>
+        </div>
+
+        <!-- Live Preview Kalkulasi Total -->
+        <div class="card bg-light border-cyan p-2">
+          <div class="d-flex justify-content-between align-items-center small text-secondary">
+            <span>Kalkulasi Total Ekspedisi:</span>
+            <span id="m-adjp-calc-formula" class="fw-bold text-dark">0 + 0 = 0</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-1">
+            <span class="fw-bold">Total Kuota Akhir (Netto):</span>
+            <span class="fs-4 fw-bold text-cyan" id="m-adjp-preview-final">0 Unit</span>
+          </div>
+          <div class="small text-muted mt-1" id="m-adjp-preview-status">Status: Normal</div>
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-cyan btn-sm text-white" id="btn-save-adjp" onclick="savePerDayAdjustment()">
+          <i class="ti ti-device-floppy me-1"></i> Simpan Adjustment Kuota
         </button>
       </div>
     </div>

@@ -693,6 +693,10 @@ class ExcelDatabase:
                 rec["PCT"] = to_float(cell_pct, 0.0)
                 rec["BULAN"] = int(dt.month)
                 rec["TAHUN"] = int(dt.year)
+                rec["TOTAL_AWAL"] = rec["GRAND_TOTAL"]
+                rec["ADJUSTMENT"] = 0
+                rec["KETERANGAN"] = "Normal"
+                rec["DETAILS_JSON"] = "{}"
                 records_map[(tgl_str, xpdc)] = rec
 
         # 2. Timpa/lengkapi dengan data terbaru dari sheet 'ALOKASI_HARIAN'
@@ -713,6 +717,15 @@ class ExcelDatabase:
                 rec["PCT"] = to_float(row[10], 0.0)
                 rec["BULAN"] = to_int(row[11], dt.month) if len(row) > 11 else dt.month
                 rec["TAHUN"] = to_int(row[12], dt.year) if len(row) > 12 else dt.year
+                # Baca Kolom Penyesuaian (Baru)
+                tot_awal = to_int(row[13], rec["GRAND_TOTAL"]) if len(row) > 13 and row[13] is not None else rec["GRAND_TOTAL"]
+                adj_val = to_int(row[14], 0) if len(row) > 14 and row[14] is not None else 0
+                ket_val = str(row[15] or "Normal").strip() if len(row) > 15 and row[15] is not None else "Normal"
+                det_json = str(row[16] or "{}").strip() if len(row) > 16 and row[16] is not None else "{}"
+                rec["TOTAL_AWAL"] = tot_awal
+                rec["ADJUSTMENT"] = adj_val
+                rec["KETERANGAN"] = ket_val
+                rec["DETAILS_JSON"] = det_json
                 records_map[(tgl_str, xpdc)] = rec
 
         wb_val.close()
@@ -758,6 +771,10 @@ class ExcelDatabase:
             r_data["PCT"] = round(gt / total_all, 6) if total_all > 0 else 0.0
             r_data["BULAN"] = int(dt.month)
             r_data["TAHUN"] = int(dt.year)
+            r_data["TOTAL_AWAL"] = to_int(alloc_matrix_dict.get(x, {}).get("TOTAL_AWAL", gt))
+            r_data["ADJUSTMENT"] = to_int(alloc_matrix_dict.get(x, {}).get("ADJUSTMENT", 0))
+            r_data["KETERANGAN"] = str(alloc_matrix_dict.get(x, {}).get("KETERANGAN", "Normal"))
+            r_data["DETAILS_JSON"] = str(alloc_matrix_dict.get(x, {}).get("DETAILS_JSON", "{}"))
             new_rows.append(r_data)
 
         all_rows = existing + new_rows
@@ -768,14 +785,23 @@ class ExcelDatabase:
             )
         )
 
-        self.add_or_replace_sheet("ALOKASI_HARIAN", all_rows)
-
-        # Update penuh Sheet 'PER DAY' (Kedua blok H-1 [Kolom A-K] dan H [Kolom M-W])
         wb = openpyxl.load_workbook(self.excel_path)
+
+        # 1. Update / Replace sheet ALOKASI_HARIAN secara atomik
+        if "ALOKASI_HARIAN" in wb.sheetnames:
+            del wb["ALOKASI_HARIAN"]
+        ws_ah = wb.create_sheet(title="ALOKASI_HARIAN")
+        if all_rows:
+            ah_headers = list(all_rows[0].keys())
+            ws_ah.append(ah_headers)
+            for r in all_rows:
+                ws_ah.append([r.get(h, "") for h in ah_headers])
+
+        # 2. Update penuh Sheet 'PER DAY' (Kedua blok H-1 [Kolom A-K] dan H [Kolom M-W])
         if "PER DAY" in wb.sheetnames:
             ws = wb["PER DAY"]
 
-            # 1. Hitung Rekap MTD untuk bulan dari tanggal yang disimpan
+            # Hitung Rekap MTD untuk bulan dari tanggal yang disimpan
             target_m = int(dt.month)
             target_y = int(dt.year)
             month_rows = [
@@ -832,7 +858,7 @@ class ExcelDatabase:
                 ws.cell(12, 10 + offset, "Grand Total")
                 ws.cell(12, 11 + offset, "%")
 
-            # 2. Tulis Rincian Harian per Tanggal mulai Baris 14 pada Kedua Blok (H-1 dan H)
+            # Tulis Rincian Harian per Tanggal mulai Baris 14 pada Kedua Blok (H-1 dan H)
             if ws.max_row >= 14:
                 ws.delete_rows(14, ws.max_row - 13)
 
@@ -854,9 +880,124 @@ class ExcelDatabase:
                     curr_r += 1
                 curr_r += 1  # 1 baris pemisah antar tanggal sesuai format asli PER DAY
 
-            wb.save(self.excel_path)
+        wb.save(self.excel_path)
         wb.close()
         return True
+
+    def adjust_daily_allocation(self, tanggal_str, xpdc, plant_adjustments, keterangan=None):
+        """
+        Melakukan penyesuaian (pembatalan, pengurangan, penambahan) kuota pada ekspedisi & tanggal tertentu
+        pada sheet 'ALOKASI_HARIAN' dan 'PER DAY'.
+        plant_adjustments: dict per plant, contoh: {"FM6": -20} atau {"FM6": {"adj": -20}} atau {"FM6": {"final": 90}}
+        """
+        import json
+        clean_tgl = parse_date_str(tanggal_str)
+        if not clean_tgl:
+            raise ValueError(f"Tanggal tidak valid: {tanggal_str}")
+        target_xpdc = str(xpdc or "").strip().upper()
+        if target_xpdc not in EXPEDITIONS:
+            raise ValueError(f"Ekspedisi tidak valid: {xpdc}")
+
+        all_recs = self.get_saved_daily_allocations()
+        target_rec = next((r for r in all_recs if r["TANGGAL"] == clean_tgl and r["XPDC"] == target_xpdc), None)
+
+        if not target_rec:
+            raise ValueError(f"Data kuota harian tersimpan untuk {target_xpdc} tanggal {clean_tgl} tidak ditemukan!")
+
+        # Muat detail per-plant yang sudah ada sebelumnya
+        try:
+            details = json.loads(target_rec.get("DETAILS_JSON", "{}"))
+        except Exception:
+            details = {}
+
+        for p in PLANTS:
+            if p not in details:
+                details[p] = {
+                    "awal": int(target_rec.get(p, 0)),
+                    "adj": 0,
+                    "final": int(target_rec.get(p, 0))
+                }
+
+        # Terapkan adjustment per plant
+        reasons_list = []
+        for p, adj_info in plant_adjustments.items():
+            p_upper = str(p).strip().upper()
+            if p_upper not in PLANTS:
+                continue
+
+            base_awal = int(details[p_upper].get("awal", target_rec.get(p_upper, 0)))
+
+            if isinstance(adj_info, dict):
+                if "final" in adj_info:
+                    new_final = max(0, int(adj_info["final"]))
+                    diff = new_final - base_awal
+                elif "adj" in adj_info:
+                    diff = int(adj_info["adj"])
+                    new_final = max(0, base_awal + diff)
+                else:
+                    diff = 0
+                    new_final = base_awal
+            else:
+                diff = int(adj_info)
+                new_final = max(0, base_awal + diff)
+
+            details[p_upper] = {
+                "awal": base_awal,
+                "adj": diff,
+                "final": new_final
+            }
+            target_rec[p_upper] = new_final
+
+            if diff != 0:
+                sign = f"+{diff}" if diff > 0 else str(diff)
+                reasons_list.append(f"{p_upper} ({sign} u)")
+
+        # Hitung Grand Total dan Total Awal
+        target_rec["GRAND_TOTAL"] = sum(int(target_rec[p]) for p in PLANTS)
+        target_rec["TOTAL_AWAL"] = sum(int(details[p]["awal"]) for p in PLANTS)
+        target_rec["ADJUSTMENT"] = target_rec["GRAND_TOTAL"] - target_rec["TOTAL_AWAL"]
+
+        # Keterangan
+        if keterangan and str(keterangan).strip():
+            target_rec["KETERANGAN"] = str(keterangan).strip()
+        else:
+            if target_rec["ADJUSTMENT"] == 0:
+                target_rec["KETERANGAN"] = "Normal"
+            else:
+                adj_desc = ", ".join(reasons_list) if reasons_list else f"Adj: {target_rec['ADJUSTMENT']}"
+                target_rec["KETERANGAN"] = f"Penyesuaian: {adj_desc}"
+
+        target_rec["DETAILS_JSON"] = json.dumps(details)
+
+        # Recalculate PCT untuk seluruh ekspedisi pada tanggal tersebut
+        day_total = sum(int(r["GRAND_TOTAL"]) for r in all_recs if r["TANGGAL"] == clean_tgl)
+        for r in all_recs:
+            if r["TANGGAL"] == clean_tgl:
+                r["PCT"] = round(r["GRAND_TOTAL"] / day_total, 6) if day_total > 0 else 0.0
+
+        # Simpan kembali ke ALOKASI_HARIAN dan PER DAY
+        alloc_dict = {
+            r["XPDC"]: {
+                **{p: r[p] for p in PLANTS},
+                "TOTAL_AWAL": r.get("TOTAL_AWAL", r["GRAND_TOTAL"]),
+                "ADJUSTMENT": r.get("ADJUSTMENT", 0),
+                "KETERANGAN": r.get("KETERANGAN", "Normal"),
+                "DETAILS_JSON": r.get("DETAILS_JSON", "{}"),
+            }
+            for r in all_recs if r["TANGGAL"] == clean_tgl
+        }
+        self.save_daily_allocation(clean_tgl, alloc_dict)
+
+        return {
+            "status": "ok",
+            "tanggal": clean_tgl,
+            "xpdc": target_xpdc,
+            "total_awal": target_rec["TOTAL_AWAL"],
+            "adjustment": target_rec["ADJUSTMENT"],
+            "total_final": target_rec["GRAND_TOTAL"],
+            "keterangan": target_rec["KETERANGAN"],
+            "details": details,
+        }
 
     def get_all_target_bulanan(self):
         """Membaca seluruh target bulanan perencanaan dari Sheet TARGET_BULANAN atau target_bulanan.json."""
