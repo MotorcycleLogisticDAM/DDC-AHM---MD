@@ -277,12 +277,16 @@ def api_do_list():
 
     return jsonify({
         "status": "ok",
-        "columns": ["TANGGAL", "PLANT", "QTY", "BULAN"],
+        "columns": ["TANGGAL", "PLANT", "QTY_AWAL", "ADJUSTMENT", "QTY_FINAL", "KETERANGAN", "BULAN"],
         "rows": [
             {
                 "TANGGAL": r["TANGGAL_STR"],
                 "PLANT": r["PLANT"],
                 "QTY": int(r["QTY"]),
+                "QTY_AWAL": int(r.get("QTY_AWAL", r["QTY"])),
+                "ADJUSTMENT": int(r.get("ADJUSTMENT", 0)),
+                "QTY_FINAL": int(r.get("QTY_FINAL", r["QTY"])),
+                "KETERANGAN": str(r.get("KETERANGAN", "Normal")),
                 "BULAN": int(r["BULAN"]),
             }
             for r in do_records
@@ -291,6 +295,44 @@ def api_do_list():
         "total_rows": len(do_records),
         "total_dates": len(by_date),
     })
+
+
+@app.route("/api/adjust_do", methods=["POST"])
+def api_adjust_do():
+    """
+    Endpoint untuk adjustment Qty DO Harian per Plant:
+    Mengakomodasi pembatalan, pengurangan, atau penambahan unit DO yang sudah disubmit.
+    """
+    payload = request.get_json(force=True)
+    tanggal = parse_date_str(payload.get("tanggal"))
+    if not tanggal:
+        return jsonify({"status": "error", "message": "Tanggal DO tidak valid!"}), 400
+
+    plant = str(payload.get("plant", "")).strip().upper()
+    if plant not in PLANTS:
+        return jsonify({"status": "error", "message": f"Plant '{plant}' tidak valid!"}), 400
+
+    adjustment = payload.get("adjustment", None)
+    qty_final = payload.get("qty_final", None)
+    qty_awal = payload.get("qty_awal", None)
+    keterangan = str(payload.get("keterangan", "")).strip()
+
+    try:
+        res = db.adjust_do(
+            tanggal_str=tanggal,
+            plant=plant,
+            adjustment_val=adjustment,
+            keterangan=keterangan,
+            qty_final=qty_final,
+            qty_awal=qty_awal,
+        )
+        return jsonify({
+            "status": "ok",
+            "message": f"Adjustment DO {plant} tanggal {tanggal} berhasil disimpan! (Awal: {res['qty_awal']:,}, Adj: {res['adjustment']:+d}, Akhir: {res['qty_final']:,} unit - {res['keterangan']})",
+            "data": res,
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/add_do", methods=["POST"])

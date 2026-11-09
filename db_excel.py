@@ -445,10 +445,31 @@ class ExcelDatabase:
             if bulan < 1 or bulan > 12:
                 bulan = int(dt.month)
 
+            # Kolom E: QTY_AWAL, Kolom F: ADJUSTMENT, Kolom G: KETERANGAN
+            raw_qty_awal = r_val[4] if (len(r_val) > 4 and r_val[4] is not None) else (r_raw[4] if len(r_raw) > 4 else None)
+            qty_awal = to_int(raw_qty_awal, qty) if raw_qty_awal is not None else qty
+
+            raw_adj = r_val[5] if (len(r_val) > 5 and r_val[5] is not None) else (r_raw[5] if len(r_raw) > 5 else None)
+            adjustment = to_int(raw_adj, 0) if raw_adj is not None else (qty - qty_awal)
+
+            raw_ket = r_val[6] if (len(r_val) > 6 and r_val[6] is not None) else (r_raw[6] if len(r_raw) > 6 else "")
+            keterangan = str(raw_ket or "").strip()
+            if not keterangan:
+                if adjustment > 0:
+                    keterangan = f"Penambahan DO (+{adjustment})"
+                elif adjustment < 0:
+                    keterangan = "Pembatalan DO" if qty == 0 else f"Pengurangan DO ({adjustment})"
+                else:
+                    keterangan = "Normal"
+
             records.append({
                 "TANGGAL_STR": tgl_str,
                 "PLANT": plant,
                 "QTY": qty,
+                "QTY_AWAL": qty_awal,
+                "ADJUSTMENT": adjustment,
+                "QTY_FINAL": qty,
+                "KETERANGAN": keterangan,
                 "BULAN": int(bulan),
                 "TAHUN": int(dt.year),
             })
@@ -479,15 +500,34 @@ class ExcelDatabase:
         ws.cell(3, 2, "PLANT")
         ws.cell(3, 3, "QTY")
         ws.cell(3, 4, "BULAN")
+        ws.cell(3, 5, "QTY_AWAL")
+        ws.cell(3, 6, "ADJUSTMENT")
+        ws.cell(3, 7, "KETERANGAN")
 
         # Gabungkan data lama dengan data tanggal yang baru diinput/diupdate
         do_map = {}
         for rec in existing_records:
-            do_map[(rec["TANGGAL_STR"], rec["PLANT"])] = (rec["QTY"], rec["BULAN"])
+            do_map[(rec["TANGGAL_STR"], rec["PLANT"])] = (
+                rec["QTY"],
+                rec["BULAN"],
+                rec.get("QTY_AWAL", rec["QTY"]),
+                rec.get("ADJUSTMENT", 0),
+                rec.get("KETERANGAN", "Normal"),
+            )
 
         for p in PLANTS:
             qty_val = to_int(do_dict_per_plant.get(p, 0), 0)
-            do_map[(clean_tgl, p)] = (qty_val, int(bulan))
+            prev = do_map.get((clean_tgl, p))
+            if prev and prev[0] != qty_val:
+                # Ada perubahan manual dari form submit
+                q_awal = prev[2]
+                adj = qty_val - q_awal
+                ket = f"Update Qty ({adj:+d})" if adj != 0 else prev[4]
+                do_map[(clean_tgl, p)] = (qty_val, int(bulan), q_awal, adj, ket)
+            elif prev:
+                do_map[(clean_tgl, p)] = (qty_val, int(bulan), prev[2], prev[3], prev[4])
+            else:
+                do_map[(clean_tgl, p)] = (qty_val, int(bulan), qty_val, 0, "Normal")
 
         # Urutkan berdasarkan Tanggal (Kronologis sesuai Sheet DO) dan urutan Plant (FM1..FM9)
         all_dates = sorted(list({k[0] for k in do_map.keys()}))
@@ -501,19 +541,116 @@ class ExcelDatabase:
             d_dt = datetime.strptime(d_str, "%Y-%m-%d")
             for p in PLANTS:
                 if (d_str, p) in do_map:
-                    q_val, b_val = do_map[(d_str, p)]
+                    q_val, b_val, q_awal, adj, ket = do_map[(d_str, p)]
                 else:
-                    q_val, b_val = 0, int(d_dt.month)
+                    q_val, b_val, q_awal, adj, ket = 0, int(d_dt.month), 0, 0, "Normal"
                 cell_tgl = ws.cell(curr_row, 1, d_dt)
                 cell_tgl.number_format = "yyyy-mm-dd"
                 ws.cell(curr_row, 2, p)
                 ws.cell(curr_row, 3, int(q_val))
                 ws.cell(curr_row, 4, int(b_val))
+                ws.cell(curr_row, 5, int(q_awal))
+                ws.cell(curr_row, 6, int(adj))
+                ws.cell(curr_row, 7, str(ket))
                 curr_row += 1
 
         wb.save(self.excel_path)
         wb.close()
         return True
+
+    def adjust_do(self, tanggal_str, plant, adjustment_val=None, keterangan="", qty_final=None, qty_awal=None):
+        """
+        Menyimpan adjustment khusus untuk satu baris (TANGGAL, PLANT) pada Sheet 'DO'.
+        Memperbarui kolom QTY (netto aktif), QTY_AWAL, ADJUSTMENT (+/-), dan KETERANGAN.
+        """
+        clean_tgl = parse_date_str(tanggal_str)
+        if not clean_tgl:
+            raise ValueError(f"Tanggal tidak valid: {tanggal_str}")
+        plant = str(plant or "").strip().upper()
+        if plant not in PLANTS:
+            raise ValueError(f"Plant tidak valid: {plant}")
+
+        self.create_backup()
+        wb = openpyxl.load_workbook(self.excel_path)
+        ws = wb["DO"]
+
+        # Pastikan Header Baris 3
+        ws.cell(3, 1, "TANGGAL")
+        ws.cell(3, 2, "PLANT")
+        ws.cell(3, 3, "QTY")
+        ws.cell(3, 4, "BULAN")
+        ws.cell(3, 5, "QTY_AWAL")
+        ws.cell(3, 6, "ADJUSTMENT")
+        ws.cell(3, 7, "KETERANGAN")
+
+        target_row = None
+        current_qty = 0
+        current_qty_awal = None
+
+        for row_idx in range(4, ws.max_row + 1):
+            cell_tgl = ws.cell(row_idx, 1).value
+            cell_plant = str(ws.cell(row_idx, 2).value or "").strip().upper()
+            tgl_row = parse_date_str(cell_tgl)
+            if tgl_row == clean_tgl and cell_plant == plant:
+                target_row = row_idx
+                current_qty = to_int(ws.cell(row_idx, 3).value, 0)
+                current_qty_awal = ws.cell(row_idx, 5).value
+                break
+
+        if not target_row:
+            wb.close()
+            raise ValueError(f"Baris DO untuk {clean_tgl} plant {plant} tidak ditemukan di Sheet DO!")
+
+        # Tentukan Qty Awal
+        if current_qty_awal is not None:
+            base_awal = to_int(current_qty_awal, current_qty)
+        elif qty_awal is not None:
+            base_awal = to_int(qty_awal, current_qty)
+        else:
+            base_awal = current_qty
+
+        # Hitung Qty Final dan Adjustment
+        if qty_final is not None and adjustment_val is None:
+            final_q = max(0, to_int(qty_final, 0))
+            adj = final_q - base_awal
+        elif adjustment_val is not None:
+            adj = to_int(adjustment_val, 0)
+            if qty_final is not None:
+                final_q = max(0, to_int(qty_final, 0))
+            else:
+                final_q = max(0, base_awal + adj)
+        else:
+            final_q = current_qty
+            adj = 0
+
+        # Keterangan default jika kosong
+        ket = str(keterangan or "").strip()
+        if not ket:
+            if final_q == 0 and base_awal > 0:
+                ket = "Pembatalan DO"
+            elif adj < 0:
+                ket = f"Pengurangan DO ({adj})"
+            elif adj > 0:
+                ket = f"Penambahan DO (+{adj})"
+            else:
+                ket = "Normal"
+
+        # Simpan ke baris target di Excel
+        ws.cell(target_row, 3, int(final_q))
+        ws.cell(target_row, 5, int(base_awal))
+        ws.cell(target_row, 6, int(adj))
+        ws.cell(target_row, 7, str(ket))
+
+        wb.save(self.excel_path)
+        wb.close()
+        return {
+            "tanggal": clean_tgl,
+            "plant": plant,
+            "qty_awal": int(base_awal),
+            "adjustment": int(adj),
+            "qty_final": int(final_q),
+            "keterangan": ket,
+        }
 
     # ------------------------------------------------------------------
     # 3. FUNGSI BACA & SIMPAN ALOKASI KUOTA HARIAN ('ALOKASI_HARIAN' & 'PER DAY')

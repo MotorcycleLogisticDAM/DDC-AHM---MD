@@ -1909,16 +1909,60 @@ async function loadDOTable() {
   th.innerHTML = `<tr>
     <th>TANGGAL</th>
     <th>PLANT</th>
-    <th class="num-col">QTY</th>
+    <th class="num-col">QTY AWAL</th>
+    <th class="text-center">ADJUSTMENT (+/-)</th>
+    <th class="num-col">QTY AKHIR (NETTO)</th>
+    <th>KETERANGAN / STATUS</th>
     <th class="text-center">BULAN</th>
+    <th class="text-center" style="width: 100px;">AKSI</th>
   </tr>`;
 
-  tb.innerHTML = d.rows.map(r => `<tr style="cursor:pointer;" onclick="selectDoDateFromTable('${r.TANGGAL}')" title="Klik untuk memuat tanggal ${r.TANGGAL} ke form di atas">
-    <td class="fw-bold">${r.TANGGAL}</td>
-    <td><span class="badge bg-blue-lt">${r.PLANT}</span></td>
-    <td class="num-col fw-bold">${fmtNum(r.QTY)}</td>
-    <td class="text-center"><span class="badge bg-azure-lt fw-bold">${r.BULAN}</span></td>
-  </tr>`).join("");
+  tb.innerHTML = d.rows.map(r => {
+    const qAwal = r.QTY_AWAL !== undefined ? r.QTY_AWAL : r.QTY;
+    const adj = r.ADJUSTMENT !== undefined ? r.ADJUSTMENT : 0;
+    const qFinal = r.QTY_FINAL !== undefined ? r.QTY_FINAL : r.QTY;
+    const ket = r.KETERANGAN || "Normal";
+
+    let adjBadge = `<span class="badge bg-secondary-lt text-secondary">0</span>`;
+    if (adj > 0) {
+      adjBadge = `<span class="badge bg-green text-white fw-bold">+${fmtNum(adj)}</span>`;
+    } else if (adj < 0) {
+      adjBadge = `<span class="badge bg-danger text-white fw-bold">${fmtNum(adj)}</span>`;
+    }
+
+    let finalDisplay = `<span class="fw-bold">${fmtNum(qFinal)}</span>`;
+    if (qFinal === 0 && qAwal > 0) {
+      finalDisplay = `<span class="text-danger fw-bold text-decoration-line-through">0 (Batal)</span>`;
+    } else if (adj !== 0) {
+      finalDisplay = `<span class="fw-bold text-primary">${fmtNum(qFinal)}</span>`;
+    }
+
+    let ketBadge = `<span class="text-secondary small">${ket}</span>`;
+    if (qFinal === 0 && qAwal > 0) {
+      ketBadge = `<span class="badge bg-red-lt"><i class="ti ti-x me-1"></i>${ket}</span>`;
+    } else if (adj < 0) {
+      ketBadge = `<span class="badge bg-orange-lt"><i class="ti ti-arrow-down me-1"></i>${ket}</span>`;
+    } else if (adj > 0) {
+      ketBadge = `<span class="badge bg-green-lt"><i class="ti ti-arrow-up me-1"></i>${ket}</span>`;
+    }
+
+    const safeKet = String(ket).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+    return `<tr style="cursor:pointer;" onclick="selectDoDateFromTable('${r.TANGGAL}')" title="Klik baris untuk memuat tanggal ${r.TANGGAL} ke form di atas">
+      <td class="fw-bold">${r.TANGGAL}</td>
+      <td><span class="badge bg-blue-lt">${r.PLANT}</span></td>
+      <td class="num-col text-secondary">${fmtNum(qAwal)}</td>
+      <td class="text-center">${adjBadge}</td>
+      <td class="num-col">${finalDisplay}</td>
+      <td>${ketBadge}</td>
+      <td class="text-center"><span class="badge bg-azure-lt fw-bold">${r.BULAN}</span></td>
+      <td class="text-center" onclick="event.stopPropagation();">
+        <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openAdjustDoModal('${r.TANGGAL}', '${r.PLANT}', ${qAwal}, ${adj}, ${qFinal}, '${safeKet}')" title="Adjust / Penyesuaian Qty DO">
+          <i class="ti ti-adjustments me-1"></i>Adjust
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
   updateAddDoTotalBadge();
 }
 
@@ -2087,10 +2131,292 @@ async function loadPerDayTab() {
   document.getElementById("tbody-pd-daily-right").innerHTML = dailyHtml;
 }
 
+// =========================================================================
+// FITUR ADJUSTMENT DO (PEMBATALAN / PENGURANGAN / PENAMBAHAN DO HARIAN)
+// =========================================================================
+let currentAdjContext = {
+  tanggal: "",
+  plant: "",
+  qtyAwal: 0,
+  adj: 0,
+  qtyFinal: 0,
+  keterangan: ""
+};
+
+function openAdjustDoModal(tgl, plant, qtyAwal, adj, qtyFinal, ket) {
+  currentAdjContext = {
+    tanggal: tgl,
+    plant: plant,
+    qtyAwal: parseInt(qtyAwal, 10) || 0,
+    adj: parseInt(adj, 10) || 0,
+    qtyFinal: parseInt(qtyFinal, 10) || 0,
+    keterangan: ket || "Normal"
+  };
+
+  document.getElementById("m-adj-plant-badge").textContent = plant;
+  document.getElementById("m-adj-tgl-text").textContent = tgl;
+  document.getElementById("m-adj-qty-awal-text").textContent = fmtNum(currentAdjContext.qtyAwal);
+  document.getElementById("m-adj-keterangan").value = (ket === "Normal" ? "" : ket);
+
+  if (currentAdjContext.qtyFinal === 0 && currentAdjContext.qtyAwal > 0) {
+    document.getElementById("m-adj-type-batal").checked = true;
+  } else if (currentAdjContext.adj < 0) {
+    document.getElementById("m-adj-type-kurang").checked = true;
+    document.getElementById("m-adj-val-input").value = Math.abs(currentAdjContext.adj);
+  } else if (currentAdjContext.adj > 0) {
+    document.getElementById("m-adj-type-tambah").checked = true;
+    document.getElementById("m-adj-val-input").value = currentAdjContext.adj;
+  } else {
+    document.getElementById("m-adj-type-kurang").checked = true;
+    document.getElementById("m-adj-val-input").value = "0";
+  }
+
+  onAdjTypeChange();
+
+  const modalEl = document.getElementById("modal-adjust-do");
+  if (modalEl && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+}
+
+function onAdjTypeChange() {
+  const type = document.querySelector('input[name="m-adj-type"]:checked').value;
+  const valContainer = document.getElementById("m-adj-val-container");
+  const directContainer = document.getElementById("m-adj-direct-container");
+  const valLabel = document.getElementById("m-adj-val-label");
+  const valInput = document.getElementById("m-adj-val-input");
+  const directInput = document.getElementById("m-adj-direct-input");
+
+  if (type === "batal") {
+    valContainer.style.display = "none";
+    directContainer.style.display = "none";
+    if (!document.getElementById("m-adj-keterangan").value) {
+      document.getElementById("m-adj-keterangan").value = "Pembatalan DO";
+    }
+  } else if (type === "reset") {
+    valContainer.style.display = "none";
+    directContainer.style.display = "none";
+    document.getElementById("m-adj-keterangan").value = "Normal";
+  } else if (type === "direct") {
+    valContainer.style.display = "none";
+    directContainer.style.display = "block";
+    directInput.value = currentAdjContext.qtyFinal;
+  } else if (type === "tambah") {
+    valContainer.style.display = "block";
+    directContainer.style.display = "none";
+    valLabel.textContent = "Nominal Penambahan Unit (+)";
+  } else {
+    valContainer.style.display = "block";
+    directContainer.style.display = "none";
+    valLabel.textContent = "Nominal Pengurangan Unit (-)";
+  }
+  recalcAdjModalPreview();
+}
+
+function recalcAdjModalPreview() {
+  const type = document.querySelector('input[name="m-adj-type"]:checked').value;
+  const awal = currentAdjContext.qtyAwal;
+  let adj = 0;
+  let finalQ = awal;
+  let statusText = "Normal";
+
+  if (type === "batal") {
+    adj = -awal;
+    finalQ = 0;
+    statusText = "Pembatalan DO (Unit = 0)";
+  } else if (type === "reset") {
+    adj = 0;
+    finalQ = awal;
+    statusText = "Reset Kembali ke Normal";
+  } else if (type === "direct") {
+    finalQ = Math.max(0, parseInt(document.getElementById("m-adj-direct-input").value || "0", 10));
+    adj = finalQ - awal;
+    statusText = adj === 0 ? "Normal" : (adj > 0 ? `Penambahan (+${fmtNum(adj)})` : `Pengurangan (${fmtNum(adj)})`);
+  } else if (type === "tambah") {
+    const val = Math.max(0, parseInt(document.getElementById("m-adj-val-input").value || "0", 10));
+    adj = val;
+    finalQ = awal + adj;
+    statusText = val === 0 ? "Normal" : `Penambahan (+${fmtNum(adj)})`;
+  } else {
+    const val = Math.max(0, parseInt(document.getElementById("m-adj-val-input").value || "0", 10));
+    adj = -val;
+    finalQ = Math.max(0, awal + adj);
+    statusText = val === 0 ? "Normal" : (finalQ === 0 ? "Pembatalan DO (Unit = 0)" : `Pengurangan (${fmtNum(adj)})`);
+  }
+
+  document.getElementById("m-adj-calc-formula").textContent = `${fmtNum(awal)} ${adj >= 0 ? '+' : '-'} ${fmtNum(Math.abs(adj))} = ${fmtNum(finalQ)}`;
+  document.getElementById("m-adj-preview-final").textContent = `${fmtNum(finalQ)} Unit`;
+  document.getElementById("m-adj-preview-status").textContent = `Status: ${statusText}`;
+}
+
+function recalcAdjModalDirect() {
+  recalcAdjModalPreview();
+}
+
+function setAdjReason(reason) {
+  document.getElementById("m-adj-keterangan").value = reason;
+}
+
+async function saveDoAdjustment() {
+  const type = document.querySelector('input[name="m-adj-type"]:checked').value;
+  const awal = currentAdjContext.qtyAwal;
+  let adj = 0;
+  let finalQ = awal;
+
+  if (type === "batal") {
+    adj = -awal;
+    finalQ = 0;
+  } else if (type === "reset") {
+    adj = 0;
+    finalQ = awal;
+  } else if (type === "direct") {
+    finalQ = Math.max(0, parseInt(document.getElementById("m-adj-direct-input").value || "0", 10));
+    adj = finalQ - awal;
+  } else if (type === "tambah") {
+    const val = Math.max(0, parseInt(document.getElementById("m-adj-val-input").value || "0", 10));
+    adj = val;
+    finalQ = awal + adj;
+  } else {
+    const val = Math.max(0, parseInt(document.getElementById("m-adj-val-input").value || "0", 10));
+    adj = -val;
+    finalQ = Math.max(0, awal + adj);
+  }
+
+  const ket = document.getElementById("m-adj-keterangan").value.trim() || (type === "batal" ? "Pembatalan DO" : (adj > 0 ? "Penambahan DO" : (adj < 0 ? "Pengurangan DO" : "Normal")));
+
+  const payload = {
+    tanggal: currentAdjContext.tanggal,
+    plant: currentAdjContext.plant,
+    qty_awal: awal,
+    adjustment: adj,
+    qty_final: finalQ,
+    keterangan: ket
+  };
+
+  const btn = document.getElementById("btn-save-adj-do");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Menyimpan...`;
+
+  try {
+    const res = await fetch("/api/adjust_do", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (d.status === "ok") {
+      showAlert(d.message);
+      const modalEl = document.getElementById("modal-adjust-do");
+      if (modalEl && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+      await loadDOTable();
+      const currentDqDate = document.getElementById("dq-date-input") ? document.getElementById("dq-date-input").value : "";
+      if (currentDqDate === currentAdjContext.tanggal) {
+        await calculateDailyQuota(false, true);
+      }
+    } else {
+      alert(d.message || "Gagal menyimpan adjustment DO");
+    }
+  } catch (err) {
+    alert("Terjadi kesalahan saat menyimpan adjustment DO: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="ti ti-device-floppy me-1"></i> Simpan Adjustment DO`;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", initApp);
 </script>
-</body>
-</html>
+
+<!-- MODAL ADJUSTMENT DO (PEMBATALAN / PENGURANGAN / PENAMBAHAN) -->
+<div class="modal modal-blur fade" id="modal-adjust-do" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header bg-primary-lt">
+        <h5 class="modal-title fw-bold">
+          <i class="ti ti-adjustments me-1"></i> Adjustment Qty Delivery Order (DO)
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="badge bg-primary text-white me-1 fs-6" id="m-adj-plant-badge">FM6</span>
+              Tanggal DO: <b id="m-adj-tgl-text">-</b>
+            </div>
+            <div>
+              Qty Submit Awal: <b class="fs-6 text-dark" id="m-adj-qty-awal-text">0</b> Unit
+            </div>
+          </div>
+        </div>
+
+        <!-- Pilihan Tipe Penyesuaian Cepat -->
+        <label class="form-label small fw-bold mb-1">Tipe Penyesuaian (Adjustment):</label>
+        <div class="btn-group w-100 mb-3" role="group">
+          <input type="radio" class="btn-check" name="m-adj-type" id="m-adj-type-kurang" value="kurang" onchange="onAdjTypeChange()" checked>
+          <label class="btn btn-outline-danger btn-sm" for="m-adj-type-kurang"><i class="ti ti-minus me-1"></i>Kurangi (-)</label>
+
+          <input type="radio" class="btn-check" name="m-adj-type" id="m-adj-type-tambah" value="tambah" onchange="onAdjTypeChange()">
+          <label class="btn btn-outline-success btn-sm" for="m-adj-type-tambah"><i class="ti ti-plus me-1"></i>Tambah (+)</label>
+
+          <input type="radio" class="btn-check" name="m-adj-type" id="m-adj-type-batal" value="batal" onchange="onAdjTypeChange()">
+          <label class="btn btn-outline-danger btn-sm" for="m-adj-type-batal"><i class="ti ti-x me-1"></i>Batal DO (0)</label>
+
+          <input type="radio" class="btn-check" name="m-adj-type" id="m-adj-type-direct" value="direct" onchange="onAdjTypeChange()">
+          <label class="btn btn-outline-primary btn-sm" for="m-adj-type-direct"><i class="ti ti-edit me-1"></i>Set Qty</label>
+
+          <input type="radio" class="btn-check" name="m-adj-type" id="m-adj-type-reset" value="reset" onchange="onAdjTypeChange()">
+          <label class="btn btn-outline-secondary btn-sm" for="m-adj-type-reset"><i class="ti ti-rotate me-1"></i>Reset</label>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-md-12" id="m-adj-val-container">
+            <label class="form-label small fw-bold mb-1" id="m-adj-val-label">Nominal Pengurangan Unit (-)</label>
+            <input type="number" id="m-adj-val-input" class="form-control" value="0" min="0" oninput="recalcAdjModalPreview()">
+          </div>
+          <div class="col-md-12" id="m-adj-direct-container" style="display:none;">
+            <label class="form-label small fw-bold mb-1">Target Qty Akhir (Netto Operasional)</label>
+            <input type="number" id="m-adj-direct-input" class="form-control" value="0" min="0" oninput="recalcAdjModalDirect()">
+          </div>
+          <div class="col-md-12">
+            <label class="form-label small fw-bold mb-1">Pilihan Cepat Alasan / Keterangan:</label>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjReason('Pembatalan DO Plant')">Pembatalan DO</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjReason('Pengurangan Unit Produksi')">Pengurangan Unit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjReason('Penambahan Unit Dadakan')">Penambahan Dadakan</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjReason('Revisi Alokasi Ekspedisi')">Revisi Alokasi</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="setAdjReason('Kendala Unit Plant')">Kendala Unit</button>
+            </div>
+            <input type="text" id="m-adj-keterangan" class="form-control form-control-sm" placeholder="Contoh: Pengurangan DO Plant 6">
+          </div>
+        </div>
+
+        <!-- Live Preview Kalkulasi -->
+        <div class="card bg-light border-primary p-2">
+          <div class="d-flex justify-content-between align-items-center small text-secondary">
+            <span>Kalkulasi Penyesuaian:</span>
+            <span id="m-adj-calc-formula" class="fw-bold text-dark">0 + 0 = 0</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-1">
+            <span class="fw-bold">Hasil Qty Akhir (Netto):</span>
+            <span class="fs-4 fw-bold text-primary" id="m-adj-preview-final">0 Unit</span>
+          </div>
+          <div class="small text-muted mt-1" id="m-adj-preview-status">Status: Normal</div>
+        </div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-save-adj-do" onclick="saveDoAdjustment()">
+          <i class="ti ti-device-floppy me-1"></i> Simpan Adjustment DO
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
