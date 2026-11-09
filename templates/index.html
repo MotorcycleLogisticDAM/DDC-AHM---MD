@@ -913,7 +913,6 @@
                             <th class="num-col">FM9</th>
                             <th class="num-col bg-yellow-lt">Grand Total</th>
                             <th class="num-col">%</th>
-                            <th>KETERANGAN / STATUS</th>
                             <th class="text-center">AKSI</th>
                           </tr>
                         </thead>
@@ -2089,7 +2088,6 @@ async function loadPerDayTab() {
         ${plantTds}
         <td class="num-col fw-bold bg-yellow-lt">${fmtNum(r.GRAND_TOTAL)}</td>
         <td class="num-col fw-bold bg-azure-lt">${r.PCT.toFixed(2)}%</td>
-        <td class="small">${ketBadge}</td>
         <td class="text-center text-nowrap">
           <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold" onclick="openAdjustDailyQuotaModal('${r.TANGGAL}', '${r.EKSPEDISI}', ${rowDataJson})" title="Action Adjustment Kuota Per Ekspedisi"><i class="ti ti-edit me-1"></i>Adjust</button>
         </td>
@@ -2097,26 +2095,18 @@ async function loadPerDayTab() {
     });
 
     const gt = grp.totals;
-    const totAdjAll = gt.ADJUSTMENT !== undefined ? gt.ADJUSTMENT : 0;
-    let totKetBadge = "-";
-    if (totAdjAll !== 0) {
-      const sSign = totAdjAll > 0 ? `+${fmtNum(totAdjAll)}` : `${fmtNum(totAdjAll)}`;
-      totKetBadge = `<span class="badge ${totAdjAll > 0 ? 'bg-success text-white' : 'bg-danger text-white'}">Net Adj: ${sSign} u</span>`;
-    }
-
     dailyHtml += `<tr class="bg-azure-lt fw-bold" style="border-bottom: 2px solid #94a3b8;">
       <td>${gt.TANGGAL}</td>
       <td>TOTAL HARIAN</td>
       ${PLANTS.map(p => `<td class="num-col">${fmtNum(gt[p])}</td>`).join("")}
       <td class="num-col bg-yellow-lt">${fmtNum(gt.GRAND_TOTAL)}</td>
       <td class="num-col bg-azure-lt">100.00%</td>
-      <td class="small">${totKetBadge}</td>
       <td></td>
     </tr>`;
   });
 
   if (!dailyHtml) {
-    dailyHtml = `<tr><td colspan="13" class="text-center text-secondary py-3">Belum ada data Kuota Harian tersimpan untuk filter ini.</td></tr>`;
+    dailyHtml = `<tr><td colspan="12" class="text-center text-secondary py-3">Belum ada data Kuota Harian tersimpan untuk filter ini.</td></tr>`;
   }
 
   const dailyEl = document.getElementById("tbody-pd-daily-left");
