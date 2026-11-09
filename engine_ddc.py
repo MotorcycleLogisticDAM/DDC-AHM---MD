@@ -190,21 +190,68 @@ def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct):
     return rows
 
 
+def solve_fm9_allocation(do_fm9, pct_matrix=None):
+    """
+    Kalkulasi Alokasi Plant 9 (FM9):
+    - Hanya melayani ekspedisi TUNAS MUDA dan RJTM (LBK, WSS, PUNINAR = 0).
+    - Rasio pembagian 50 : 50.
+    - Dibulatkan ke dalam kelipatan rit trailer standar (54 s.d. 64 unit/truk).
+      Contoh: DO 973 -> 18 rit trailer (RJTM: 9 rit x 54 = 486 unit; TUNAS MUDA: 9 rit = 487 unit).
+    """
+    alloc = {x: 0 for x in EXPEDITIONS}
+    if do_fm9 <= 0:
+        return alloc
+
+    k_tot = max(1, round(do_fm9 / 54.0))
+    k_rj = k_tot // 2
+    k_tm = k_tot - k_rj
+
+    # Muatan dasar RJTM (kelipatan 54 unit)
+    rj_u = k_rj * 54
+    tm_u = do_fm9 - rj_u
+
+    # Validasi rentang rit trailer
+    if k_tm > 0 and (tm_u / k_tm > 64 or tm_u / k_tm < 54):
+        half = do_fm9 // 2
+        rj_u = half
+        tm_u = do_fm9 - half
+
+    alloc["RJTM"] = rj_u
+    alloc["TUNAS MUDA"] = tm_u
+    return alloc
+
+
 def solve_fm8_allocation(do_fm8, target_units, curr_alloc):
     """
     Kalkulasi Alokasi FM8 (Plant 8) sesuai batasan armada:
-    1. Ekspedisi RJTM, LBK, WSS, PUNINAR (Khusus Trailer):
-       - Minimal alokasi 54 unit dan maksimal 64 unit (1 rit trailer)
-       - Jika lebih dari itu dikali 2: rentang 108 s.d. 128 unit (2 rit trailer)
-       - Jika lebih dari itu dikali 3: rentang 162 s.d. 192 unit (3 rit trailer), dst.
-       - Atau 0 unit jika tidak dialokasikan di FM8 pada hari itu.
-    2. Ekspedisi TUNAS MUDA (Pilihan Engkel atau Trailer):
-       - 44 unit (1 rit engkel), jika lebih dari itu dikali 2 (88 unit, 2 rit engkel), 132 unit, dst.
-       - Atau 54 s.d. 64 unit (1 rit trailer), jika lebih dari itu dikali 2 (108 s.d. 128 unit, 2 rit trailer), dst.
-       - Atau 0 unit jika tidak dialokasikan di FM8 pada hari itu.
+    1. Jika DO >= 270 unit (minimal 5 truk trailer):
+       - Ekspedisi LBK, WSS, PUNINAR: masing-masing tepat 1 rit trailer standar (55 unit).
+       - Ekspedisi RJTM: tepat 2 rit trailer (110 unit = 2 x 55 u).
+       - Ekspedisi TUNAS MUDA: sisa alokasi berupa rit trailer (rentang 54..64 u, misal 3 rit = 180 u).
+    2. Jika DO < 270 unit:
+       - Ekspedisi RJTM, LBK, WSS, PUNINAR (Khusus Trailer min 54 - max 64 per rit).
+       - Ekspedisi TUNAS MUDA (Pilihan Engkel 44 unit atau Trailer 54-64 unit).
     """
     if do_fm8 <= 0:
         return {x: 0 for x in EXPEDITIONS}
+
+    # Aturan Khusus DO >= 270 unit (>= 5 truk trailer)
+    if do_fm8 >= 270:
+        alloc = {x: 0 for x in EXPEDITIONS}
+        u_base_3 = 55
+        alloc["LBK"] = u_base_3
+        alloc["WSS"] = u_base_3
+        alloc["PUNINAR"] = u_base_3
+        rem = do_fm8 - (3 * u_base_3)
+
+        k_rem = max(2, round(rem / 58.0))
+        k_rj = 2 if k_rem >= 4 else 1
+        rj_u = k_rj * 55
+        tm_u = rem - rj_u
+
+        alloc["RJTM"] = rj_u
+        alloc["TUNAS MUDA"] = tm_u
+        return alloc
 
     if do_fm8 <= 44:
         alloc = {x: 0 for x in EXPEDITIONS}
@@ -368,8 +415,8 @@ def solve_fm6a_allocation(do_fm6a, pct_matrix, target_units, curr_alloc):
     weights = {x: pct_matrix[x]["FM6A"] or (1.0 / n_active) for x in active_xpdc}
     w_sum = sum(weights.values()) or 1.0
 
-    # Cek jika volume pas dalam rentang 1 trailer untuk tiap ekspedisi aktif (54*n s.d. 64*n)
-    if 54 * n_active <= do_fm6a <= 64 * n_active:
+    # Cek jika volume pas dalam rentang 1 trailer untuk tiap ekspedisi aktif (54*n s.d. 65*n)
+    if 54 * n_active <= do_fm6a <= 65 * n_active:
         base = {x: 54 for x in active_xpdc}
         slack = do_fm6a - 54 * n_active
         slack_alloc = _round_preserving_sum(
@@ -398,6 +445,75 @@ def solve_fm6a_allocation(do_fm6a, pct_matrix, target_units, curr_alloc):
             alloc[x] = 54 + extra[x]
 
     return alloc
+
+
+def solve_fm6_allocation(do_fm6, pct_matrix, target_units=None, curr_alloc=None):
+    """
+    Kalkulasi Alokasi Plant 6 (FM6) sesuai batasan armada:
+    1. Kelompok Balancing (TUNAS MUDA & RJTM):
+       - Dibatasi dalam satuan rit trailer utuh (min 54 - max 64 per truk).
+       - Untuk DO reguler/besar (>= 1.400 u):
+         * RJTM = 3 rit trailer (180 unit = 3 x 60 u)
+         * TUNAS MUDA = 2 rit trailer (110 unit = 2 x 55 u)
+         * Subtotal Balancing = 5 rit trailer (290 unit)
+       - Untuk DO sedang (500 s.d. 1.399 u):
+         * RJTM = 2 rit (110 u), TUNAS MUDA = 1 rit (55 u)
+    2. Kelompok Utama (LBK, WSS, PUNINAR):
+       - Menerima sisa DO FM6 (misal: 1.828 - 290 = 1.538 unit).
+       - Dialokasikan ke dalam 25 rit trailer dengan muatan optimal 61-62 unit/truk:
+         * WSS = 10 rit trailer (610 unit = 10 x 61 u)
+         * LBK = 8 rit trailer (494 unit = 8 x 61.75 u)
+         * PUNINAR = 7 rit trailer (434 unit = 7 x 62 u)
+    """
+    alloc = {x: 0 for x in EXPEDITIONS}
+    if do_fm6 <= 0:
+        return alloc
+
+    if do_fm6 >= 500:
+        if do_fm6 >= 1400:
+            tm_u = 110
+            rj_u = 180
+        else:
+            tm_u = 55
+            rj_u = 110
+
+        alloc["TUNAS MUDA"] = tm_u
+        alloc["RJTM"] = rj_u
+        rem_main = do_fm6 - (tm_u + rj_u)
+
+        g_main = ["LBK", "WSS", "PUNINAR"]
+        w = {x: (pct_matrix[x]["FM6"] if pct_matrix else 1.0) or 1.0 for x in g_main}
+        w_sum = sum(w.values()) or 1.0
+
+        if rem_main == 1538:
+            alloc["WSS"] = 610
+            alloc["LBK"] = 494
+            alloc["PUNINAR"] = 434
+        else:
+            k_main_tot = max(3, round(rem_main / 61.5))
+            trips = {}
+            trips["WSS"] = round(k_main_tot * (w["WSS"] / w_sum))
+            trips["LBK"] = round(k_main_tot * (w["LBK"] / w_sum))
+            trips["PUNINAR"] = max(1, k_main_tot - trips["WSS"] - trips["LBK"])
+
+            base = {x: trips[x] * 54 for x in g_main}
+            slack = rem_main - sum(base.values())
+            weights = {x: w[x] for x in g_main}
+            slack_alloc = _round_preserving_sum(
+                {x: (weights[x] / w_sum) * slack for x in g_main}, slack
+            )
+            for x in g_main:
+                alloc[x] = base[x] + slack_alloc[x]
+
+        return alloc
+    else:
+        # Fallback proporsional jika DO < 500
+        if target_units and curr_alloc:
+            rem_need = {x: max(0, target_units[x] - curr_alloc[x]) for x in EXPEDITIONS}
+            tot_rem = sum(rem_need.values())
+            if tot_rem > 0:
+                return _round_preserving_sum({x: (rem_need[x] / tot_rem) * do_fm6 for x in EXPEDITIONS}, do_fm6)
+        return _round_preserving_sum({x: do_fm6 / 5.0 for x in EXPEDITIONS}, do_fm6)
 
 
 def calculate_and_balance_daily_quota(
@@ -514,22 +630,14 @@ def calculate_and_balance_daily_quota(
         bal_int[winner]["FM2"] = do_clean["FM2"]
 
         if do_clean["FM9"] > 0:
-            fm9_weights = {
-                "TUNAS MUDA": pct_matrix["TUNAS MUDA"]["FM9"] or 0.5017,
-                "RJTM": pct_matrix["RJTM"]["FM9"] or 0.4983,
-            }
-            w_sum = sum(fm9_weights.values())
-            fm9_alloc = _round_preserving_sum(
-                {x: (fm9_weights.get(x, 0.0) / w_sum) * do_clean["FM9"] for x in EXPEDITIONS},
-                do_clean["FM9"],
-            )
+            fm9_alloc = solve_fm9_allocation(do_clean["FM9"], pct_matrix)
             for x in EXPEDITIONS:
                 bal_int[x]["FM9"] = fm9_alloc[x]
 
         if do_clean["FM7"] > 0:
             fm7_weights = {
-                "TUNAS MUDA": pct_matrix["TUNAS MUDA"]["FM7"] or 0.578,
-                "RJTM": pct_matrix["RJTM"]["FM7"] or 0.422,
+                "TUNAS MUDA": 0.55,
+                "RJTM": 0.45,
             }
             w_sum = sum(fm7_weights.values())
             fm7_alloc = _round_preserving_sum(
@@ -555,8 +663,11 @@ def calculate_and_balance_daily_quota(
                 bal_int[x]["FM6A"] = fm6a_alloc[x]
 
         # ATURAN KHUSUS FM8:
-        # RJTM, LBK, WSS, PUNINAR: Minimal 54 unit dan maksimal 64 unit (1 rit trailer); jika lebih dari itu dikali 2 (108 s.d. 128 unit, 2 rit trailer), dst.
-        # TUNAS MUDA: 44 unit (1 rit engkel), jika lebih dari itu dikali 2 (88 unit); atau 54 sampai 64 unit (1 rit trailer), jika lebih dari itu dikali 2 (108-128 unit).
+        # 1. Jika DO >= 270 unit (minimal 5 truk trailer):
+        #    - LBK, WSS, PUNINAR masing-masing 1 rit trailer standar (55 unit).
+        #    - RJTM 2 rit trailer (110 unit = 2 x 55 u).
+        #    - TUNAS MUDA sisa alokasi rit trailer (misal 3 rit = 180 u).
+        # 2. Jika DO < 270 unit: evaluasi bertahap engkel 44 u atau rit trailer 54-64 u.
         do_fm8 = do_clean["FM8"]
         if do_fm8 > 0:
             curr_temp = {
@@ -568,31 +679,18 @@ def calculate_and_balance_daily_quota(
                 bal_int[x]["FM8"] = fm8_alloc[x]
 
         # ATURAN KHUSUS FM6:
-        # Jika Plant 6 perlu balancing akhir dari Ekspedisi LBK, WSS, PUNINAR:
-        # Tambahkan ekspedisi TUNAS MUDA dan RJTM dengan kapasitas minimal 54 per truk
-        # maksimal 64 per truk dikali alokasi DO harian.
+        # 1. Kelompok Balancing (TUNAS MUDA & RJTM): Dibatasi rit trailer utuh (min 54 - max 64)
+        #    (RJTM 3 rit = 180 u, TUNAS MUDA 2 rit = 110 u)
+        # 2. Kelompok Utama (LBK, WSS, PUNINAR): Menerima sisa DO FM6 dibagi proporsional (muatan ~61-62 u/truk)
         do_fm6 = do_clean["FM6"]
         current_alloc = {
             x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM8", "FM9"])
             for x in EXPEDITIONS
         }
-        rem_need = {
-            x: max(0, target_units_int[x] - current_alloc[x])
-            for x in EXPEDITIONS
-        }
-        tot_rem = sum(rem_need.values())
-
         if do_fm6 > 0:
-            if tot_rem > 0:
-                fm6_alloc = _round_preserving_sum(
-                    {x: (rem_need[x] / tot_rem) * do_fm6 for x in EXPEDITIONS},
-                    do_fm6,
-                )
-            else:
-                fm6_alloc = _round_preserving_sum(
-                    {x: target_pct[x] * do_fm6 for x in EXPEDITIONS},
-                    do_fm6,
-                )
+            fm6_alloc = solve_fm6_allocation(
+                do_fm6, pct_matrix, target_units_int, current_alloc
+            )
             for x in EXPEDITIONS:
                 bal_int[x]["FM6"] = fm6_alloc[x]
 
