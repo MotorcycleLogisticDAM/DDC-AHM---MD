@@ -333,8 +333,8 @@
                           <option value="3">3 - Maret</option><option value="4">4 - April</option>
                           <option value="5">5 - Mei</option><option value="6">6 - Juni</option>
                           <option value="7">7 - Juli</option><option value="8">8 - Agustus</option>
-                          <option value="9">9 - September</option><option value="10" selected>10 - Oktober</option>
-                          <option value="11">11 - November</option><option value="12">12 - Desember</option>
+                          <option value="9">9 - September</option><option value="10">10 - Oktober</option>
+                          <option value="11" selected>11 - November</option><option value="12">12 - Desember</option>
                         </select>
                       </div>
                       <div class="col-md-3">
@@ -825,8 +825,8 @@
                       <option value="3">3 - Maret</option><option value="4">4 - April</option>
                       <option value="5">5 - Mei</option><option value="6">6 - Juni</option>
                       <option value="7">7 - Juli</option><option value="8">8 - Agustus</option>
-                      <option value="9">9 - September</option><option value="10" selected>10 - Oktober</option>
-                      <option value="11">11 - November</option><option value="12">12 - Desember</option>
+                      <option value="9">9 - September</option><option value="10">10 - Oktober</option>
+                      <option value="11" selected>11 - November</option><option value="12">12 - Desember</option>
                     </select>
                   </div>
                   <div class="col-md-2">
@@ -1112,6 +1112,23 @@ async function initApp() {
       inputSumDate.value = cal.do_date_h_minus_1;
     }
     updateSummaryButtonState();
+
+    // Bulan Kalender Sistem
+    const calDateStr = cal.calendar_date || "2026-11-09";
+    const calMonth = parseInt(calDateStr.substring(5, 7), 10);
+    const calYear = parseInt(calDateStr.substring(0, 4), 10);
+
+    // Menu Perencanaan Target Bulanan: Bulan & Tahun mengikuti kalender
+    const tbMonthEl = document.getElementById("tb-month");
+    if (tbMonthEl) tbMonthEl.value = String(calMonth);
+    const tbYearEl = document.getElementById("tb-year");
+    if (tbYearEl) tbYearEl.value = String(calYear);
+
+    // Menu Per Day: Bulan & Tahun mengikuti kalender
+    const pdMonthEl = document.getElementById("pd-month");
+    if (pdMonthEl) pdMonthEl.value = String(calMonth);
+    const pdYearEl = document.getElementById("pd-year");
+    if (pdYearEl) pdYearEl.value = String(calYear);
   }
 
   // Populate DO dates
@@ -1988,8 +2005,10 @@ async function openDateInKuotaHarian(tgl) {
 }
 
 async function loadPerDayTab() {
-  const m = document.getElementById("pd-month") ? document.getElementById("pd-month").value : "10";
-  const y = document.getElementById("pd-year") ? document.getElementById("pd-year").value : "2026";
+  const calMonthFallback = currentCalendarInfo ? parseInt(currentCalendarInfo.calendar_date.substring(5, 7), 10) : 11;
+  const calYearFallback = currentCalendarInfo ? parseInt(currentCalendarInfo.calendar_date.substring(0, 4), 10) : 2026;
+  const m = document.getElementById("pd-month") ? document.getElementById("pd-month").value : String(calMonthFallback);
+  const y = document.getElementById("pd-year") ? document.getElementById("pd-year").value : String(calYearFallback);
   const tgl = document.getElementById("pd-date") ? document.getElementById("pd-date").value : "";
   const sortOrder = document.getElementById("pd-sort") ? document.getElementById("pd-sort").value : "newest";
 

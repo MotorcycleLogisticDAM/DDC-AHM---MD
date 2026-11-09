@@ -322,8 +322,13 @@ def api_perday():
     Mengambil data Kuota Harian yang sudah disimpan untuk ditampilkan pada Menu Per Day
     sesuai format 2 blok/kolom di Sheet 'PER DAY' (H-1 & H, lengkap dengan tabel MTD dan tabel Harian).
     """
-    month_str = request.args.get("month", "10").strip()
-    year_str = request.args.get("year", "2026").strip()
+    cal_info = get_calendar_info()
+    cal_date_str = cal_info.get("calendar_date", "2026-11-09")
+    default_cal_year_str = cal_date_str[:4]
+    default_cal_month_str = str(int(cal_date_str[5:7]))
+
+    month_str = request.args.get("month", default_cal_month_str).strip()
+    year_str = request.args.get("year", default_cal_year_str).strip()
     tanggal_filter = request.args.get("tanggal", "").strip()
     sort_order = request.args.get("sort", "newest").strip()
 
@@ -477,8 +482,13 @@ def api_summary():
 
 @app.route("/api/target_bulanan", methods=["GET"])
 def api_get_target_bulanan():
-    year = int(request.args.get("year", 2026))
-    month = int(request.args.get("month", 10))
+    cal_info = get_calendar_info()
+    cal_date_str = cal_info.get("calendar_date", "2026-11-09")
+    default_cal_year = int(cal_date_str[:4])
+    default_cal_month = int(cal_date_str[5:7])
+
+    year = int(request.args.get("year", default_cal_year))
+    month = int(request.args.get("month", default_cal_month))
     total_target_param = request.args.get("total_target", None)
 
     planned = db.get_target_bulanan(tahun=year, bulan=month)
