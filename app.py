@@ -90,7 +90,8 @@ def api_calendar():
 def api_monthly_quota():
     target_month = int(request.args.get("month", 10))
     target_year = int(request.args.get("year", 2026))
-    cutoff_date = request.args.get("cutoff_date", "").strip() or None
+    start_date = request.args.get("start_date", "").strip() or None
+    end_date = request.args.get("end_date", "").strip() or request.args.get("cutoff_date", "").strip() or None
     gudang = request.args.get("gudang", "ALL").strip()
 
     sl_records = db.get_sl_data()
@@ -98,7 +99,9 @@ def api_monthly_quota():
         sl_records,
         target_month=target_month,
         target_year=target_year,
-        cutoff_date=cutoff_date,
+        cutoff_date=end_date,
+        start_date=start_date,
+        end_date=end_date,
         gudang_filter=gudang,
     )
 
@@ -125,7 +128,10 @@ def api_monthly_quota():
         "target_month_name": res["target_month_name"],
         "target_year": res["target_year"],
         "periods": res["periods"],
+        "start_date": res.get("start_date"),
+        "end_date": res.get("end_date"),
         "cutoff_date": res["cutoff_date"],
+        "date_range_display": res.get("date_range_display"),
         "total_3m_units": res["total_3m_units"],
         "plant_totals": {k: int(v) for k, v in res["plant_totals"].items()},
         "unit_rows": unit_rows,

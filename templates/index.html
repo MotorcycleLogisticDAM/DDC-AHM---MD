@@ -566,15 +566,15 @@
           </div>
 
           <!-- ========================================================== -->
-          <!-- TAB 2: KUOTA BULANAN (%) BERDASARKAN 3 BULAN TERAKHIR SL   -->
+          <!-- TAB 2: KUOTA BULANAN (%) BERDASARKAN RENTANG TANGGAL SL   -->
           <!-- ========================================================== -->
           <div class="tab-pane" id="tab-monthly">
             <div class="card mb-3">
               <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
                   <div class="col-md-2">
-                    <label class="form-label mb-1">Bulan Berjalan</label>
-                    <select id="mq-month" class="form-select form-select-sm">
+                    <label class="form-label mb-1 fw-bold">Bulan Target</label>
+                    <select id="mq-month" class="form-select form-select-sm" onchange="onMonthlyQuotaMonthChange()">
                       <option value="1">1 - Januari</option><option value="2">2 - Februari</option>
                       <option value="3">3 - Maret</option><option value="4">4 - April</option>
                       <option value="5">5 - Mei</option><option value="6">6 - Juni</option>
@@ -583,16 +583,25 @@
                       <option value="11">11 - November</option><option value="12">12 - Desember</option>
                     </select>
                   </div>
-                  <div class="col-md-2">
-                    <label class="form-label mb-1">Tahun</label>
-                    <input type="number" id="mq-year" class="form-control form-control-sm" value="2026">
-                  </div>
-                  <div class="col-md-3">
-                    <label class="form-label mb-1">Cut-off Tanggal SL (Opsional)</label>
-                    <input type="date" id="mq-cutoff" class="form-control form-control-sm" value="2026-09-29">
+                  <div class="col-md-1">
+                    <label class="form-label mb-1 fw-bold">Tahun</label>
+                    <input type="number" id="mq-year" class="form-control form-control-sm text-center" value="2026" onchange="onMonthlyQuotaMonthChange()">
                   </div>
                   <div class="col-md-2">
-                    <label class="form-label mb-1">Filter Gudang</label>
+                    <label class="form-label mb-1 fw-bold text-primary">
+                      <i class="ti ti-calendar me-1"></i>Dari Tanggal SL
+                    </label>
+                    <input type="date" id="mq-start-date" class="form-control form-control-sm border-primary" value="2026-07-01">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label mb-1 fw-bold text-primary">
+                      <i class="ti ti-calendar-event me-1"></i>Sampai Tanggal SL
+                    </label>
+                    <input type="date" id="mq-end-date" class="form-control form-control-sm border-primary" value="2026-09-29">
+                    <input type="hidden" id="mq-cutoff" value="2026-09-29">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label mb-1 fw-bold">Filter Gudang</label>
                     <select id="mq-gudang" class="form-select form-select-sm">
                       <option value="ALL">SEMUA GUDANG (TOTAL)</option>
                       <option value="KARAWANG">KARAWANG</option>
@@ -606,7 +615,26 @@
                     </button>
                   </div>
                 </div>
-                <div class="mt-2 small text-secondary" id="mq-period-info"></div>
+
+                <!-- PRESET BUTTONS UNTUK MEMUDAHKAN SETTING BULAN KE BULAN / 3 BULAN TERAKHIR -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2 pt-2 border-top">
+                  <div class="d-flex flex-wrap align-items-center gap-1">
+                    <span class="small fw-bold text-secondary me-1"><i class="ti ti-adjustments me-1"></i>Preset Rentang:</span>
+                    <button type="button" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size: 11px;" onclick="setMonthlyQuotaPreset('cutoff_default')" title="Cut-off Default Sheet QUOTA (01-Jul-26 s.d. 29-Sep-26)">
+                      <i class="ti ti-check me-1"></i>Cut-off Default (29-Sep-26)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 11px;" onclick="setMonthlyQuotaPreset('3m_full')" title="Rentang 3 Bulan Penuh Sebelum Bulan Target">
+                      <i class="ti ti-calendar-stats me-1"></i>3 Bulan Penuh
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-azure py-0 px-2" style="font-size: 11px;" onclick="setMonthlyQuotaPreset('last_1m')" title="Rentang 1 Bulan Terakhir Saja">
+                      <i class="ti ti-clock me-1"></i>1 Bulan Terakhir
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 11px;" onclick="setMonthlyQuotaPreset('last_2m')" title="Rentang 2 Bulan Terakhir">
+                      <i class="ti ti-clock-2 me-1"></i>2 Bulan Terakhir
+                    </button>
+                  </div>
+                  <div class="small fw-bold text-primary" id="mq-period-info">Memuat informasi periode...</div>
+                </div>
               </div>
             </div>
 
@@ -614,7 +642,7 @@
               <div class="col-lg-12">
                 <div class="card mb-3">
                   <div class="card-header bg-green-lt">
-                    <h3 class="card-title fw-bold">1. Pencapaian Aktual 3 Bulan Terakhir (Unit) per Ekspedisi & Plant</h3>
+                    <h3 class="card-title fw-bold">1. Pencapaian Aktual SL Periode Terpilih (Unit) per Ekspedisi & Plant</h3>
                   </div>
                   <div class="table-responsive">
                     <table class="table table-bordered table-sm mb-0">
@@ -1415,17 +1443,73 @@ function editSavedTargetBulanan(m, y) {
   loadTargetBulananPage();
 }
 
+function onMonthlyQuotaMonthChange() {
+  const m = parseInt(document.getElementById("mq-month").value, 10);
+  const y = parseInt(document.getElementById("mq-year").value, 10);
+  if (m === 10 && y === 2026) {
+    document.getElementById("mq-start-date").value = "2026-07-01";
+    document.getElementById("mq-end-date").value = "2026-09-29";
+  } else {
+    setMonthlyQuotaPreset('3m_full');
+  }
+}
+
+function setMonthlyQuotaPreset(mode) {
+  const m = parseInt(document.getElementById("mq-month").value, 10);
+  const y = parseInt(document.getElementById("mq-year").value, 10);
+
+  if (mode === 'cutoff_default') {
+    document.getElementById("mq-start-date").value = "2026-07-01";
+    document.getElementById("mq-end-date").value = "2026-09-29";
+    loadMonthlyQuota();
+    return;
+  }
+
+  let numMonths = 3;
+  if (mode === 'last_1m') numMonths = 1;
+  else if (mode === 'last_2m') numMonths = 2;
+  else if (mode === '3m_full') numMonths = 3;
+
+  // Tanggal akhir: hari terakhir dari bulan (m - 1)
+  let endM = m - 1;
+  let endY = y;
+  if (endM < 1) {
+    endM = 12;
+    endY -= 1;
+  }
+  const lastDayOfEndM = new Date(endY, endM, 0).getDate();
+  const endStr = `${endY}-${String(endM).padStart(2, '0')}-${String(lastDayOfEndM).padStart(2, '0')}`;
+
+  // Tanggal mulai: tanggal 1 dari bulan (m - numMonths)
+  let startM = m - numMonths;
+  let startY = y;
+  while (startM < 1) {
+    startM += 12;
+    startY -= 1;
+  }
+  const startStr = `${startY}-${String(startM).padStart(2, '0')}-01`;
+
+  document.getElementById("mq-start-date").value = startStr;
+  document.getElementById("mq-end-date").value = endStr;
+  loadMonthlyQuota();
+}
+
 async function loadMonthlyQuota() {
   const m = document.getElementById("mq-month").value;
   const y = document.getElementById("mq-year").value;
-  const cutoff = document.getElementById("mq-cutoff").value;
+  const startD = document.getElementById("mq-start-date") ? document.getElementById("mq-start-date").value : "";
+  const endD = document.getElementById("mq-end-date") ? document.getElementById("mq-end-date").value : (document.getElementById("mq-cutoff") ? document.getElementById("mq-cutoff").value : "");
   const gudang = document.getElementById("mq-gudang").value;
 
-  const res = await fetch(`/api/monthly_quota?month=${m}&year=${y}&cutoff_date=${cutoff}&gudang=${gudang}`);
+  const hiddenCutoff = document.getElementById("mq-cutoff");
+  if (hiddenCutoff) hiddenCutoff.value = endD;
+
+  const res = await fetch(`/api/monthly_quota?month=${m}&year=${y}&start_date=${encodeURIComponent(startD)}&end_date=${encodeURIComponent(endD)}&cutoff_date=${encodeURIComponent(endD)}&gudang=${encodeURIComponent(gudang)}`);
   const d = await res.json();
 
+  const rangeInfo = d.date_range_display || `${startD} s.d. ${endD}`;
   document.getElementById("mq-period-info").innerHTML =
-    `Periode 3 Bulan Terakhir untuk Kuota <b>${d.target_month_name} ${d.target_year}</b>: <b>${d.periods.join(", ")}</b> (Cut-off: ${d.cutoff_date}) — Total Pencapaian: <b>${fmtNum(d.total_3m_units)} unit</b>`;
+    `<i class="ti ti-calendar me-1"></i>Rentang Kuota SL: <b>${rangeInfo}</b> (${d.periods.join(", ")}) &bull; Total Pencapaian: <b>${fmtNum(d.total_3m_units)} unit</b>`;
 
   const tbU = document.getElementById("tbody-mq-units");
   tbU.innerHTML = "";

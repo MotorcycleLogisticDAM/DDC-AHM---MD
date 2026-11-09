@@ -6,7 +6,7 @@ murni Python standar sehingga kompatibel 100% dengan Python 3.11 s.d. 3.15+ di W
 """
 
 import math
-from db_excel import PLANTS, EXPEDITIONS, parse_date_str
+from db_excel import PLANTS, EXPEDITIONS, parse_date_str, format_date_d_mmm_yy
 
 MONTH_NAMES_ID = {
     1: "JANUARY", 2: "FEBRUARY", 3: "MARCH", 4: "APRIL",
@@ -29,25 +29,52 @@ def get_last_3_months(target_month, target_year):
     return periods
 
 
-def calculate_monthly_quota(sl_records, target_month=10, target_year=2026, cutoff_date=None, gudang_filter="ALL"):
+def calculate_monthly_quota(
+    sl_records,
+    target_month=10,
+    target_year=2026,
+    cutoff_date=None,
+    start_date=None,
+    end_date=None,
+    gudang_filter="ALL",
+):
     """
-    Menghitung Kuota Bulanan (%) berdasarkan pencapaian aktual SL dalam 3 bulan terakhir.
-    sl_records: list of dicts dari db.get_sl_data()
+    Menghitung Kuota Bulanan (%) berdasarkan pencapaian aktual SL dalam rentang tanggal
+    (mendukung 2 kolom kalender: start_date s.d. end_date, atau rentang 3 bulan terakhir dengan cut-off).
     """
-    periods = get_last_3_months(target_month, target_year)
-    period_set = set(periods)
-    clean_cutoff = parse_date_str(cutoff_date) if cutoff_date else None
+    clean_start = parse_date_str(start_date) if start_date else None
+    clean_end = parse_date_str(end_date) if end_date else (parse_date_str(cutoff_date) if cutoff_date else None)
     g_filter = (gudang_filter or "ALL").strip().upper()
 
-    filtered = []
-    all_gudang_set = set()
-    for r in sl_records:
-        all_gudang_set.add(r["GUDANG"])
-        if (int(r["YEAR"]), int(r["MONTH"])) not in period_set:
-            continue
-        if clean_cutoff and r["TANGGAL_STR"] > clean_cutoff:
-            continue
-        filtered.append(r)
+    default_periods = get_last_3_months(target_month, target_year)
+    default_period_set = set(default_periods)
+
+    if clean_start or clean_end:
+        if not clean_start and clean_end:
+            first_y, first_m = default_periods[0]
+            clean_start = f"{first_y:04d}-{first_m:02d}-01"
+        filtered = []
+        all_gudang_set = set()
+        for r in sl_records:
+            all_gudang_set.add(r["GUDANG"])
+            t = r["TANGGAL_STR"]
+            if clean_start and t < clean_start:
+                continue
+            if clean_end and t > clean_end:
+                continue
+            filtered.append(r)
+
+        unique_periods = sorted(list({(int(r["YEAR"]), int(r["MONTH"])) for r in filtered}))
+        periods = unique_periods if unique_periods else default_periods
+    else:
+        periods = default_periods
+        filtered = []
+        all_gudang_set = set()
+        for r in sl_records:
+            all_gudang_set.add(r["GUDANG"])
+            if (int(r["YEAR"]), int(r["MONTH"])) not in default_period_set:
+                continue
+            filtered.append(r)
 
     # Filter sesuai gudang_filter untuk tabel utama
     main_records = [
@@ -99,12 +126,19 @@ def calculate_monthly_quota(sl_records, target_month=10, target_year=2026, cutof
             },
         }
 
+    start_disp = format_date_d_mmm_yy(clean_start) if clean_start else "-"
+    end_disp = format_date_d_mmm_yy(clean_end) if clean_end else "-"
+    date_range_display = f"{start_disp} s.d. {end_disp}" if (clean_start and clean_end) else (f"s.d. {end_disp}" if clean_end else "Akhir Bulan Penuh")
+
     return {
         "target_month": int(target_month),
         "target_month_name": MONTH_NAMES_ID.get(int(target_month), str(target_month)),
         "target_year": int(target_year),
         "periods": [f"{MONTH_NAMES_ID.get(m, m)} {y}" for (y, m) in periods],
-        "cutoff_date": clean_cutoff or "Akhir Bulan Penuh",
+        "start_date": clean_start,
+        "end_date": clean_end,
+        "cutoff_date": clean_end or "Akhir Bulan Penuh",
+        "date_range_display": date_range_display,
         "total_3m_units": total_3m_units,
         "plant_totals": plant_totals,
         "unit_matrix": unit_matrix,
