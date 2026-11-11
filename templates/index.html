@@ -473,7 +473,7 @@
             <div class="card mb-3 shadow-sm" id="card-distribution-summary" style="border: 1px solid #b0c4de; overflow: hidden;">
               <!-- HEADER RED BANNER -->
               <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
-                <div class="px-3 py-2 text-white fw-bold d-flex align-items-center" style="font-size: 1.25rem; letter-spacing: 0.5px;">
+                <div class="px-3 py-2 fw-bold d-flex align-items-center" style="font-size: 1.25rem; letter-spacing: 0.5px; color: #000000 !important; font-weight: 800;">
                   DISTRIBUTION SUMMARY
                 </div>
                 <div class="d-flex align-items-center">
@@ -577,23 +577,59 @@
               </div>
             </div>
 
-            <!-- 3.B PERFORMANCE ANALYSIS TABLE -->
+            <!-- ANALISA PERFORMANCE PER EKSPEDISI -->
             <div class="row row-cards">
               <div class="col-lg-7">
-                <div class="card">
-                  <div class="card-header bg-teal-lt d-flex justify-content-between align-items-center">
-                    <h3 class="card-title fw-bold mb-0">3.B ANALISA PERFORMANCE PER EKSPEDISI (Target vs Aktual s.d. H-1)</h3>
-                    <span class="badge bg-teal text-white" id="badge-perf-repdate">Up to Date H-1</span>
+                <div class="card shadow-sm" id="card-perf-analysis" style="border: 1px solid #b0c4de;">
+                  <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center py-2 px-3 border-bottom gap-2">
+                    <h3 class="card-title fw-bold mb-0 text-dark" style="font-size: 1.15rem; letter-spacing: 0.5px; font-weight: 800;">ANALISA PERFORMANCE PER EKSPEDISI</h3>
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                      <!-- TOMBOL SALIN GAMBAR WA (no-capture) -->
+                      <div class="btn-group no-capture">
+                        <button type="button" class="btn btn-teal btn-sm shadow-sm d-flex align-items-center" onclick="sharePerfAnalysisToWhatsApp('copy')" title="Salin Gambar ke Clipboard untuk Paste di WhatsApp (Ctrl+V)">
+                          <i class="ti ti-brand-whatsapp me-1 fs-5"></i> Salin Gambar (WA)
+                        </button>
+                        <button type="button" class="btn btn-teal btn-sm dropdown-toggle dropdown-toggle-split shadow-sm" data-bs-toggle="dropdown" aria-expanded="false" title="Pilihan Ekspor">
+                          <span class="visually-hidden">Opsi</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                          <li>
+                            <a class="dropdown-item py-2" href="javascript:void(0)" onclick="sharePerfAnalysisToWhatsApp('copy')">
+                              <i class="ti ti-copy me-2 text-teal fs-4"></i>
+                              <div>
+                                <div class="fw-bold">Salin Gambar (Clipboard)</div>
+                                <small class="text-muted">Langsung Ctrl+V di WhatsApp</small>
+                              </div>
+                            </a>
+                          </li>
+                          <li><hr class="dropdown-divider my-1"></li>
+                          <li>
+                            <a class="dropdown-item py-2" href="javascript:void(0)" onclick="sharePerfAnalysisToWhatsApp('download')">
+                              <i class="ti ti-download me-2 text-primary fs-4"></i>
+                              <div>
+                                <div class="fw-bold">Download File PNG</div>
+                                <small class="text-muted">Simpan gambar kualitas tinggi</small>
+                              </div>
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                      <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS -->
+                      <div class="px-2 py-1 text-dark d-flex align-items-center" style="font-style: italic;">
+                        <span class="me-2 fw-normal" style="font-size: 0.95rem;">up to date :</span>
+                        <span id="perf-header-date-topright" class="fw-bold text-dark font-monospace" style="font-size: 1.1rem; font-style: normal;">11/11/26</span>
+                      </div>
+                    </div>
                   </div>
                   <div class="table-responsive">
-                    <table class="table table-bordered table-sm table-vcenter mb-0">
-                      <thead class="bg-light">
-                        <tr>
-                          <th>EKSPEDISI (XPDC)</th>
-                          <th class="num-col">TARGET (DO OPEN s.d. H-1)</th>
-                          <th class="num-col">ACTUAL (SL s.d. H-1)</th>
-                          <th class="num-col">GAP (UNIT)</th>
-                          <th class="num-col">% ACH</th>
+                    <table class="table table-bordered table-sm mb-0" style="border: 2px solid #103a71;">
+                      <thead style="background-color: #103a71; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="padding: 6px 10px; border: 1px solid #103a71; color: white;">XPDC</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #103a71; color: white;">TARGET</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #103a71; color: white;">ACTUAL</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #103a71; color: white;">GAP</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #103a71; color: white;">% ACH</th>
                         </tr>
                       </thead>
                       <tbody id="tbody-perf-summary"></tbody>
@@ -1384,26 +1420,38 @@ async function loadSummary() {
     <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${totMtdAch}</td>
   </tr>`;
 
-  // Render 3.B (Kolom % SHARE TARGET dihilangkan)
+  // Update Tanggal Analisa Performance Kanan Atas
+  const perfDateEl = document.getElementById("perf-header-date-topright");
+  if (perfDateEl) {
+    perfDateEl.textContent = formatDateMMDDYY(repDate);
+  }
+
+  // Render ANALISA PERFORMANCE PER EKSPEDISI (Sesuai contoh gambar)
   const tbPerf = document.getElementById("tbody-perf-summary");
   tbPerf.innerHTML = "";
   d.performance_analysis.forEach(r => {
-    const gapClass = r.GAP < 0 ? "text-danger" : (r.GAP > 0 ? "text-success" : "");
+    const gapFmt = (r.GAP > 0 ? "+" : "") + fmtNum(r.GAP);
+    const achFmt = r.ACH_PCT.toFixed(1).replace(".", ",") + "%";
+    const gapBg = r.GAP < 0 ? "background-color: #ffd8d8; color: #991b1b;" : (r.GAP > 0 ? "background-color: #d4edda; color: #155724;" : "background-color: #ffffff;");
+    const achBg = r.ACH_PCT < 100 ? "background-color: #ffd8d8; color: #991b1b;" : "background-color: #d4edda; color: #155724;";
+
     tbPerf.innerHTML += `<tr>
-      <td class="fw-bold">${r.XPDC}</td>
-      <td class="num-col">${fmtNum(r.TARGET_UPTO)}</td>
-      <td class="num-col">${fmtNum(r.ACTUAL_UPTO)}</td>
-      <td class="num-col fw-bold ${gapClass}">${r.GAP > 0 ? "+"+fmtNum(r.GAP) : fmtNum(r.GAP)}</td>
-      <td class="num-col fw-bold">${r.ACH_PCT.toFixed(2)}%</td>
+      <td class="fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.TARGET_UPTO)}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.ACTUAL_UPTO)}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${gapBg}">${gapFmt}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${achBg}">${achFmt}</td>
     </tr>`;
   });
   const pt = d.performance_totals;
-  tbPerf.innerHTML += `<tr class="bg-light fw-bold">
-    <td>TOTAL</td>
-    <td class="num-col">${fmtNum(pt.TARGET_UPTO)}</td>
-    <td class="num-col">${fmtNum(pt.ACTUAL_UPTO)}</td>
-    <td class="num-col">${fmtNum(pt.GAP)}</td>
-    <td class="num-col">${pt.ACH_PCT.toFixed(2)}%</td>
+  const totGapFmt = (pt.GAP > 0 ? "+" : "") + fmtNum(pt.GAP);
+  const totAchFmt = pt.ACH_PCT.toFixed(1).replace(".", ",") + "%";
+  tbPerf.innerHTML += `<tr style="background-color: #d9e2f3; font-weight: bold; border: 1px solid #b0c4de;">
+    <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">TOTAL</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(pt.TARGET_UPTO)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(pt.ACTUAL_UPTO)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${totGapFmt}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${totAchFmt}</td>
   </tr>`;
 
   // Render Chart
@@ -2134,6 +2182,42 @@ async function shareDistSummaryToWhatsApp(action = 'copy') {
     }
   } catch (err) {
     console.error("Error capturing distribution summary:", err);
+    showAlert("Gagal memproses gambar: " + err.message);
+  }
+}
+
+async function sharePerfAnalysisToWhatsApp(action = 'copy') {
+  if (typeof html2canvas === "undefined") {
+    showAlert("Library html2canvas belum termuat. Harap refresh halaman.");
+    return;
+  }
+  const card = document.getElementById("card-perf-analysis");
+  if (!card) {
+    showAlert("Card Analisa Performance tidak ditemukan.");
+    return;
+  }
+
+  const rawDate = document.getElementById("sum-date") ? document.getElementById("sum-date").value : "";
+  const dateFormatted = document.getElementById("perf-header-date-topright") ? document.getElementById("perf-header-date-topright").textContent.trim() : rawDate;
+  const safeFilename = `ANALISA_PERFORMANCE_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      ignoreElements: (el) => el.classList && el.classList.contains("no-capture")
+    });
+
+    if (action === "download") {
+      downloadCanvasAsPng(canvas, safeFilename);
+      showWaToast("Gambar Berhasil Didownload!", `File <b>${safeFilename}</b> telah tersimpan. Siap dilampirkan ke WhatsApp.`, dateFormatted);
+    } else {
+      await copyCanvasImageToClipboard(canvas, safeFilename, dateFormatted);
+    }
+  } catch (err) {
+    console.error("Error capturing performance analysis:", err);
     showAlert("Gagal memproses gambar: " + err.message);
   }
 }
