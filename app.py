@@ -5,6 +5,7 @@ Kompatibel penuh dengan Python 3.11, 3.12, 3.13, 3.14, dan 3.15+ di Windows, Mac
 """
 
 import os
+import json
 from flask import Flask, render_template, request, jsonify, send_file
 from db_excel import ExcelDatabase, PLANTS, EXPEDITIONS, parse_date_str, format_date_d_mmm_yy
 from engine_ddc import (
@@ -58,6 +59,30 @@ def get_calendar_info():
     }
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(EXCEL_PATH)) if os.path.isabs(EXCEL_PATH) else os.path.dirname(os.path.abspath(__file__))
+STATE_FILE_PATH = os.path.join(BASE_DIR, "app_state.json")
+
+def load_app_state():
+    """Memuat snapshot state aplikasi terakhir dari app_state.json."""
+    if os.path.exists(STATE_FILE_PATH):
+        try:
+            with open(STATE_FILE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading app_state.json: {e}")
+    return {}
+
+def save_app_state(state):
+    """Menyimpan snapshot state aplikasi ke app_state.json."""
+    try:
+        with open(STATE_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving app_state.json: {e}")
+        return False
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -69,6 +94,7 @@ def api_init():
     do_records = db.get_do_data()
     do_dates = sorted(list({r["TANGGAL_STR"] for r in do_records}))
     cal_info = get_calendar_info()
+    saved_state = load_app_state()
     return jsonify({
         "status": "ok",
         "excel_path": EXCEL_PATH,
@@ -78,7 +104,25 @@ def api_init():
         "do_dates": do_dates,
         "default_date": do_dates[-1] if do_dates else "2026-10-30",
         "calendar": cal_info,
+        "saved_state": saved_state,
     })
+
+
+@app.route("/api/app_state", methods=["GET", "POST"])
+def api_app_state():
+    """Endpoint untuk menyimpan dan memulihkan state aplikasi terakhir."""
+    if request.method == "POST":
+        try:
+            data = request.get_json(force=True)
+            if not isinstance(data, dict):
+                return jsonify({"status": "error", "message": "Payload harus berupa JSON object"}), 400
+            save_app_state(data)
+            return jsonify({"status": "ok", "message": "App state berhasil disimpan"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    else:
+        state = load_app_state()
+        return jsonify({"status": "ok", "state": state})
 
 
 @app.route("/api/calendar", methods=["GET"])

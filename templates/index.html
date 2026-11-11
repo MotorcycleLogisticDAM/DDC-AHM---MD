@@ -86,8 +86,14 @@
           </li>
         </ul>
         <div class="mt-auto p-3">
+           <div id="session-restore-badge" class="badge bg-green-lt text-green w-100 mb-2 py-2 d-none" style="font-size:0.75rem;">
+             <i class="ti ti-check me-1"></i> Sesi Terakhir Aktif
+           </div>
            <button class="btn btn-outline-light w-100 mb-2" onclick="initApp()"><i class="ti ti-refresh me-1"></i> Sync Database</button>
-           <a href="/api/download_excel" class="btn btn-success w-100"><i class="ti ti-download me-1"></i> Download Excel</a>
+           <a href="/api/download_excel" class="btn btn-success w-100 mb-2"><i class="ti ti-download me-1"></i> Download Excel</a>
+           <button class="btn btn-outline-secondary text-white-50 btn-sm w-100" onclick="resetAppStateToDefault()" title="Reset seluruh form dan filter ke kondisi awal kalender">
+             <i class="ti ti-rotate me-1"></i> Reset Sesi ke Default
+           </button>
         </div>
       </div>
     </div>
@@ -1039,8 +1045,22 @@ function setSummaryDateToCalendarH1() {
 }
 
 async function initApp() {
+  isRestoringState = true;
   const res = await fetch("/api/init");
   const data = await res.json();
+
+  // Load persistent state (prioritaskan LocalStorage, fallback ke server saved_state)
+  let savedState = {};
+  try {
+    const localStr = localStorage.getItem(DDC_STATE_KEY);
+    if (localStr) {
+      savedState = JSON.parse(localStr);
+    } else if (data.saved_state && Object.keys(data.saved_state).length > 0) {
+      savedState = data.saved_state;
+    }
+  } catch (e) {
+    savedState = data.saved_state || {};
+  }
 
   // Populate Calendar Info & Aturan Operasional
   if (data.calendar) {
@@ -1062,23 +1082,45 @@ async function initApp() {
     const elLblDoH1Badge = document.getElementById("lbl-do-h1-badge");
     if (elLblDoH1Badge) elLblDoH1Badge.textContent = `${cal.do_date_formatted} (${cal.do_date_h_minus_1})`;
 
-    // Form DO default ke H-1 kalender
+    // Form DO: jika ada state tersimpan gunakan itu, jika tidak gunakan H-1 kalender
     const inputDoTgl = document.getElementById("add-do-tgl");
-    if (inputDoTgl && cal.do_date_h_minus_1) {
-      inputDoTgl.value = cal.do_date_h_minus_1;
+    if (inputDoTgl) {
+      inputDoTgl.value = savedState["add-do-tgl"] || cal.do_date_h_minus_1 || "2026-11-06";
+      const inputDoBulan = document.getElementById("add-do-bulan");
+      if (inputDoBulan && savedState["add-do-bulan"]) {
+        inputDoBulan.value = savedState["add-do-bulan"];
+      }
+      PLANTS.forEach(p => {
+        const pEl = document.getElementById(`add-do-${p}`);
+        if (pEl && savedState[`add-do-${p}`] !== undefined) {
+          pEl.value = savedState[`add-do-${p}`];
+        }
+      });
       onChangeAddDoDate();
     }
 
-    // Form SL manual default ke H+1 kalender
+    // Form SL manual: jika ada state tersimpan gunakan itu, jika tidak gunakan H+1 kalender
     const inputSlTgl = document.getElementById("sl-tgl");
-    if (inputSlTgl && cal.sl_date_h_plus_1) {
-      inputSlTgl.value = cal.sl_date_h_plus_1;
+    if (inputSlTgl) {
+      inputSlTgl.value = savedState["sl-tgl"] || cal.sl_date_h_plus_1 || "";
     }
+    ['sl-nopol', 'sl-sopir', 'sl-xpdc', 'sl-plant', 'sl-gudang', 'sl-qty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && savedState[id] !== undefined) el.value = savedState[id];
+    });
 
-    // Tanggal Laporan Dashboard Summary otomatis default ke Up to Date H-1 kalender
+    // Tanggal Laporan Dashboard Summary: jika ada state tersimpan gunakan itu
     const inputSumDate = document.getElementById("sum-date");
-    if (inputSumDate && cal.do_date_h_minus_1) {
-      inputSumDate.value = cal.do_date_h_minus_1;
+    if (inputSumDate) {
+      inputSumDate.value = savedState["sum-date"] || cal.do_date_h_minus_1 || "";
+    }
+    const inputSumCutoff = document.getElementById("sum-cutoff");
+    if (inputSumCutoff && savedState["sum-cutoff"]) {
+      inputSumCutoff.value = savedState["sum-cutoff"];
+    }
+    const inputSumUnfilled = document.getElementById("sum-unfilled");
+    if (inputSumUnfilled && savedState["sum-unfilled"] !== undefined) {
+      inputSumUnfilled.value = savedState["sum-unfilled"];
     }
     updateSummaryButtonState();
 
@@ -1087,50 +1129,108 @@ async function initApp() {
     const calMonth = parseInt(calDateStr.substring(5, 7), 10);
     const calYear = parseInt(calDateStr.substring(0, 4), 10);
 
-    // Menu Perencanaan Target Bulanan: Bulan & Tahun mengikuti kalender
+    // Menu Perencanaan Target Bulanan:
     const tbMonthEl = document.getElementById("tb-month");
-    if (tbMonthEl) tbMonthEl.value = String(calMonth);
+    if (tbMonthEl) tbMonthEl.value = savedState["tb-month"] || String(calMonth);
     const tbYearEl = document.getElementById("tb-year");
-    if (tbYearEl) tbYearEl.value = String(calYear);
+    if (tbYearEl) tbYearEl.value = savedState["tb-year"] || String(calYear);
 
-    // Menu Per Day: Bulan & Tahun mengikuti kalender
+    // Menu Per Day:
     const pdMonthEl = document.getElementById("pd-month");
-    if (pdMonthEl) pdMonthEl.value = String(calMonth);
+    if (pdMonthEl) pdMonthEl.value = savedState["pd-month"] || String(calMonth);
     const pdYearEl = document.getElementById("pd-year");
-    if (pdYearEl) pdYearEl.value = String(calYear);
+    if (pdYearEl) pdYearEl.value = savedState["pd-year"] || String(calYear);
+    const pdDateEl = document.getElementById("pd-date");
+    if (pdDateEl && savedState["pd-date"] !== undefined) pdDateEl.value = savedState["pd-date"];
+    const pdSortEl = document.getElementById("pd-sort");
+    if (pdSortEl && savedState["pd-sort"]) pdSortEl.value = savedState["pd-sort"];
   }
 
-  // Populate DO dates
+  // Populate DO dates in Kuota Harian
+  const targetDqDate = savedState["dq-date-input"] || data.default_date;
   const selDate = document.getElementById("dq-date-select");
   selDate.innerHTML = "";
   data.do_dates.forEach(d => {
     const opt = document.createElement("option");
     opt.value = d;
     opt.textContent = d;
-    if (d === data.default_date) opt.selected = true;
+    if (d === targetDqDate) opt.selected = true;
     selDate.appendChild(opt);
   });
-  document.getElementById("dq-date-input").value = data.default_date;
+  document.getElementById("dq-date-input").value = targetDqDate;
+  if (savedState["dq-rolling"] && document.getElementById("dq-rolling")) document.getElementById("dq-rolling").value = savedState["dq-rolling"];
+  if (savedState["dq-mode"] && document.getElementById("dq-mode")) document.getElementById("dq-mode").value = savedState["dq-mode"];
+
+  // Populate Kuota Bulanan
+  if (savedState["mq-month"] && document.getElementById("mq-month")) document.getElementById("mq-month").value = savedState["mq-month"];
+  if (savedState["mq-year"] && document.getElementById("mq-year")) document.getElementById("mq-year").value = savedState["mq-year"];
+  if (savedState["mq-start-date"] && document.getElementById("mq-start-date")) document.getElementById("mq-start-date").value = savedState["mq-start-date"];
+  if (savedState["mq-end-date"] && document.getElementById("mq-end-date")) document.getElementById("mq-end-date").value = savedState["mq-end-date"];
+  if (savedState["mq-cutoff"] && document.getElementById("mq-cutoff")) document.getElementById("mq-cutoff").value = savedState["mq-cutoff"];
+  if (savedState["mq-gudang"] && document.getElementById("mq-gudang")) document.getElementById("mq-gudang").value = savedState["mq-gudang"];
+  if (savedState["mq-target"] && document.getElementById("mq-target")) document.getElementById("mq-target").value = savedState["mq-target"];
 
   // Populate Sheets
+  const targetSheet = savedState["db-sheet-select"] || (data.sheets[0] || "");
   const selSheet = document.getElementById("db-sheet-select");
   selSheet.innerHTML = "";
   data.sheets.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
     opt.textContent = s;
+    if (s === targetSheet) opt.selected = true;
     selSheet.appendChild(opt);
   });
 
+  // DO Filters
+  if (savedState["filter-do-tgl"] && document.getElementById("filter-do-tgl")) document.getElementById("filter-do-tgl").value = savedState["filter-do-tgl"];
+  if (savedState["filter-do-bulan"] && document.getElementById("filter-do-bulan")) document.getElementById("filter-do-bulan").value = savedState["filter-do-bulan"];
+  if (savedState["filter-do-sort"] && document.getElementById("filter-do-sort")) document.getElementById("filter-do-sort").value = savedState["filter-do-sort"];
+
+  // Muat data untuk seluruh modul
   await loadSummary();
   await loadTargetBulananPage();
   await loadMonthlyQuota();
   await loadSLTable();
   await calculateDailyQuota(false);
+
+  // Jika ada draft editan bal-cell Tahap 2 untuk tanggal ini, pulihkan!
+  if (savedState.bal_draft && savedState["dq-date-input"] === targetDqDate) {
+    Object.keys(savedState.bal_draft).forEach(key => {
+      const parts = key.split("_");
+      if (parts.length === 2) {
+        const x = parts[0];
+        const p = parts[1];
+        const cell = document.querySelector(`.bal-cell[data-xpdc="${x}"][data-plant="${p}"]`);
+        if (cell) cell.value = savedState.bal_draft[key];
+      }
+    });
+    recalcEditableTable();
+  }
+
   await loadSheetPreview();
   await loadDOTable();
   onChangeAddDoDate();
   await loadPerDayTab();
+
+  // Buka kembali tab menu terakhir yang aktif
+  const lastActiveTab = savedState.activeTab;
+  if (lastActiveTab) {
+    const tabTrigger = document.querySelector(`a[href="${lastActiveTab}"]`);
+    if (tabTrigger && typeof bootstrap !== "undefined" && bootstrap.Tab) {
+      const tabInst = bootstrap.Tab.getOrCreateInstance(tabTrigger);
+      tabInst.show();
+    }
+  }
+
+  // Tampilkan indikator status pemulihan sesi
+  const badgeSess = document.getElementById("session-restore-badge");
+  if (badgeSess && savedState.timestamp) {
+    badgeSess.classList.remove("d-none");
+    badgeSess.setAttribute("title", `Kondisi terakhir dipulihkan dari sesi: ${new Date(savedState.timestamp).toLocaleString()}`);
+  }
+
+  isRestoringState = false;
 }
 
 async function loadSummary() {
@@ -2514,7 +2614,138 @@ async function savePerDayAdjustment() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", initApp);
+// =========================================================================
+// STATE PERSISTENCE MANAGER (DUAL-LAYER: LOCALSTORAGE + SERVER JSON)
+// =========================================================================
+const DDC_STATE_KEY = "DDC_APP_STATE_V1";
+let appStateSaveTimer = null;
+let isRestoringState = false;
+
+function collectCurrentAppState() {
+  const state = {};
+
+  // 1. Tab aktif
+  const activeTabLink = document.querySelector('#sidebar-menu a.nav-link.active') || document.querySelector('.navbar-nav a.nav-link.active') || document.querySelector('a[data-bs-toggle="tab"].active');
+  if (activeTabLink && activeTabLink.getAttribute("href")) {
+    state.activeTab = activeTabLink.getAttribute("href");
+  }
+
+  // 2. Daftar elemen input/select yang dilacak
+  const trackedIds = [
+    // Tab DO
+    "add-do-tgl", "add-do-bulan",
+    "add-do-FM1", "add-do-FM2", "add-do-FM6", "add-do-FM6A", "add-do-FM7", "add-do-FM8", "add-do-FM9",
+    "filter-do-tgl", "filter-do-bulan", "filter-do-sort",
+    // Tab SL
+    "sl-tgl", "sl-nopol", "sl-sopir", "sl-xpdc", "sl-plant", "sl-gudang", "sl-qty",
+    // Tab Target Bulanan
+    "tb-month", "tb-year",
+    // Tab Dashboard Summary
+    "sum-date", "sum-cutoff", "sum-unfilled",
+    // Tab Kuota Bulanan
+    "mq-month", "mq-year", "mq-start-date", "mq-end-date", "mq-cutoff", "mq-gudang", "mq-target",
+    // Tab Kuota Harian
+    "dq-date-input", "dq-date-select", "dq-rolling", "dq-mode",
+    // Tab Per Day
+    "pd-month", "pd-year", "pd-date", "pd-sort",
+    // Tab Database
+    "db-sheet-select"
+  ];
+
+  trackedIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      state[id] = el.value;
+    }
+  });
+
+  // 3. Draft Kuota Harian (bal-cell di Tahap 2)
+  const balCells = document.querySelectorAll('.bal-cell');
+  if (balCells.length > 0) {
+    state.bal_draft = {};
+    balCells.forEach(cell => {
+      const x = cell.getAttribute("data-xpdc");
+      const p = cell.getAttribute("data-plant");
+      if (x && p) {
+        state.bal_draft[`${x}_${p}`] = cell.value;
+      }
+    });
+  }
+
+  state.timestamp = new Date().toISOString();
+  return state;
+}
+
+function saveAppStateImmediate() {
+  if (isRestoringState) return;
+  try {
+    const state = collectCurrentAppState();
+    const str = JSON.stringify(state);
+    localStorage.setItem(DDC_STATE_KEY, str);
+
+    // Sinkronisasi ke server (POST /api/app_state)
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/app_state", str);
+    } else {
+      fetch("/api/app_state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: str,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn("Gagal menyimpan state DDC:", e);
+  }
+}
+
+function saveAppStateDebounced() {
+  if (isRestoringState) return;
+  if (appStateSaveTimer) clearTimeout(appStateSaveTimer);
+  appStateSaveTimer = setTimeout(() => {
+    saveAppStateImmediate();
+  }, 300);
+}
+
+function resetAppStateToDefault() {
+  if (!confirm("Apakah Anda yakin ingin mereset seluruh settingan dan filter ke kondisi kalender sistem awal?")) {
+    return;
+  }
+  try {
+    localStorage.removeItem(DDC_STATE_KEY);
+    fetch("/api/app_state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    }).catch(() => {});
+  } catch (e) {}
+  alert("Sesi telah direset ke default sistem.");
+  window.location.reload();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initApp();
+
+  // Listen for tab switches
+  document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {
+    el.addEventListener("shown.bs.tab", () => {
+      saveAppStateImmediate();
+    });
+  });
+
+  // Listen for input changes across the app
+  document.addEventListener("change", (e) => {
+    saveAppStateDebounced();
+  });
+  document.addEventListener("input", (e) => {
+    saveAppStateDebounced();
+  });
+
+  // Listen for unload / close tab
+  window.addEventListener("beforeunload", () => {
+    saveAppStateImmediate();
+  });
+});
 </script>
 
 <!-- MODAL ADJUSTMENT DO (PEMBATALAN / PENGURANGAN / PENAMBAHAN) -->
