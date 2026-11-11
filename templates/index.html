@@ -136,17 +136,26 @@
           <!-- ========================================================== -->
           <div class="tab-pane active show" id="tab-do">
             <div class="row row-cards">
+              <!-- KARTU 1: TAMBAH / UPDATE DO AHM (OTOMATIS PUSH KE SHEET LOKAL DO) -->
               <div class="col-lg-12">
-                <div class="card mb-3">
-                  <div class="card-header bg-blue-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="card mb-3 shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <div class="card-header bg-blue-lt d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
                     <div>
-                      <h3 class="card-title fw-bold mb-0">Tambah / Update Delivery Order (DO) AHM</h3>
+                      <h3 class="card-title fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="ti ti-truck-delivery fs-2"></i>
+                        Tambah / Update Delivery Order (DO) AHM — Otomatis Push ke Sheet Lokal 'DO'
+                      </h3>
                       <div class="small text-secondary mt-1">
                         <span class="badge bg-primary text-white me-1"><i class="ti ti-calendar me-1"></i>Rule 1</span>
-                        DO dirilis <b>H-1</b> dari tanggal kalender sistem (Target: <span id="lbl-do-h1-badge" class="fw-bold text-primary">06-Nov-26</span>)
+                        DO dirilis <b>H-1</b> dari tanggal kalender sistem (Target: <span id="lbl-do-h1-badge" class="fw-bold text-primary">06-Nov-26</span>) &bull; Otomatis tersimpan ke Sheet Lokal <b>DO</b> pada <code>DDC.xlsx</code>
                       </div>
                     </div>
-                    <span class="badge bg-blue text-white" id="add-do-total-badge">Total Input DO: 0 Unit</span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-blue text-white" id="add-do-total-badge">Total Input DO: 0 Unit</span>
+                      <a href="/api/download_excel" class="btn btn-sm btn-outline-primary d-flex align-items-center" title="Unduh file DDC.xlsx lokal dengan data Sheet DO & SL terkini">
+                        <i class="ti ti-download me-1"></i> Download DDC.xlsx Terkini
+                      </a>
+                    </div>
                   </div>
                   <div class="card-body">
                     <div class="row g-2 align-items-end">
@@ -166,13 +175,48 @@
                       <div class="col"><label class="small text-secondary mb-1 d-block">FM8</label><input type="number" id="add-do-FM8" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
                       <div class="col"><label class="small text-secondary mb-1 d-block">FM9</label><input type="number" id="add-do-FM9" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
                       <div class="col-auto">
-                        <button class="btn btn-primary btn-sm" onclick="submitNewDO()">
-                          <i class="ti ti-device-floppy me-1"></i> Simpan DO
+                        <button class="btn btn-primary btn-sm fw-bold px-3" onclick="submitNewDO()">
+                          <i class="ti ti-device-floppy me-1"></i> Simpan DO &amp; Push ke Sheet DO
                         </button>
                       </div>
                     </div>
                     <div class="small text-secondary mt-2">
-                      <i class="ti ti-info-circle me-1"></i><b>Aturan DO:</b> Dirilis H-1 dari kalender sistem. Kolom <b>Bulan (Angka)</b> otomatis terisi sesuai Tanggal DO dan tersimpan ke kolom <code>BULAN</code> di Sheet <code>DO</code>. Klik baris tanggal pada tabel di bawah jika ingin memuat kembali angka DO tanggal tersebut.
+                      <i class="ti ti-info-circle me-1"></i><b>Otomatis Push ke Sheet DO:</b> Data Tanggal DO (H-1 Kalender) beserta rincian Qty per Plant (FM1..FM9) dan Bulan (Angka) akan <b>langsung tersimpan &amp; ter-push ke Sheet Lokal 'DO' pada file <code>DDC.xlsx</code></b> dan otomatis memutakhirkan perhitungan di menu Kuota Harian. Klik baris tanggal pada tabel di bawah jika ingin memuat kembali angka DO tanggal tersebut.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- KARTU 2: UPLOAD DATA AKTUAL BATCH (OTOMATIS PUSH KE SHEET LOKAL SL) -->
+              <div class="col-lg-12">
+                <div class="card mb-3 shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <div class="card-header bg-teal-lt d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0 text-teal d-flex align-items-center gap-2">
+                        <i class="ti ti-upload fs-2"></i>
+                        Upload Data Aktual Batch (Excel .xlsx) — Otomatis Push ke Sheet Lokal 'SL'
+                      </h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
+                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman &bull; Otomatis ter-push ke Sheet Lokal <b>SL</b> pada <code>DDC.xlsx</code>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <a href="/api/download_template_sl" class="btn btn-sm btn-outline-teal d-flex align-items-center">
+                        <i class="ti ti-download me-1"></i> Download Template Excel SL
+                      </a>
+                    </div>
+                  </div>
+                  <div class="card-body py-3">
+                    <div class="mb-2 text-secondary small">
+                      Unggah file Excel (<code>.xlsx</code>) berisi data aktual pengiriman unit. Data yang di-upload akan <b>langsung di-push ke Sheet Lokal 'SL'</b> pada file <code>DDC.xlsx</code> (menambahkan baris baru ke bawah tanpa menghapus data lama).
+                      <div class="mt-1"><span class="badge bg-teal-lt fw-bold">Format Kolom: TANGGAL (contoh: 31-Okt-26), NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY</span></div>
+                    </div>
+                    <div class="input-group">
+                      <input type="file" id="do-tab-sl-file-upload" class="form-control form-control-sm" accept=".xlsx">
+                      <button class="btn btn-teal btn-sm fw-bold px-3" onclick="uploadSLBatchFromDO(event)">
+                        <i class="ti ti-upload me-1"></i> Upload Batch &amp; Push ke Sheet SL
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2531,24 +2575,69 @@ async function submitNewDO() {
       "FM9": parseInt(document.getElementById("add-do-FM9").value || "0", 10),
     }
   };
-  const res = await fetch("/api/add_do", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const d = await res.json();
-  if (d.status === "ok") {
-    showAlert(d.message);
-    await initApp();
-    document.getElementById("add-do-tgl").value = tglVal;
-    onChangeAddDoDate();
-    // Langsung hubungkan tanggal DO yang baru disimpan ke menu Kuota Harian (Tahap 1 & Tahap 2)
-    document.getElementById("dq-date-input").value = tglVal;
-    const selDq = document.getElementById("dq-date-select");
-    if (selDq) selDq.value = tglVal;
-    await calculateDailyQuota(false, true);
-  } else {
-    alert(d.message || "Gagal menyimpan DO");
+  try {
+    const res = await fetch("/api/add_do", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (d.status === "ok") {
+      showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-primary ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx Terkini</a>`);
+      await initApp();
+      await loadDOTable();
+      document.getElementById("add-do-tgl").value = tglVal;
+      onChangeAddDoDate();
+      // Langsung hubungkan tanggal DO yang baru disimpan ke menu Kuota Harian (Tahap 1 & Tahap 2)
+      document.getElementById("dq-date-input").value = tglVal;
+      const selDq = document.getElementById("dq-date-select");
+      if (selDq) selDq.value = tglVal;
+      await calculateDailyQuota(false, true);
+      await loadSummary();
+    } else {
+      showAlert("Gagal menyimpan DO: " + (d.message || "Terjadi kesalahan"), "danger");
+    }
+  } catch (err) {
+    showAlert("Terjadi kesalahan saat menyimpan DO: " + err.message, "danger");
+  }
+}
+
+async function uploadSLBatchFromDO(event) {
+  const fileInput = document.getElementById("do-tab-sl-file-upload");
+  if (!fileInput || !fileInput.files.length) {
+    showAlert("Pilih file Excel (.xlsx) terlebih dahulu!", "warning");
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  
+  const btn = event.currentTarget;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Mengunggah &amp; Push ke Sheet SL...`;
+  
+  try {
+    const res = await fetch("/api/upload_sl", {
+      method: "POST",
+      body: formData
+    });
+    const d = await res.json();
+    if (d.status === "ok") {
+      showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-success ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx Terkini</a>`);
+      await loadSLTable();
+      await loadDOTable();
+      await loadSummary();
+      await loadMonthlyQuota();
+      fileInput.value = "";
+    } else {
+      showAlert("Gagal upload batch ke Sheet SL: " + (d.message || "Terjadi kesalahan"), "danger");
+    }
+  } catch (err) {
+    showAlert("Gagal menghubungi server: " + err.message, "danger");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
   }
 }
 

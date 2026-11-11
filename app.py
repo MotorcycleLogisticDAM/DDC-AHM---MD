@@ -15,7 +15,8 @@ from engine_ddc import (
 )
 
 app = Flask(__name__)
-EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", "DDC.xlsx")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", os.path.join(BASE_DIR, "DDC.xlsx"))
 db = ExcelDatabase(EXCEL_PATH)
 
 
@@ -388,8 +389,13 @@ def api_add_do():
     bulan = payload.get("bulan", None)
     do_per_plant = payload.get("do_per_plant", {})
 
-    db.create_backup()
-    db.upsert_daily_do(tanggal, do_per_plant, bulan_override=bulan)
+    try:
+        db.create_backup()
+        db.upsert_daily_do(tanggal, do_per_plant, bulan_override=bulan)
+    except PermissionError as pe:
+        return jsonify({"status": "error", "message": str(pe)}), 409
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Gagal push ke Sheet DO: {str(e)}"}), 500
 
     bulan_num = int(bulan) if (bulan is not None and str(bulan).strip() != "") else int(tanggal[5:7])
     tot_unit = sum(int(do_per_plant.get(p, 0)) for p in PLANTS)
@@ -398,7 +404,7 @@ def api_add_do():
         "tanggal": tanggal,
         "bulan": bulan_num,
         "total_qty": tot_unit,
-        "message": f"Data DO Harian tanggal {tanggal} (Bulan: {bulan_num}, Total: {tot_unit:,} unit) berhasil disimpan & terhubung ke histori Sheet DO!",
+        "message": f"Data DO Harian tanggal {tanggal} (Bulan: {bulan_num}, Total: {tot_unit:,} unit) berhasil disimpan dan otomatis ter-push ke Sheet Lokal 'DO' pada file DDC.xlsx!",
     })
 
 
@@ -813,7 +819,7 @@ def api_upload_sl():
             "status": "ok", 
             "added": added,
             "total_sl": total_sl,
-            "message": f"Berhasil meng-update {added} data pengiriman ke Sheet SL pada file DDC.xlsx! Total data saat ini: {total_sl:,} baris."
+            "message": f"Berhasil meng-upload {added} data pengiriman dan otomatis ter-push ke Sheet Lokal 'SL' pada file DDC.xlsx! Total data saat ini: {total_sl:,} baris."
         })
         
     except PermissionError as e:

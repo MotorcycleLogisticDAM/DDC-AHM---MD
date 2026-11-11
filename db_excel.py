@@ -11,7 +11,8 @@ import shutil
 from datetime import datetime, date
 import openpyxl
 
-DEFAULT_EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", "DDC.xlsx")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", os.path.join(BASE_DIR, "DDC.xlsx"))
 PLANTS = ["FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9"]
 EXPEDITIONS = ["TUNAS MUDA", "RJTM", "LBK", "WSS", "PUNINAR"]
 
@@ -279,8 +280,15 @@ class ExcelDatabase:
         else:
             ws.append(["KOLOM_1", "KOLOM_2"])
 
-        wb.save(self.excel_path)
-        wb.close()
+        try:
+            wb.save(self.excel_path)
+            wb.close()
+        except PermissionError:
+            wb.close()
+            raise PermissionError(
+                f"File '{os.path.basename(self.excel_path)}' sedang dibuka atau dikunci oleh program lain (seperti Microsoft Excel). "
+                f"Mohon tutup Microsoft Excel terlebih dahulu agar data dapat di-push ke Sheet DO."
+            )
         return True
 
     # ------------------------------------------------------------------
@@ -554,8 +562,15 @@ class ExcelDatabase:
                 ws.cell(curr_row, 7, str(ket))
                 curr_row += 1
 
-        wb.save(self.excel_path)
-        wb.close()
+        try:
+            wb.save(self.excel_path)
+            wb.close()
+        except PermissionError:
+            wb.close()
+            raise PermissionError(
+                f"File '{os.path.basename(self.excel_path)}' sedang dibuka atau dikunci oleh program lain (seperti Microsoft Excel). "
+                f"Mohon tutup Microsoft Excel terlebih dahulu agar data dapat di-push ke Sheet DO."
+            )
         return True
 
     def adjust_do(self, tanggal_str, plant, adjustment_val=None, keterangan="", qty_final=None, qty_awal=None):
@@ -880,8 +895,15 @@ class ExcelDatabase:
                     curr_r += 1
                 curr_r += 1  # 1 baris pemisah antar tanggal sesuai format asli PER DAY
 
-        wb.save(self.excel_path)
-        wb.close()
+        try:
+            wb.save(self.excel_path)
+            wb.close()
+        except PermissionError:
+            wb.close()
+            raise PermissionError(
+                f"File '{os.path.basename(self.excel_path)}' sedang dibuka atau dikunci oleh program lain (seperti Microsoft Excel). "
+                f"Mohon tutup Microsoft Excel terlebih dahulu agar data dapat di-push ke Sheet DO."
+            )
         return True
 
     def adjust_daily_allocation(self, tanggal_str, xpdc, plant_adjustments=None, keterangan=None, adj_type=None, amount=0, target_plant=None):
