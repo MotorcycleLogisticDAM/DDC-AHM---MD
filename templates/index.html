@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     body { background-color: #f4f6fa; }
     .navbar-brand-title { font-weight: 700; letter-spacing: -0.02em; }
@@ -787,8 +788,8 @@
               </div>
             </div>
 
-            <!-- STEP 4: HASIL AUTO-BALANCING (EDITABLE + SAVE TO EXCEL) -->
-            <div class="card mb-3">
+            <!-- STEP 4: HASIL AUTO-BALANCING (EDITABLE + SAVE TO EXCEL + SHARE WA) -->
+            <div class="card mb-3" id="card-new-quota-harian">
               <div class="card-header bg-green-lt d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
                 <div class="d-flex align-items-center gap-2">
                   <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 32px; width: auto; object-fit: contain;">
@@ -798,7 +799,46 @@
                   <div class="badge bg-white text-dark border px-3 py-2 fs-6 fw-bold shadow-sm d-flex align-items-center" title="Tanggal Delivery Order (DO) H-1">
                     <i class="ti ti-calendar me-1 text-primary"></i> <span id="dq-header-date-topright">11/06/26</span>
                   </div>
-                  <button class="btn btn-success btn-sm shadow-sm" onclick="saveDailyAllocationToExcel()">
+                  <!-- Tombol Aksi Share / Salin Gambar WA -->
+                  <div class="btn-group no-capture">
+                    <button type="button" class="btn btn-teal btn-sm shadow-sm d-flex align-items-center" id="btn-share-wa-main" onclick="shareQuotaToWhatsApp('copy')" title="Salin Gambar ke Clipboard untuk Paste di WhatsApp (Ctrl+V)">
+                      <i class="ti ti-brand-whatsapp me-1 fs-4"></i> Salin Gambar (WA)
+                    </button>
+                    <button type="button" class="btn btn-teal btn-sm dropdown-toggle dropdown-toggle-split shadow-sm" data-bs-toggle="dropdown" aria-expanded="false" title="Pilihan Ekspor Gambar">
+                      <span class="visually-hidden">Pilihan Opsi</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="shareQuotaToWhatsApp('copy')">
+                          <i class="ti ti-copy me-2 text-teal fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Salin Gambar (Clipboard)</div>
+                            <small class="text-muted">Siap di-Paste langsung di WA Web (Ctrl + V)</small>
+                          </div>
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider my-1"></li>
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="shareQuotaToWhatsApp('download')">
+                          <i class="ti ti-download me-2 text-primary fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Download File PNG</div>
+                            <small class="text-muted">Simpan gambar resolusi tinggi</small>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="shareQuotaToWhatsApp('share')">
+                          <i class="ti ti-share me-2 text-azure fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Share Langsung (Mobile/Web)</div>
+                            <small class="text-muted">Buka dialog kirim WhatsApp HP</small>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <button class="btn btn-success btn-sm shadow-sm no-capture" onclick="saveDailyAllocationToExcel()">
                     <i class="ti ti-device-floppy me-1"></i> Simpan Kuota Harian ke DDC.xlsx
                   </button>
                 </div>
@@ -1838,6 +1878,177 @@ async function saveDailyAllocationToExcel() {
   showAlert(d.message + " Silakan cek hasil tampilannya pada menu Per Day.");
   await loadPerDayTab();
   await loadSummary();
+}
+
+// ==========================================
+// FITUR SHARE / EKSPOR GAMBAR TABEL KE WHATSAPP
+// ==========================================
+async function shareQuotaToWhatsApp(action = 'copy') {
+  if (typeof html2canvas === "undefined") {
+    showAlert("Library html2canvas sedang dimuat atau terblokir. Harap refresh halaman.");
+    return;
+  }
+
+  const card = document.getElementById("card-new-quota-harian");
+  if (!card) {
+    showAlert("Tabel NEW QUOTA PER EXPEDITION PER DAY H-1 tidak ditemukan.");
+    return;
+  }
+
+  const btnMain = document.getElementById("btn-share-wa-main");
+  const origBtnHtml = btnMain ? btnMain.innerHTML : "";
+  if (btnMain) {
+    btnMain.disabled = true;
+    btnMain.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Memproses...`;
+  }
+
+  const rawDate = document.getElementById("dq-date-input") ? document.getElementById("dq-date-input").value : "";
+  const dateFormatted = document.getElementById("dq-header-date-topright") ? document.getElementById("dq-header-date-topright").textContent.trim() : rawDate;
+  const safeFilename = `NEW_QUOTA_H-1_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 2, // Ketajaman retina 2x untuk WhatsApp
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      ignoreElements: (el) => el.classList && el.classList.contains("no-capture"),
+      onclone: (clonedDoc) => {
+        // Sembunyikan elemen no-capture pada cloned DOM
+        clonedDoc.querySelectorAll(".no-capture").forEach(el => el.style.setProperty("display", "none", "important"));
+
+        // Ganti input alokasi plant dengan angka tebal rapi berformat ribuan
+        const originalInputs = document.querySelectorAll("#card-new-quota-harian .bal-cell");
+        const clonedInputs = clonedDoc.querySelectorAll("#card-new-quota-harian .bal-cell");
+        clonedInputs.forEach((clInp, idx) => {
+          const origInp = originalInputs[idx];
+          const val = origInp ? parseInt(origInp.value, 10) || 0 : 0;
+          const parent = clInp.parentElement;
+          const span = clonedDoc.createElement("span");
+          span.style.fontWeight = val > 0 ? "700" : "500";
+          span.style.fontSize = "13px";
+          span.style.fontFamily = "inherit";
+          span.style.color = val > 0 ? "#0f172a" : "#94a3b8";
+          span.textContent = fmtNum(val);
+          parent.replaceChild(span, clInp);
+          parent.style.textAlign = "right";
+          parent.style.padding = "6px 8px";
+        });
+
+        // Format cloned card untuk snapshot resmi
+        const clonedCard = clonedDoc.getElementById("card-new-quota-harian");
+        if (clonedCard) {
+          clonedCard.style.boxShadow = "none";
+          clonedCard.style.borderRadius = "8px";
+          clonedCard.style.border = "1px solid #cbd5e1";
+          clonedCard.style.overflow = "hidden";
+          clonedCard.style.margin = "0";
+
+          // Tambahkan watermark footer resmi
+          const footerDiv = clonedDoc.createElement("div");
+          footerDiv.style.cssText = "padding: 8px 16px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b; font-family: inherit;";
+
+          const leftSpan = clonedDoc.createElement("span");
+          leftSpan.innerHTML = "<b style='color:#0f172a;'>PT DAYA ADICIPTA MOTORA</b> &bull; DDC Logistics &amp; Distribution Engine";
+
+          const rightSpan = clonedDoc.createElement("span");
+          const now = new Date();
+          const timeStr = now.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) + " " +
+                          now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
+          rightSpan.innerHTML = `Tanggal DO: <b style="color: #0284c7;">${dateFormatted}</b> &bull; Digenerate: ${timeStr}`;
+
+          footerDiv.appendChild(leftSpan);
+          footerDiv.appendChild(rightSpan);
+          clonedCard.appendChild(footerDiv);
+        }
+      }
+    });
+
+    if (action === "download") {
+      downloadCanvasAsPng(canvas, safeFilename);
+      showWaToast("Gambar Berhasil Didownload!", `File <b>${safeFilename}</b> telah tersimpan. Siap dilampirkan ke WhatsApp.`, dateFormatted);
+    } else if (action === "share") {
+      let shared = false;
+      if (navigator.canShare) {
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (blob) {
+          const file = new File([blob], safeFilename, { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                title: "NEW QUOTA PER EXPEDITION PER DAY H-1",
+                text: `Berikut tabel alokasi kuota harian DO (H-1) Tanggal ${dateFormatted}:`,
+                files: [file]
+              });
+              shared = true;
+            } catch (err) {
+              if (err.name !== "AbortError") console.warn(err);
+            }
+          }
+        }
+      }
+      if (!shared) {
+        await copyCanvasImageToClipboard(canvas, safeFilename, dateFormatted);
+      }
+    } else {
+      await copyCanvasImageToClipboard(canvas, safeFilename, dateFormatted);
+    }
+  } catch (err) {
+    console.error("Error generating quota image:", err);
+    showAlert("Terjadi kendala saat memproses gambar: " + err.message);
+  } finally {
+    if (btnMain) {
+      btnMain.disabled = false;
+      btnMain.innerHTML = origBtnHtml;
+    }
+  }
+}
+
+async function copyCanvasImageToClipboard(canvas, filename, dateFormatted) {
+  try {
+    const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+    if (blob && navigator.clipboard && navigator.clipboard.write) {
+      const item = new ClipboardItem({ "image/png": blob });
+      await navigator.clipboard.write([item]);
+      showWaToast(
+        "Gambar Berhasil Disalin ke Clipboard!",
+        "Silakan buka WhatsApp Web / Desktop, lalu tekan <b>Ctrl + V</b> pada kolom chat grup.",
+        dateFormatted
+      );
+      return;
+    }
+  } catch (err) {
+    console.warn("Clipboard write gagal / dibatasi browser, fallback ke download PNG:", err);
+  }
+  // Fallback unduh otomatis jika browser membatasi clipboard gambar
+  downloadCanvasAsPng(canvas, filename);
+  showWaToast(
+    "Gambar Didownload Otomatis (PNG)",
+    `Browser membatasi copy gambar langsung. Berkas <b>${filename}</b> telah diunduh. Silakan drag / attach ke WhatsApp.`,
+    dateFormatted
+  );
+}
+
+function downloadCanvasAsPng(canvas, filename) {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = canvas.toDataURL("image/png");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function showWaToast(title, desc, dateStr) {
+  const toastEl = document.getElementById("wa-share-toast");
+  if (!toastEl) return;
+  document.getElementById("wa-toast-title").innerHTML = title;
+  document.getElementById("wa-toast-desc").innerHTML = desc;
+  document.getElementById("wa-toast-date").textContent = dateStr || "-";
+  toastEl.style.display = "block";
+  clearTimeout(window._waToastTimer);
+  window._waToastTimer = setTimeout(() => {
+    toastEl.style.display = "none";
+  }, 9000);
 }
 
 async function loadSheetPreview() {
@@ -2957,6 +3168,32 @@ window.addEventListener("DOMContentLoaded", () => {
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
         <button type="button" class="btn btn-primary btn-sm text-white fw-bold" id="btn-save-adjp" onclick="savePerDayAdjustment()">
           <i class="ti ti-device-floppy me-1"></i> Simpan Penyesuaian
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFIKASI SHARE WHATSAPP -->
+<div id="wa-share-toast" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; display: none;">
+  <div class="toast show shadow-lg border border-teal" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 320px;">
+    <div class="toast-header bg-teal text-white py-2">
+      <i class="ti ti-brand-whatsapp me-2 fs-5"></i>
+      <strong class="me-auto">WhatsApp Share — Kuota H-1</strong>
+      <button type="button" class="btn-close btn-close-white" onclick="document.getElementById('wa-share-toast').style.display='none'"></button>
+    </div>
+    <div class="toast-body bg-white py-3">
+      <div class="d-flex align-items-start mb-2">
+        <i class="ti ti-circle-check text-success fs-1 me-2 flex-shrink-0"></i>
+        <div>
+          <div class="fw-bold text-dark" id="wa-toast-title">Gambar Berhasil Disalin!</div>
+          <div class="small text-secondary" id="wa-toast-desc">Buka WhatsApp Web / Desktop, lalu tekan <b>Ctrl + V</b> pada kolom chat grup.</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Tanggal DO: <b id="wa-toast-date">-</b></span>
+        <button class="btn btn-sm btn-outline-teal py-0 px-2" onclick="shareQuotaToWhatsApp('download')">
+          <i class="ti ti-download me-1"></i> Download PNG
         </button>
       </div>
     </div>
