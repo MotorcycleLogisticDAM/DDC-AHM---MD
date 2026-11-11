@@ -1061,7 +1061,7 @@
                   <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
                     <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 22px; max-width: 85px; object-fit: contain;">
                   </div>
-                  <span>NEW QUOTA PER EXPEDITION PER DAY H-1</span>
+                  <span>QUOTA PER EXPEDITION PER DAY H-1</span>
                 </div>
                 <div class="d-flex align-items-center">
                   <!-- TOMBOL AKSI NO-CAPTURE -->
@@ -2372,7 +2372,7 @@ async function shareQuotaToWhatsApp(action = 'copy') {
 
   const card = document.getElementById("card-new-quota-harian");
   if (!card) {
-    showAlert("Tabel NEW QUOTA PER EXPEDITION PER DAY H-1 tidak ditemukan.");
+    showAlert("Tabel QUOTA PER EXPEDITION PER DAY H-1 tidak ditemukan.");
     return;
   }
 
@@ -2385,7 +2385,7 @@ async function shareQuotaToWhatsApp(action = 'copy') {
 
   const rawDate = document.getElementById("dq-date-input") ? document.getElementById("dq-date-input").value : "";
   const dateFormatted = document.getElementById("dq-header-date-topright") ? document.getElementById("dq-header-date-topright").textContent.trim() : rawDate;
-  const safeFilename = `NEW_QUOTA_H-1_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+  const safeFilename = `QUOTA_H-1_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
 
   showLoading("Menyiapkan Gambar WhatsApp...", "Sedang merender snapshot tabel resolusi tinggi untuk WhatsApp...");
   try {
@@ -2458,7 +2458,7 @@ async function shareQuotaToWhatsApp(action = 'copy') {
           if (navigator.canShare({ files: [file] })) {
             try {
               await navigator.share({
-                title: "NEW QUOTA PER EXPEDITION PER DAY H-1",
+                title: "QUOTA PER EXPEDITION PER DAY H-1",
                 text: `Berikut tabel alokasi kuota harian DO (H-1) Tanggal ${dateFormatted}:`,
                 files: [file]
               });
