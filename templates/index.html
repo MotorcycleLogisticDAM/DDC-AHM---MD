@@ -803,19 +803,41 @@
 
             <div class="row row-cards">
               <div class="col-lg-12">
-                <div class="card mb-3">
-                  <div class="card-header bg-green-lt">
-                    <h3 class="card-title fw-bold">1. Pencapaian Aktual SL Periode Terpilih (Unit) per Ekspedisi & Plant</h3>
+                <!-- CARD 1: ACHIEVEMENT LAST 3 MONTH -->
+                <div class="card mb-3 shadow-sm" id="card-mq-units" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <!-- RED BANNER HEADER SEPERTI DASHBOARD SUMMARY -->
+                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                    <div class="px-3 py-2 fw-bold d-flex align-items-center gap-2" style="font-size: 1.15rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
+                      <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
+                        <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 22px; max-width: 85px; object-fit: contain;">
+                      </div>
+                      <span>ACHIEVEMENT LAST 3 MONTH</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <!-- PERIODE DI KANAN ATAS -->
+                      <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
+                        <span class="me-2 fw-normal" style="font-size: 0.9rem; color: #000000;">periode :</span>
+                        <span class="badge bg-white text-dark shadow-xs" style="font-size: 0.85rem; font-style: normal; font-weight: 700;" id="mq-units-date-topright">-</span>
+                      </div>
+                      <div class="bg-white rounded px-2 py-1 me-3 ms-2 my-1 d-flex align-items-center shadow-xs">
+                        <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 20px; max-width: 34px; object-fit: contain;">
+                      </div>
+                    </div>
                   </div>
                   <div class="table-responsive">
-                    <table class="table table-bordered table-sm mb-0">
-                      <thead class="bg-light">
-                        <tr>
-                          <th>EKSPEDISI</th>
-                          <th class="num-col">FM1</th><th class="num-col">FM2</th><th class="num-col">FM6</th>
-                          <th class="num-col">FM6A</th><th class="num-col">FM7</th><th class="num-col">FM8</th>
-                          <th class="num-col">FM9</th><th class="num-col bg-yellow-lt">GRAND TOTAL (UNIT)</th>
-                          <th class="num-col bg-azure-lt">KUOTA BULANAN (%)</th>
+                    <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
+                      <thead style="background-color: #366092; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">GRAND TOTAL (UNIT)</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">KUOTA BULANAN (%)</th>
                         </tr>
                       </thead>
                       <tbody id="tbody-mq-units"></tbody>
@@ -823,18 +845,39 @@
                   </div>
                 </div>
 
-                <div class="card mb-3">
-                  <div class="card-header bg-azure-lt">
-                    <h3 class="card-title fw-bold">2. Matriks Kuota Bulanan (%) per Plant & Target All Plant</h3>
+                <!-- CARD 2: QUOTA PER EXPEDITION (%) -->
+                <div class="card mb-3 shadow-sm" id="card-mq-pct" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <!-- RED BANNER HEADER SEPERTI DASHBOARD SUMMARY -->
+                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                    <div class="px-3 py-2 fw-bold d-flex align-items-center gap-2" style="font-size: 1.15rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
+                      <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
+                        <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 22px; max-width: 85px; object-fit: contain;">
+                      </div>
+                      <span>QUOTA PER EXPEDITION (%)</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
+                        <span class="me-2 fw-normal" style="font-size: 0.9rem; color: #000000;">periode :</span>
+                        <span class="badge bg-white text-dark shadow-xs" style="font-size: 0.85rem; font-style: normal; font-weight: 700;" id="mq-pct-date-topright">-</span>
+                      </div>
+                      <div class="bg-white rounded px-2 py-1 me-3 ms-2 my-1 d-flex align-items-center shadow-xs">
+                        <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 20px; max-width: 34px; object-fit: contain;">
+                      </div>
+                    </div>
                   </div>
                   <div class="table-responsive">
-                    <table class="table table-bordered table-sm mb-0">
-                      <thead class="bg-light">
-                        <tr>
-                          <th>EKSPEDISI</th>
-                          <th class="num-col">FM1 (%)</th><th class="num-col">FM2 (%)</th><th class="num-col">FM6 (%)</th>
-                          <th class="num-col">FM6A (%)</th><th class="num-col">FM7 (%)</th><th class="num-col">FM8 (%)</th>
-                          <th class="num-col">FM9 (%)</th><th class="num-col bg-azure-lt">TARGET KUOTA ALL PLANT (%)</th>
+                    <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
+                      <thead style="background-color: #366092; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1 (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2 (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6 (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7 (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8 (%)</th>
+                          <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9 (%)</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">TARGET KUOTA ALL PLANT (%)</th>
                         </tr>
                       </thead>
                       <tbody id="tbody-mq-pct"></tbody>
@@ -842,22 +885,72 @@
                   </div>
                 </div>
 
-                <div class="card">
-                  <div class="card-header bg-purple-lt">
-                    <h3 class="card-title fw-bold">3. Perbandingan Pencapaian & % Kuota per Masing-Masing Gudang (Karawang, Bandung, Cirebon)</h3>
+                <!-- PEMISAHAN TABEL PER GUDANG: HITUNGAN JUMLAH (UNIT) & PERSENTASE (%) -->
+                <div class="row g-3">
+                  <!-- TABEL 3.A: ACHIEVEMENT PER GUDANG (UNIT) -->
+                  <div class="col-lg-6">
+                    <div class="card mb-3 shadow-sm h-100" id="card-mq-gudang-units" style="border: 1px solid #b0c4de; overflow: hidden;">
+                      <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                        <div class="px-3 py-2 fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
+                          <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
+                            <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 18px; max-width: 65px; object-fit: contain;">
+                          </div>
+                          <span>ACHIEVEMENT PER GUDANG (UNIT)</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                          <div class="bg-white rounded px-2 py-1 me-2 my-1 d-flex align-items-center shadow-xs">
+                            <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 18px; max-width: 30px; object-fit: contain;">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
+                          <thead style="background-color: #366092; color: #ffffff;">
+                            <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                              <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">KARAWANG</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">BANDUNG</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">CIREBON</th>
+                              <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">TOTAL (UNIT)</th>
+                            </tr>
+                          </thead>
+                          <tbody id="tbody-mq-gudang-units"></tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                  <div class="table-responsive">
-                    <table class="table table-bordered table-sm mb-0">
-                      <thead class="bg-light">
-                        <tr>
-                          <th>EKSPEDISI</th>
-                          <th class="num-col">KARAWANG (Unit)</th><th class="num-col">KARAWANG (%)</th>
-                          <th class="num-col">BANDUNG (Unit)</th><th class="num-col">BANDUNG (%)</th>
-                          <th class="num-col">CIREBON (Unit)</th><th class="num-col">CIREBON (%)</th>
-                        </tr>
-                      </thead>
-                      <tbody id="tbody-mq-gudang"></tbody>
-                    </table>
+
+                  <!-- TABEL 3.B: QUOTA PER GUDANG (%) -->
+                  <div class="col-lg-6">
+                    <div class="card mb-3 shadow-sm h-100" id="card-mq-gudang-pct" style="border: 1px solid #b0c4de; overflow: hidden;">
+                      <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                        <div class="px-3 py-2 fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
+                          <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
+                            <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 18px; max-width: 65px; object-fit: contain;">
+                          </div>
+                          <span>QUOTA PER GUDANG (%)</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                          <div class="bg-white rounded px-2 py-1 me-2 my-1 d-flex align-items-center shadow-xs">
+                            <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 18px; max-width: 30px; object-fit: contain;">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
+                          <thead style="background-color: #366092; color: #ffffff;">
+                            <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                              <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">KARAWANG (%)</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">BANDUNG (%)</th>
+                              <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">CIREBON (%)</th>
+                              <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">TOTAL (%)</th>
+                            </tr>
+                          </thead>
+                          <tbody id="tbody-mq-gudang-pct"></tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1903,63 +1996,132 @@ async function loadMonthlyQuota() {
   showLoading("Memuat Kuota 3 Bulan...", `Sedang menganalisa histori SL periode 3 bulan (${startD || m} s.d. ${endD || y})...`);
   try {
     const res = await fetch(`/api/monthly_quota?month=${m}&year=${y}&start_date=${encodeURIComponent(startD)}&end_date=${encodeURIComponent(endD)}&cutoff_date=${encodeURIComponent(endD)}&gudang=${encodeURIComponent(gudang)}`);
-  const d = await res.json();
+    const d = await res.json();
 
-  const rangeInfo = d.date_range_display || `${startD} s.d. ${endD}`;
-  document.getElementById("mq-period-info").innerHTML =
-    `<i class="ti ti-calendar me-1"></i>Rentang Kuota SL: <b>${rangeInfo}</b> (${d.periods.join(", ")}) &bull; Total Pencapaian: <b>${fmtNum(d.total_3m_units)} unit</b>`;
+    const rangeInfo = d.date_range_display || `${startD} s.d. ${endD}`;
+    const periodFormatted = (startD && endD) ? `${formatDateMMDDYY(startD)} - ${formatDateMMDDYY(endD)}` : rangeInfo;
 
-  const tbU = document.getElementById("tbody-mq-units");
-  tbU.innerHTML = "";
-  d.unit_rows.forEach(r => {
-    tbU.innerHTML += `<tr>
-      <td class="fw-bold">${r.XPDC}</td>
-      ${PLANTS.map(p => `<td class="num-col">${fmtNum(r[p])}</td>`).join("")}
-      <td class="num-col fw-bold bg-yellow-lt">${fmtNum(r.GRAND_TOTAL)}</td>
-      <td class="num-col fw-bold bg-azure-lt">${r.PCT.toFixed(2)}%</td>
-    </tr>`;
-  });
-  tbU.innerHTML += `<tr class="bg-light fw-bold">
-    <td>TOTAL</td>
-    ${PLANTS.map(p => `<td class="num-col">${fmtNum(d.plant_totals[p])}</td>`).join("")}
-    <td class="num-col bg-yellow-lt">${fmtNum(d.total_3m_units)}</td>
-    <td class="num-col bg-azure-lt">100.00%</td>
-  </tr>`;
+    document.getElementById("mq-period-info").innerHTML =
+      `<i class="ti ti-calendar me-1"></i>Rentang Kuota SL: <b>${rangeInfo}</b> (${d.periods.join(", ")}) &bull; Total Pencapaian: <b>${fmtNum(d.total_3m_units)} unit</b>`;
 
-  const tbP = document.getElementById("tbody-mq-pct");
-  tbP.innerHTML = "";
-  d.pct_rows.forEach(r => {
-    currentTargetPctMap[r.XPDC] = r.TARGET_PCT;
-    tbP.innerHTML += `<tr>
-      <td class="fw-bold">${r.XPDC}</td>
-      ${PLANTS.map(p => `<td class="num-col">${r[p].toFixed(2)}%</td>`).join("")}
-      <td class="num-col fw-bold bg-azure-lt">${r.TARGET_PCT.toFixed(2)}%</td>
-    </tr>`;
-  });
-  tbP.innerHTML += `<tr class="bg-light fw-bold">
-    <td>TOTAL</td>
-    ${PLANTS.map(() => `<td class="num-col">100.00%</td>`).join("")}
-    <td class="num-col bg-azure-lt">100.00%</td>
-  </tr>`;
+    const badgeDate1 = document.getElementById("mq-units-date-topright");
+    if (badgeDate1) badgeDate1.textContent = periodFormatted;
+    const badgeDate2 = document.getElementById("mq-pct-date-topright");
+    if (badgeDate2) badgeDate2.textContent = periodFormatted;
 
-  // Gudang breakdown
-  const tbG = document.getElementById("tbody-mq-gudang");
-  tbG.innerHTML = "";
-  const gb = d.gudang_breakdown;
-  EXPEDITIONS.forEach(x => {
-    const kwU = gb.KARAWANG ? gb.KARAWANG.units[x] : 0;
-    const kwP = gb.KARAWANG ? (gb.KARAWANG.pct[x]*100).toFixed(2) : "0.00";
-    const bdU = gb.BANDUNG ? gb.BANDUNG.units[x] : 0;
-    const bdP = gb.BANDUNG ? (gb.BANDUNG.pct[x]*100).toFixed(2) : "0.00";
-    const crU = gb.CIREBON ? gb.CIREBON.units[x] : 0;
-    const crP = gb.CIREBON ? (gb.CIREBON.pct[x]*100).toFixed(2) : "0.00";
-    tbG.innerHTML += `<tr>
-      <td class="fw-bold">${x}</td>
-      <td class="num-col">${fmtNum(kwU)}</td><td class="num-col fw-bold">${kwP}%</td>
-      <td class="num-col">${fmtNum(bdU)}</td><td class="num-col fw-bold">${bdP}%</td>
-      <td class="num-col">${fmtNum(crU)}</td><td class="num-col fw-bold">${crP}%</td>
-    </tr>`;
-  });
+    // 1. Render Tabel ACHIEVEMENT LAST 3 MONTH
+    const tbU = document.getElementById("tbody-mq-units");
+    if (tbU) {
+      tbU.innerHTML = "";
+      d.unit_rows.forEach(r => {
+        tbU.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+          ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r[p])}</td>`).join("")}
+          <td class="num-col fw-bold text-dark bg-light" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.GRAND_TOTAL)}</td>
+          <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">${r.PCT.toFixed(2)}%</td>
+        </tr>`;
+      });
+      tbU.innerHTML += `<tr class="bg-light fw-bold text-dark" style="background-color: #f1f5f9; border-top: 2px solid #366092;">
+        <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">TOTAL</td>
+        ${PLANTS.map(p => `<td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(d.plant_totals[p])}</td>`).join("")}
+        <td class="num-col fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(d.total_3m_units)}</td>
+        <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">100.00%</td>
+      </tr>`;
+    }
+
+    // 2. Render Tabel QUOTA PER EXPEDITION (%)
+    const tbP = document.getElementById("tbody-mq-pct");
+    if (tbP) {
+      tbP.innerHTML = "";
+      d.pct_rows.forEach(r => {
+        currentTargetPctMap[r.XPDC] = r.TARGET_PCT;
+        tbP.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+          ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r[p].toFixed(2)}%</td>`).join("")}
+          <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">${r.TARGET_PCT.toFixed(2)}%</td>
+        </tr>`;
+      });
+      tbP.innerHTML += `<tr class="bg-light fw-bold text-dark" style="background-color: #f1f5f9; border-top: 2px solid #366092;">
+        <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">TOTAL</td>
+        ${PLANTS.map(() => `<td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">100.00%</td>`).join("")}
+        <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">100.00%</td>
+      </tr>`;
+    }
+
+    // 3.A Render Tabel ACHIEVEMENT PER GUDANG (UNIT)
+    const tbGU = document.getElementById("tbody-mq-gudang-units");
+    if (tbGU) {
+      tbGU.innerHTML = "";
+      const gb = d.gudang_breakdown || {};
+      let sumKw = 0, sumBd = 0, sumCr = 0, grandTot = 0;
+
+      EXPEDITIONS.forEach(x => {
+        const kwU = gb.KARAWANG && gb.KARAWANG.units ? (gb.KARAWANG.units[x] || 0) : 0;
+        const bdU = gb.BANDUNG && gb.BANDUNG.units ? (gb.BANDUNG.units[x] || 0) : 0;
+        const crU = gb.CIREBON && gb.CIREBON.units ? (gb.CIREBON.units[x] || 0) : 0;
+        const totU = kwU + bdU + crU;
+
+        sumKw += kwU;
+        sumBd += bdU;
+        sumCr += crU;
+        grandTot += totU;
+
+        tbGU.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${x}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(kwU)}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(bdU)}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(crU)}</td>
+          <td class="num-col fw-bold text-dark bg-light" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(totU)}</td>
+        </tr>`;
+      });
+
+      tbGU.innerHTML += `<tr class="bg-light fw-bold text-dark" style="background-color: #f1f5f9; border-top: 2px solid #366092;">
+        <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">TOTAL</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(sumKw)}</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(sumBd)}</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(sumCr)}</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(grandTot)}</td>
+      </tr>`;
+    }
+
+    // 3.B Render Tabel QUOTA PER GUDANG (%)
+    const tbGP = document.getElementById("tbody-mq-gudang-pct");
+    if (tbGP) {
+      tbGP.innerHTML = "";
+      const gb = d.gudang_breakdown || {};
+      const totKw = gb.KARAWANG ? (gb.KARAWANG.total_units || 0) : 0;
+      const totBd = gb.BANDUNG ? (gb.BANDUNG.total_units || 0) : 0;
+      const totCr = gb.CIREBON ? (gb.CIREBON.total_units || 0) : 0;
+      const grandTot = totKw + totBd + totCr;
+
+      EXPEDITIONS.forEach(x => {
+        const kwU = gb.KARAWANG && gb.KARAWANG.units ? (gb.KARAWANG.units[x] || 0) : 0;
+        const bdU = gb.BANDUNG && gb.BANDUNG.units ? (gb.BANDUNG.units[x] || 0) : 0;
+        const crU = gb.CIREBON && gb.CIREBON.units ? (gb.CIREBON.units[x] || 0) : 0;
+        const totU = kwU + bdU + crU;
+
+        const kwP = totKw > 0 ? ((kwU / totKw) * 100).toFixed(2) : "0.00";
+        const bdP = totBd > 0 ? ((bdU / totBd) * 100).toFixed(2) : "0.00";
+        const crP = totCr > 0 ? ((crU / totCr) * 100).toFixed(2) : "0.00";
+        const totP = grandTot > 0 ? ((totU / grandTot) * 100).toFixed(2) : "0.00";
+
+        tbGP.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${x}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${kwP}%</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${bdP}%</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${crP}%</td>
+          <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">${totP}%</td>
+        </tr>`;
+      });
+
+      tbGP.innerHTML += `<tr class="bg-light fw-bold text-dark" style="background-color: #f1f5f9; border-top: 2px solid #366092;">
+        <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">TOTAL</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">100.00%</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">100.00%</td>
+        <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">100.00%</td>
+        <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; background-color: #e0f2fe; color: #0369a1 !important;">100.00%</td>
+      </tr>`;
+    }
   } catch (err) {
     showAlert("Gagal memuat kuota bulanan: " + err.message);
   } finally {
