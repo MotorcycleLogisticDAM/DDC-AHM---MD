@@ -24,6 +24,38 @@
   </style>
 </head>
 <body>
+  <!-- TOP SHIMMER PROGRESS BAR -->
+  <div id="global-top-progress-bar" style="position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 100000; display: none; background: transparent;">
+    <div style="height: 100%; width: 100%; background: linear-gradient(90deg, #d00000, #ff4d4f, #206bc4, #0ca678); background-size: 200% 100%; animation: shimmerLoadingBar 1.2s infinite linear;"></div>
+  </div>
+  <style>
+    @keyframes shimmerLoadingBar {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+
+  <!-- GLOBAL INTERACTIVE LOADING OVERLAY (BRANDING RESMI DAYA & HONDA) -->
+  <div id="global-loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 99999; backdrop-filter: blur(4px); align-items: center; justify-content: center; transition: opacity 0.2s ease-in-out;">
+    <div class="card shadow-lg p-4 text-center border-0" style="min-width: 320px; max-width: 440px; border-radius: 12px; background: #ffffff;">
+      <div class="mb-3 d-flex justify-content-center align-items-center gap-3">
+        <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 36px; max-width: 125px; object-fit: contain;">
+        <span class="text-muted fs-3">&bull;</span>
+        <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 36px; max-width: 70px; object-fit: contain;">
+      </div>
+      <div class="d-flex justify-content-center my-3">
+        <div class="spinner-border text-danger" style="width: 3.2rem; height: 3.2rem; border-width: 0.3rem;" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+      <h4 class="fw-bold mb-1" id="loading-overlay-title" style="color: #0f172a; font-size: 1.15rem;">Memproses Data...</h4>
+      <p class="text-secondary small mb-0" id="loading-overlay-desc">Mohon tunggu sebentar, sistem sedang memproses dan menyinkronkan data.</p>
+      <div class="progress progress-sm mt-3" style="height: 4px; border-radius: 2px;">
+        <div class="progress-bar progress-bar-indeterminate bg-danger"></div>
+      </div>
+    </div>
+  </div>
+
 <div class="page">
   <!-- SIDEBAR (LEFT MENU) -->
   <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark" data-bs-theme="dark">
@@ -121,6 +153,9 @@
         </div>
 
         <div class="navbar-nav flex-row order-md-last ms-auto align-items-center gap-2">
+          <span id="nav-system-status" class="badge bg-success-lt text-success py-1 px-3 fs-6 d-flex align-items-center" title="Status Sinkronisasi Sistem">
+            <i class="ti ti-check me-1"></i> Sistem Siap
+          </span>
           <span class="badge bg-azure-lt py-1 px-3 fs-6"><i class="ti ti-brand-python me-1"></i> Python Engine + Excel DB</span>
         </div>
       </div>
@@ -1175,11 +1210,51 @@ const EXPEDITIONS = ["TUNAS MUDA", "RJTM", "LBK", "WSS", "PUNINAR"];
 let summaryChart = null;
 let currentTargetPctMap = {};
 
-function showAlert(msg) {
+let activeLoadingCount = 0;
+
+function showLoading(title = "Memproses Data...", desc = "Mohon tunggu sebentar, sistem sedang memproses dan menyinkronkan data.") {
+  activeLoadingCount++;
+  const overlay = document.getElementById("global-loading-overlay");
+  const topBar = document.getElementById("global-top-progress-bar");
+  const navStatus = document.getElementById("nav-system-status");
+
+  if (topBar) topBar.style.display = "block";
+  if (overlay) {
+    const tEl = document.getElementById("loading-overlay-title");
+    const dEl = document.getElementById("loading-overlay-desc");
+    if (tEl) tEl.textContent = title;
+    if (dEl) dEl.textContent = desc;
+    overlay.style.display = "flex";
+  }
+  if (navStatus) {
+    navStatus.className = "badge bg-warning text-dark py-1 px-3 fs-6 d-flex align-items-center shadow-xs";
+    navStatus.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> ${title}`;
+  }
+}
+
+function hideLoading(statusText = "Sistem Siap") {
+  activeLoadingCount = Math.max(0, activeLoadingCount - 1);
+  if (activeLoadingCount === 0) {
+    const overlay = document.getElementById("global-loading-overlay");
+    const topBar = document.getElementById("global-top-progress-bar");
+    const navStatus = document.getElementById("nav-system-status");
+
+    if (overlay) overlay.style.display = "none";
+    if (topBar) topBar.style.display = "none";
+    if (navStatus) {
+      navStatus.className = "badge bg-success-lt text-success py-1 px-3 fs-6 d-flex align-items-center";
+      navStatus.innerHTML = `<i class="ti ti-check me-1"></i> ${statusText}`;
+    }
+  }
+}
+
+function showAlert(msg, type = "success") {
   const box = document.getElementById("alert-box");
-  box.textContent = msg;
+  if (!box) return;
+  box.className = `alert alert-${type} alert-dismissible mb-3 d-flex align-items-center justify-content-between shadow-sm`;
+  box.innerHTML = `<div>${msg}</div><button type="button" class="btn-close ms-2" onclick="document.getElementById('alert-box').classList.add('d-none')"></button>`;
   box.classList.remove("d-none");
-  setTimeout(() => box.classList.add("d-none"), 5000);
+  setTimeout(() => box.classList.add("d-none"), 7000);
 }
 
 function fmtNum(n) {
@@ -1227,9 +1302,11 @@ function setSummaryDateToCalendarH1() {
 }
 
 async function initApp() {
-  isRestoringState = true;
-  const res = await fetch("/api/init");
-  const data = await res.json();
+  showLoading("Memuat & Sinkronisasi Database...", "Sedang memuat data kalender, histori DO, dan konfigurasi dari DDC.xlsx...");
+  try {
+    isRestoringState = true;
+    const res = await fetch("/api/init");
+    const data = await res.json();
 
   // Load persistent state (prioritaskan LocalStorage, fallback ke server saved_state)
   let savedState = {};
@@ -1412,8 +1489,12 @@ async function initApp() {
     badgeSess.classList.remove("d-none");
     badgeSess.setAttribute("title", `Kondisi terakhir dipulihkan dari sesi: ${new Date(savedState.timestamp).toLocaleString()}`);
   }
-
-  isRestoringState = false;
+  } catch (err) {
+    console.error("initApp error:", err);
+  } finally {
+    isRestoringState = false;
+    hideLoading("Sistem Siap & Tersinkron");
+  }
 }
 
 async function loadSummary() {
@@ -1422,9 +1503,11 @@ async function loadSummary() {
   const unfilled = document.getElementById("sum-unfilled").value;
   updateSummaryButtonState();
 
-  const res = await fetch(`/api/summary?report_date=${repDate}&cutoff_date=${cutoff}&unfilled_h_1=${unfilled}`);
-  const json = await res.json();
-  const d = json.data;
+  showLoading("Menghitung Summary Performa...", "Sedang menyinkronkan data pengiriman aktual (Daily & MTD) dari Sheet SL DDC.xlsx...");
+  try {
+    const res = await fetch(`/api/summary?report_date=${repDate}&cutoff_date=${cutoff}&unfilled_h_1=${unfilled}`);
+    const json = await res.json();
+    const d = json.data;
 
   // Update Tanggal Summary Kanan Atas (Format MM/DD/YY)
   const headerDateEl = document.getElementById("sum-header-date-topright");
@@ -1541,6 +1624,11 @@ async function loadSummary() {
     },
     options: { responsive: true, plugins: { legend: { position: "bottom" } } }
   });
+  } catch (err) {
+    showAlert("Gagal memuat summary: " + err.message, "danger");
+  } finally {
+    hideLoading("Summary Berhasil Diperbarui");
+  }
 }
 
 let currentQuotaPctMap = {};
@@ -1550,7 +1638,9 @@ async function loadTargetBulananPage() {
   const y = document.getElementById("tb-year").value;
   const totInput = document.getElementById("tb-total-input").value;
   
-  const res = await fetch(`/api/target_bulanan?month=${m}&year=${y}&total_target=${totInput || ''}`);
+  showLoading("Memuat Target Bulanan...", `Sedang mengambil alokasi target bulanan periode ${m}/${y}...`);
+  try {
+    const res = await fetch(`/api/target_bulanan?month=${m}&year=${y}&total_target=${totInput || ''}`);
   const data = await res.json();
   
   currentQuotaPctMap = data.quota_3m_pct || {};
@@ -1591,6 +1681,11 @@ async function loadTargetBulananPage() {
 
   recalcTargetBulananFooters();
   renderTargetBulananHistory(data.all_targets || []);
+  } catch (err) {
+    showAlert("Gagal memuat target bulanan: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 function recalcTargetBulananFooters() {
@@ -1687,18 +1782,25 @@ async function submitTargetBulanan() {
     catatan: catatan
   };
 
-  const res = await fetch("/api/save_target_bulanan", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if (data.status === "ok") {
-    showAlert(`Berhasil! Target Bulanan Periode ${m}/${y} sebesar ${fmtNum(total)} Unit berhasil disimpan ke DDC.xlsx dan aktif pada kolom TARGET BULAN.`);
-    await loadTargetBulananPage();
-    await loadSummary();
-  } else {
-    showAlert("Gagal menyimpan target bulanan: " + (data.message || "Terjadi kesalahan"));
+  showLoading("Menyimpan Target Bulanan...", "Sedang menyimpan perencanaan target unit ke file DDC.xlsx dan konfigurasi sistem...");
+  try {
+    const res = await fetch("/api/save_target_bulanan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      showAlert(`Berhasil! Target Bulanan Periode ${m}/${y} sebesar ${fmtNum(total)} Unit berhasil disimpan ke DDC.xlsx dan aktif pada kolom TARGET BULAN.`);
+      await loadTargetBulananPage();
+      await loadSummary();
+    } else {
+      showAlert("Gagal menyimpan target bulanan: " + (data.message || "Terjadi kesalahan"), "danger");
+    }
+  } catch (err) {
+    showAlert("Gagal menghubungi server: " + err.message, "danger");
+  } finally {
+    hideLoading("Target Bulanan Berhasil Disimpan");
   }
 }
 
@@ -1798,7 +1900,9 @@ async function loadMonthlyQuota() {
   const hiddenCutoff = document.getElementById("mq-cutoff");
   if (hiddenCutoff) hiddenCutoff.value = endD;
 
-  const res = await fetch(`/api/monthly_quota?month=${m}&year=${y}&start_date=${encodeURIComponent(startD)}&end_date=${encodeURIComponent(endD)}&cutoff_date=${encodeURIComponent(endD)}&gudang=${encodeURIComponent(gudang)}`);
+  showLoading("Memuat Kuota 3 Bulan...", `Sedang menganalisa histori SL periode 3 bulan (${startD || m} s.d. ${endD || y})...`);
+  try {
+    const res = await fetch(`/api/monthly_quota?month=${m}&year=${y}&start_date=${encodeURIComponent(startD)}&end_date=${encodeURIComponent(endD)}&cutoff_date=${encodeURIComponent(endD)}&gudang=${encodeURIComponent(gudang)}`);
   const d = await res.json();
 
   const rangeInfo = d.date_range_display || `${startD} s.d. ${endD}`;
@@ -1856,6 +1960,11 @@ async function loadMonthlyQuota() {
       <td class="num-col">${fmtNum(crU)}</td><td class="num-col fw-bold">${crP}%</td>
     </tr>`;
   });
+  } catch (err) {
+    showAlert("Gagal memuat kuota bulanan: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 function formatDateMMDDYY(dateStr) {
@@ -1908,20 +2017,22 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
   const mode = document.getElementById("dq-mode").value;
   const cutoff = document.getElementById("mq-cutoff").value;
 
-  let custom_do = null;
-  if (useCustomInputs) {
-    custom_do = {};
-    PLANTS.forEach(p => {
-      custom_do[p] = parseInt(document.getElementById(`do-${p}`).value || "0", 10);
-    });
-  }
+  showLoading("Menghitung & Auto-Balancing Kuota...", "Sedang mengalkulasi alokasi 7 plant dan menyeimbangkan toleransi deviasi (±0.1%)...");
+  try {
+    let custom_do = null;
+    if (useCustomInputs) {
+      custom_do = {};
+      PLANTS.forEach(p => {
+        custom_do[p] = parseInt(document.getElementById(`do-${p}`).value || "0", 10);
+      });
+    }
 
-  const res = await fetch("/api/daily_quota", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tanggal, rolling_winner: rolling, mode, cutoff_date: cutoff, custom_do })
-  });
-  const d = await res.json();
+    const res = await fetch("/api/daily_quota", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tanggal, rolling_winner: rolling, mode, cutoff_date: cutoff, custom_do })
+    });
+    const d = await res.json();
 
   // Update DO input boxes
   PLANTS.forEach(p => {
@@ -2014,6 +2125,11 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
     <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
   </tr>`;
   recalcEditableTable();
+  } catch (err) {
+    showAlert("Gagal menghitung kuota harian: " + err.message, "danger");
+  } finally {
+    hideLoading("Kalkulasi Kuota Selesai");
+  }
 }
 
 function recalcEditableTable() {
@@ -2051,29 +2167,36 @@ function recalcEditableTable() {
 
 async function saveDailyAllocationToExcel() {
   const tanggal = document.getElementById("dq-date-input").value;
-  const do_per_plant = {};
-  PLANTS.forEach(p => {
-    do_per_plant[p] = parseInt(document.getElementById(`do-${p}`).value || "0", 10);
-  });
-
-  const alloc_matrix = {};
-  EXPEDITIONS.forEach(x => {
-    alloc_matrix[x] = {};
+  showLoading("Menyimpan Kuota Harian ke Excel...", "Sedang mem-push alokasi kuota ke Sheet 'DO', 'PER DAY', dan 'ALOKASI_HARIAN' pada file DDC.xlsx...");
+  try {
+    const do_per_plant = {};
     PLANTS.forEach(p => {
-      const el = document.querySelector(`.bal-cell[data-xpdc="${x}"][data-plant="${p}"]`);
-      alloc_matrix[x][p] = parseInt(el ? el.value : "0", 10) || 0;
+      do_per_plant[p] = parseInt(document.getElementById(`do-${p}`).value || "0", 10);
     });
-  });
 
-  const res = await fetch("/api/save_daily_quota", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tanggal, do_per_plant, alloc_matrix })
-  });
-  const d = await res.json();
-  showAlert(d.message + " Silakan cek hasil tampilannya pada menu Per Day.");
-  await loadPerDayTab();
-  await loadSummary();
+    const alloc_matrix = {};
+    EXPEDITIONS.forEach(x => {
+      alloc_matrix[x] = {};
+      PLANTS.forEach(p => {
+        const el = document.querySelector(`.bal-cell[data-xpdc="${x}"][data-plant="${p}"]`);
+        alloc_matrix[x][p] = parseInt(el ? el.value : "0", 10) || 0;
+      });
+    });
+
+    const res = await fetch("/api/save_daily_quota", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tanggal, do_per_plant, alloc_matrix })
+    });
+    const d = await res.json();
+    showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-primary ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx</a>`);
+    await loadPerDayTab();
+    await loadSummary();
+  } catch (err) {
+    showAlert("Gagal menyimpan kuota harian: " + err.message, "danger");
+  } finally {
+    hideLoading("Kuota Harian Berhasil Disimpan");
+  }
 }
 
 // ==========================================
@@ -2102,6 +2225,7 @@ async function shareQuotaToWhatsApp(action = 'copy') {
   const dateFormatted = document.getElementById("dq-header-date-topright") ? document.getElementById("dq-header-date-topright").textContent.trim() : rawDate;
   const safeFilename = `NEW_QUOTA_H-1_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
 
+  showLoading("Menyiapkan Gambar WhatsApp...", "Sedang merender snapshot tabel resolusi tinggi untuk WhatsApp...");
   try {
     const canvas = await html2canvas(card, {
       scale: 2, // Ketajaman retina 2x untuk WhatsApp
@@ -2197,6 +2321,7 @@ async function shareQuotaToWhatsApp(action = 'copy') {
       btnMain.disabled = false;
       btnMain.innerHTML = origBtnHtml;
     }
+    hideLoading("Gambar Siap di WhatsApp");
   }
 }
 
@@ -2262,6 +2387,7 @@ async function shareDistSummaryToWhatsApp(action = 'copy') {
   const dateFormatted = document.getElementById("sum-header-date-topright") ? document.getElementById("sum-header-date-topright").textContent.trim() : rawDate;
   const safeFilename = `DISTRIBUTION_SUMMARY_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
 
+  showLoading("Menyiapkan Gambar WhatsApp...", "Sedang merender snapshot tabel Distribution Summary...");
   try {
     const canvas = await html2canvas(card, {
       scale: 2,
@@ -2280,6 +2406,8 @@ async function shareDistSummaryToWhatsApp(action = 'copy') {
   } catch (err) {
     console.error("Error capturing distribution summary:", err);
     showAlert("Gagal memproses gambar: " + err.message);
+  } finally {
+    hideLoading("Gambar Siap di WhatsApp");
   }
 }
 
@@ -2298,6 +2426,7 @@ async function sharePerfAnalysisToWhatsApp(action = 'copy') {
   const dateFormatted = document.getElementById("perf-header-date-topright") ? document.getElementById("perf-header-date-topright").textContent.trim() : rawDate;
   const safeFilename = `ANALISA_PERFORMANCE_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
 
+  showLoading("Menyiapkan Gambar WhatsApp...", "Sedang merender snapshot tabel Analisa Performa...");
   try {
     const canvas = await html2canvas(card, {
       scale: 2,
@@ -2316,19 +2445,28 @@ async function sharePerfAnalysisToWhatsApp(action = 'copy') {
   } catch (err) {
     console.error("Error capturing performance analysis:", err);
     showAlert("Gagal memproses gambar: " + err.message);
+  } finally {
+    hideLoading("Gambar Siap di WhatsApp");
   }
 }
 
 async function loadSheetPreview() {
   const s = document.getElementById("db-sheet-select").value;
   if (!s) return;
-  const res = await fetch(`/api/sheet/${encodeURIComponent(s)}?max_rows=100`);
+  showLoading("Memuat Pratinjau Sheet...", `Sedang mengambil data Sheet '${s}' dari DDC.xlsx...`);
+  try {
+    const res = await fetch(`/api/sheet/${encodeURIComponent(s)}?max_rows=100`);
   const d = await res.json();
 
   const th = document.getElementById("thead-sheet-preview");
   const tb = document.getElementById("tbody-sheet-preview");
   th.innerHTML = `<tr>${d.columns.map(c => `<th>${c}</th>`).join("")}</tr>`;
   tb.innerHTML = d.rows.map(r => `<tr>${d.columns.map(c => `<td>${r[c] || ""}</td>`).join("")}</tr>`).join("");
+  } catch (err) {
+    showAlert("Gagal memuat pratinjau: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 async function submitNewSL() {
@@ -2341,23 +2479,30 @@ async function submitNewSL() {
     gudang: document.getElementById("sl-gudang").value,
     qty: parseInt(document.getElementById("sl-qty").value || "64", 10)
   };
-  const res = await fetch("/api/add_sl", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const d = await res.json();
-  showAlert(d.message);
-  await loadSummary();
-  await loadMonthlyQuota();
-  await loadSLTable();
+  showLoading("Menyimpan Pengiriman SL...", "Sedang menambahkan baris pengiriman baru ke Sheet Lokal 'SL' DDC.xlsx...");
+  try {
+    const res = await fetch("/api/add_sl", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    showAlert(d.message);
+    await loadSummary();
+    await loadMonthlyQuota();
+    await loadSLTable();
+  } catch (err) {
+    showAlert("Gagal menyimpan SL: " + err.message, "danger");
+  } finally {
+    hideLoading("Pengiriman SL Berhasil Disimpan");
+  }
 }
 
 
 async function uploadSLBatch(event) {
   const fileInput = document.getElementById("sl-file-upload");
   if (!fileInput.files.length) {
-    alert("Pilih file Excel terlebih dahulu!");
+    showAlert("Pilih file Excel terlebih dahulu!", "warning");
     return;
   }
   
@@ -2369,6 +2514,7 @@ async function uploadSLBatch(event) {
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Mengunggah...`;
   
+  showLoading("Mengunggah & Memproses File Batch SL...", "Sedang membaca file Excel, mem-push baris pengiriman baru ke Sheet Lokal 'SL', dan memperbarui kalkulasi...");
   try {
     const res = await fetch("/api/upload_sl", {
       method: "POST",
@@ -2376,19 +2522,20 @@ async function uploadSLBatch(event) {
     });
     const d = await res.json();
     if (d.status === "ok") {
-      showAlert(d.message);
+      showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-success ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx Terkini</a>`);
       await loadSLTable();
       await loadSummary();
       await loadMonthlyQuota();
       fileInput.value = "";
     } else {
-      alert("Error: " + d.message);
+      showAlert("Gagal upload batch: " + (d.message || "Terjadi kesalahan"), "danger");
     }
   } catch (err) {
-    alert("Gagal mengunggah file. Pastikan Excel tidak rusak.");
+    showAlert("Gagal mengunggah file. Pastikan Excel tidak rusak.", "danger");
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
+    hideLoading("Data Batch Selesai Di-upload");
   }
 }
 
@@ -2457,7 +2604,9 @@ async function loadDOTable() {
   const bulanFilter = document.getElementById("filter-do-bulan") ? document.getElementById("filter-do-bulan").value : "ALL";
   const tglFilter = document.getElementById("filter-do-tgl") ? document.getElementById("filter-do-tgl").value : "";
 
-  const res = await fetch(`/api/do_list?sort=${encodeURIComponent(sortOrder)}&bulan=${encodeURIComponent(bulanFilter)}&tanggal=${encodeURIComponent(tglFilter)}`);
+  showLoading("Memuat Data DO...", "Sedang mengambil data Delivery Order dari Sheet 'DO' DDC.xlsx...");
+  try {
+    const res = await fetch(`/api/do_list?sort=${encodeURIComponent(sortOrder)}&bulan=${encodeURIComponent(bulanFilter)}&tanggal=${encodeURIComponent(tglFilter)}`);
   const d = await res.json();
   cachedDoByDate = d.by_date || {};
 
@@ -2526,6 +2675,11 @@ async function loadDOTable() {
     </tr>`;
   }).join("");
   updateAddDoTotalBadge();
+  } catch (err) {
+    showAlert("Gagal memuat data DO: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 function formatIndoDate(val) {
@@ -2543,7 +2697,9 @@ function formatIndoDate(val) {
 }
 
 async function loadSLTable() {
-  const res = await fetch(`/api/sheet/SL?max_rows=100`);
+  showLoading("Memuat Data SL...", "Sedang membaca data Sheet 'SL' DDC.xlsx...");
+  try {
+    const res = await fetch(`/api/sheet/SL?max_rows=100`);
   const d = await res.json();
   const th = document.getElementById("thead-sl-preview");
   const tb = document.getElementById("tbody-sl-preview");
@@ -2557,6 +2713,11 @@ async function loadSLTable() {
     if (c === "TANGGAL") val = formatIndoDate(val);
     return `<td>${val}</td>`;
   }).join("")}</tr>`).join("");
+  } catch (err) {
+    showAlert("Gagal memuat data SL: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 async function submitNewDO() {
@@ -2575,6 +2736,7 @@ async function submitNewDO() {
       "FM9": parseInt(document.getElementById("add-do-FM9").value || "0", 10),
     }
   };
+  showLoading("Menyimpan Delivery Order (DO)...", "Sedang mem-push data DO (H-1) ke Sheet Lokal 'DO' pada file DDC.xlsx dan menyinkronkan kuota...");
   try {
     const res = await fetch("/api/add_do", {
       method: "POST",
@@ -2599,6 +2761,8 @@ async function submitNewDO() {
     }
   } catch (err) {
     showAlert("Terjadi kesalahan saat menyimpan DO: " + err.message, "danger");
+  } finally {
+    hideLoading("Data DO Berhasil Disimpan");
   }
 }
 
@@ -2617,6 +2781,7 @@ async function uploadSLBatchFromDO(event) {
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Mengunggah &amp; Push ke Sheet SL...`;
   
+  showLoading("Mengunggah & Push Data Aktual Batch...", "Sedang membaca file Excel dan mem-push baris pengiriman baru ke Sheet Lokal 'SL' DDC.xlsx...");
   try {
     const res = await fetch("/api/upload_sl", {
       method: "POST",
@@ -2638,6 +2803,7 @@ async function uploadSLBatchFromDO(event) {
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
+    hideLoading("Data Batch Selesai Di-upload");
   }
 }
 
@@ -2663,7 +2829,9 @@ async function loadPerDayTab() {
   const tgl = document.getElementById("pd-date") ? document.getElementById("pd-date").value : "";
   const sortOrder = document.getElementById("pd-sort") ? document.getElementById("pd-sort").value : "newest";
 
-  const res = await fetch(`/api/perday?month=${encodeURIComponent(m)}&year=${encodeURIComponent(y)}&tanggal=${encodeURIComponent(tgl)}&sort=${encodeURIComponent(sortOrder)}`);
+  showLoading("Memuat Data Per Day...", "Sedang mengagregasi data harian & MTD Sheet 'PER DAY' DDC.xlsx...");
+  try {
+    const res = await fetch(`/api/perday?month=${encodeURIComponent(m)}&year=${encodeURIComponent(y)}&tanggal=${encodeURIComponent(tgl)}&sort=${encodeURIComponent(sortOrder)}`);
   const d = await res.json();
 
   const lblLeft = document.getElementById("pd-month-label-left");
@@ -2758,6 +2926,11 @@ async function loadPerDayTab() {
 
   const dailyEl = document.getElementById("tbody-pd-daily-left");
   if (dailyEl) dailyEl.innerHTML = dailyHtml;
+  } catch (err) {
+    showAlert("Gagal memuat data Per Day: " + err.message);
+  } finally {
+    hideLoading();
+  }
 }
 
 // =========================================================================
@@ -2927,6 +3100,7 @@ async function saveDoAdjustment() {
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Menyimpan...`;
 
+  showLoading("Menyimpan Penyesuaian DO...", "Sedang memperbarui penyesuaian unit ke Sheet 'DO' DDC.xlsx...");
   try {
     const res = await fetch("/api/adjust_do", {
       method: "POST",
@@ -2954,6 +3128,7 @@ async function saveDoAdjustment() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<i class="ti ti-device-floppy me-1"></i> Simpan Adjustment DO`;
+    hideLoading("Penyesuaian DO Berhasil Disimpan");
   }
 }
 
@@ -3134,6 +3309,7 @@ async function savePerDayAdjustment() {
       keterangan: ket
     };
 
+    showLoading("Menyimpan Penyesuaian Kuota Per Day...", "Sedang mem-push penyesuaian alokasi ke Sheet 'PER DAY' DDC.xlsx...");
     const res = await fetch("/api/adjust_daily_quota", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3158,6 +3334,7 @@ async function savePerDayAdjustment() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = origText;
+    hideLoading("Penyesuaian Kuota Berhasil Disimpan");
   }
 }
 
