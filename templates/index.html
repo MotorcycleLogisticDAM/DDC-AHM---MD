@@ -767,7 +767,7 @@
             <!-- STEP 1-3: KALKULASI AWAL (SEBELUM BALANCING) -->
             <div class="card mb-3">
               <div class="card-header bg-red-lt d-flex justify-content-between align-items-center">
-                <h3 class="card-title fw-bold mb-0">Tahap 1: Kalkulasi Awal [Kuota Bulanan (%) x DO Harian] — Sebelum Balancing</h3>
+                <h3 class="card-title fw-bold mb-0">QUOTA PER EXPEDITION (%)</h3>
                 <span id="raw-tol-badge" class="badge"></span>
               </div>
               <div class="table-responsive">
@@ -791,7 +791,7 @@
             <div class="card mb-3">
               <div class="card-header bg-green-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                  <h3 class="card-title fw-bold mb-0">Tahap 2: Hasil Akhir Kuota Harian (Sesudah Auto-Balancing) — Dapat Diedit &amp; Disimpan ke Excel</h3>
+                  <h3 class="card-title fw-bold mb-0">NEW QUOTA PER EXPEDITION PER DAY H-1</h3>
                   <div class="small text-secondary mt-1">
                     <span class="badge bg-blue text-white me-1"><i class="ti ti-truck me-1"></i>Rule FM6</span>
                     Balancing akhir mencakup LBK, WSS, PUNINAR + TUNAS MUDA &amp; RJTM (Trailer min 54 s.d. 64 u/truk)
@@ -803,9 +803,14 @@
                     RJTM, LBK, WSS, PUNINAR 54-64 u/rit (x2: 108-128 u) | TUNAS MUDA 44 u Engkel (x2: 88 u) / 54-64 u Trailer
                   </div>
                 </div>
-                <button class="btn btn-success btn-sm" onclick="saveDailyAllocationToExcel()">
-                  <i class="ti ti-device-floppy me-1"></i> Simpan Kuota Harian ke DDC.xlsx
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="badge bg-white text-dark border px-3 py-2 fs-6 fw-bold shadow-sm d-flex align-items-center" title="Tanggal Delivery Order (DO) H-1">
+                    <i class="ti ti-calendar me-1 text-primary"></i> <span id="dq-header-date-topright">11/06/26</span>
+                  </div>
+                  <button class="btn btn-success btn-sm" onclick="saveDailyAllocationToExcel()">
+                    <i class="ti ti-device-floppy me-1"></i> Simpan Kuota Harian ke DDC.xlsx
+                  </button>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-bordered table-sm mb-0">
@@ -1158,6 +1163,7 @@ async function initApp() {
     selDate.appendChild(opt);
   });
   document.getElementById("dq-date-input").value = targetDqDate;
+  updateDqHeaderDateBadge(targetDqDate);
   if (savedState["dq-rolling"] && document.getElementById("dq-rolling")) document.getElementById("dq-rolling").value = savedState["dq-rolling"];
   if (savedState["dq-mode"] && document.getElementById("dq-mode")) document.getElementById("dq-mode").value = savedState["dq-mode"];
 
@@ -1650,14 +1656,52 @@ async function loadMonthlyQuota() {
   });
 }
 
+function formatDateMMDDYY(dateStr) {
+  if (!dateStr) return "-";
+  const clean = String(dateStr).trim();
+  const parts = clean.split("-");
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD -> MM/DD/YY
+      const y = parts[0].substring(2);
+      const m = parts[1].padStart(2, "0");
+      const d = parts[2].padStart(2, "0");
+      return `${m}/${d}/${y}`;
+    } else if (parts[2].length === 4 || parts[2].length === 2) {
+      // DD-MM-YYYY -> MM/DD/YY
+      const d = parts[0].padStart(2, "0");
+      const m = parts[1].padStart(2, "0");
+      const y = parts[2].length === 4 ? parts[2].substring(2) : parts[2];
+      return `${m}/${d}/${y}`;
+    }
+  }
+  const dt = new Date(clean);
+  if (!isNaN(dt.getTime())) {
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    const y = String(dt.getFullYear()).substring(2);
+    return `${m}/${d}/${y}`;
+  }
+  return clean;
+}
+
+function updateDqHeaderDateBadge(dateStr) {
+  const el = document.getElementById("dq-header-date-topright");
+  if (el) {
+    el.textContent = formatDateMMDDYY(dateStr);
+  }
+}
+
 function onChangeDoDate() {
   const val = document.getElementById("dq-date-select").value;
   document.getElementById("dq-date-input").value = val;
+  updateDqHeaderDateBadge(val);
   calculateDailyQuota(false);
 }
 
 async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
   const tanggal = document.getElementById("dq-date-input").value;
+  updateDqHeaderDateBadge(tanggal);
   const rolling = document.getElementById("dq-rolling").value;
   const mode = document.getElementById("dq-mode").value;
   const cutoff = document.getElementById("mq-cutoff").value;
