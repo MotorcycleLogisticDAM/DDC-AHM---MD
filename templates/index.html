@@ -439,7 +439,7 @@
             <div class="card mb-3">
               <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
-                  <div class="col-md-4">
+                  <div class="col-md-5">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <label class="form-label mb-0 fw-bold">Tanggal Laporan (Up to Date H-1 Kalender)</label>
                       <span class="badge bg-yellow-lt py-0 px-1 text-dark" style="font-size: 11px;">Rule: DO H-1</span>
@@ -454,16 +454,14 @@
                       </button>
                     </div>
                   </div>
+                  <!-- Cut-off Kuota disembunyikan sesuai permintaan -->
+                  <input type="hidden" id="sum-cutoff" value="2026-09-29">
                   <div class="col-md-3">
-                    <label class="form-label mb-1">Cut-off Kuota 3 Bulan Sebelumnya</label>
-                    <input type="date" id="sum-cutoff" class="form-control form-control-sm" value="2026-09-29">
-                  </div>
-                  <div class="col-md-2">
-                    <label class="form-label mb-1">Unfilled H-1 (Unit)</label>
+                    <label class="form-label mb-1 fw-bold">Unfilled H-1 (Unit)</label>
                     <input type="number" id="sum-unfilled" class="form-control form-control-sm" value="379">
                   </div>
-                  <div class="col-md-3">
-                    <button class="btn btn-primary btn-sm w-100" onclick="loadSummary()">
+                  <div class="col-md-4">
+                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="loadSummary()">
                       <i class="ti ti-calculator me-1"></i> Hitung Summary
                     </button>
                   </div>
@@ -471,71 +469,111 @@
               </div>
             </div>
 
-            <!-- UNFILLED KPI CARDS -->
-            <div class="row row-cards mb-3" id="unfilled-cards">
-              <div class="col-sm-6 col-lg">
-                <div class="card card-sm card-kpi"><div class="card-body">
-                  <div class="text-secondary text-uppercase fw-bold small">UNFILLED H-1</div>
-                  <div class="h2 mb-0" id="kpi-unfilled-h1">379</div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg">
-                <div class="card card-sm card-kpi"><div class="card-body">
-                  <div class="text-secondary text-uppercase fw-bold small">DO AHM (H-1)</div>
-                  <div class="h2 mb-0" id="kpi-do-ahm">0</div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg">
-                <div class="card card-sm card-kpi"><div class="card-body">
-                  <div class="text-secondary text-uppercase fw-bold small">TOTAL DO</div>
-                  <div class="h2 mb-0 text-primary" id="kpi-total-do">379</div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg">
-                <div class="card card-sm card-kpi"><div class="card-body">
-                  <div class="text-secondary text-uppercase fw-bold small">ACT DIST (H-1)</div>
-                  <div class="h2 mb-0 text-success" id="kpi-act-dist">379</div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg">
-                <div class="card card-sm card-kpi"><div class="card-body">
-                  <div class="text-secondary text-uppercase fw-bold small">UNFILLED H</div>
-                  <div class="h2 mb-0 text-danger" id="kpi-unfilled-h">0</div>
-                </div></div>
-              </div>
-            </div>
-
-            <!-- 3.A DISTRIBUTION SUMMARY TABLE -->
-            <div class="card mb-3">
-              <div class="card-header bg-primary-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <div>
-                  <h3 class="card-title fw-bold mb-0">3.A DISTRIBUTION SUMMARY (Pencapaian Harian H-1 & Bulanan MTD)</h3>
-                  <div class="small text-secondary mt-1">
-                    <span class="badge bg-blue text-white me-1" id="badge-summary-repdate"><i class="ti ti-calendar me-1"></i>Up to Date: -</span>
-                    Laporan kinerja distribusi akumulasi MTD s.d. tanggal rilis H-1
+            <!-- DISTRIBUTION SUMMARY CARD (SESUAI FORMAT RESMI DAYA - HONDA) -->
+            <div class="card mb-3 shadow-sm" id="card-distribution-summary" style="border: 1px solid #b0c4de; overflow: hidden;">
+              <!-- HEADER RED BANNER -->
+              <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                <div class="px-3 py-2 text-white fw-bold d-flex align-items-center" style="font-size: 1.25rem; letter-spacing: 0.5px;">
+                  DISTRIBUTION SUMMARY
+                </div>
+                <div class="d-flex align-items-center">
+                  <!-- TOMBOL SHARE WA (no-capture) -->
+                  <div class="btn-group no-capture me-2">
+                    <button type="button" class="btn btn-sm btn-outline-light d-flex align-items-center py-1 px-2" onclick="shareDistSummaryToWhatsApp('copy')" title="Salin Gambar ke Clipboard untuk Paste di WhatsApp (Ctrl+V)">
+                      <i class="ti ti-brand-whatsapp me-1 text-light fs-4"></i> Salin Gambar (WA)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light dropdown-toggle dropdown-toggle-split py-1 px-1" data-bs-toggle="dropdown" aria-expanded="false">
+                      <span class="visually-hidden">Opsi</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="shareDistSummaryToWhatsApp('copy')">
+                          <i class="ti ti-copy me-2 text-teal fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Salin Gambar (Clipboard)</div>
+                            <small class="text-muted">Langsung Ctrl+V di WhatsApp</small>
+                          </div>
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider my-1"></li>
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="shareDistSummaryToWhatsApp('download')">
+                          <i class="ti ti-download me-2 text-primary fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Download File PNG</div>
+                            <small class="text-muted">Simpan gambar kualitas tinggi</small>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <!-- TANGGAL SUMMARY (MM/DD/YY) -->
+                  <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
+                    <span class="me-2 fw-normal" style="font-size: 0.95rem;">up to date :</span>
+                    <span id="sum-header-date-topright" class="fw-bold text-dark font-monospace" style="font-size: 1.1rem; font-style: normal;">11/11/26</span>
                   </div>
                 </div>
-                <span class="badge bg-primary text-white" id="badge-summary-target-info">Target Bulan: Berjalan</span>
               </div>
-              <div class="table-responsive">
-                <table class="table table-bordered table-sm table-vcenter mb-0">
-                  <thead class="bg-light">
-                    <tr>
-                      <th rowspan="2" class="align-middle">EKSPEDISI (XPDC)</th>
-                      <th colspan="3" class="text-center bg-azure-lt">DAILY (H-1)</th>
-                      <th colspan="3" class="text-center bg-green-lt">MONTHLY (MTD s.d. H-1)</th>
-                    </tr>
-                    <tr>
-                      <th class="num-col">TARGET</th>
-                      <th class="num-col">ACTUAL</th>
-                      <th class="num-col">% ACH</th>
-                      <th class="num-col">TARGET BULAN</th>
-                      <th class="num-col">ACTUAL MTD</th>
-                      <th class="num-col">% MTD</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbody-dist-summary"></tbody>
-                </table>
+
+              <div class="card-body p-3 bg-white">
+                <!-- BARIS SUB-HEADER: LOGO DAYA | TABEL 5 KOLOM KPI | LOGO HONDA WING -->
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                  <!-- LOGO DAYA DI SEBELAH KIRI -->
+                  <div class="text-center px-1" style="min-width: 140px;">
+                    <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 48px; max-width: 135px; object-fit: contain;">
+                  </div>
+
+                  <!-- TABEL 5 KOLOM KPI ALOKASI -->
+                  <div class="flex-grow-1">
+                    <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #103a71;">
+                      <thead style="background-color: #103a71; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700;">
+                          <th style="padding: 6px; border: 1px solid #103a71; color: white;">UNFILLED H-1</th>
+                          <th style="padding: 6px; border: 1px solid #103a71; color: white;">DO AHM (H-1)</th>
+                          <th style="padding: 6px; border: 1px solid #103a71; color: white;">TOTAL DO</th>
+                          <th style="padding: 6px; border: 1px solid #103a71; color: white;">ACT DIST (H-1)</th>
+                          <th style="padding: 6px; border: 1px solid #103a71; color: white;">UNFILLED H</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style="font-size: 1.15rem; font-weight: bold; background-color: #ffffff;">
+                          <td style="padding: 6px; border: 1px solid #cbd5e1;" id="kpi-unfilled-h1">379</td>
+                          <td style="padding: 6px; border: 1px solid #cbd5e1;" id="kpi-do-ahm">0</td>
+                          <td style="padding: 6px; border: 1px solid #cbd5e1;" id="kpi-total-do">379</td>
+                          <td style="padding: 6px; border: 1px solid #cbd5e1;" id="kpi-act-dist">379</td>
+                          <td style="padding: 6px; border: 1px solid #cbd5e1;" id="kpi-unfilled-h">0</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- LOGO HONDA WING DI SEBELAH KANAN -->
+                  <div class="text-center px-1" style="min-width: 100px;">
+                    <img src="/static/img/logo_honda.png" alt="Honda Wing" style="height: 48px; max-width: 75px; object-fit: contain;">
+                  </div>
+                </div>
+
+                <!-- TABEL UTAMA DISTRIBUTION SUMMARY (XPDC, DAILY, MTD) -->
+                <div class="table-responsive">
+                  <table class="table table-bordered table-sm mb-0" style="border: 2px solid #103a71;">
+                    <thead style="background-color: #103a71; color: #ffffff;">
+                      <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                        <th rowspan="2" class="align-middle" style="border: 1px solid #103a71; color: white; min-width: 140px;">XPDC</th>
+                        <th colspan="3" style="border: 1px solid #103a71; color: white; background-color: #1b4985;">DAILY</th>
+                        <th colspan="3" style="border: 1px solid #103a71; color: white; background-color: #1b4985;">MTD</th>
+                      </tr>
+                      <tr style="font-size: 0.8rem; font-weight: 700; text-align: center;">
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">TARGET</th>
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">ACTUAL</th>
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">% ACH</th>
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">TARGET</th>
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">ACTUAL</th>
+                        <th class="num-col" style="border: 1px solid #103a71; color: white;">% ACH</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-dist-summary"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -1279,6 +1317,12 @@ async function loadSummary() {
   const json = await res.json();
   const d = json.data;
 
+  // Update Tanggal Summary Kanan Atas (Format MM/DD/YY)
+  const headerDateEl = document.getElementById("sum-header-date-topright");
+  if (headerDateEl) {
+    headerDateEl.textContent = formatDateMMDDYY(repDate);
+  }
+
   // Status Badge Tanggal Laporan
   const badgeRep = document.getElementById("badge-summary-repdate");
   if (badgeRep) {
@@ -1308,29 +1352,36 @@ async function loadSummary() {
   document.getElementById("kpi-act-dist").textContent = fmtNum(d.unfilled_box.act_dist);
   document.getElementById("kpi-unfilled-h").textContent = fmtNum(d.unfilled_box.unfilled_h);
 
-  // Render 3.A (Kolom KONTRIBUSI AKTUAL & KALKULASI NEW TARGET MTD dihilangkan)
+  // Render Tabel Distribution Summary (Format Visual Resmi Daya - Honda)
   const tbDist = document.getElementById("tbody-dist-summary");
   tbDist.innerHTML = "";
   d.distribution_summary.forEach(r => {
+    const dailyAchFmt = r.DAILY_ACH_PCT.toFixed(1).replace(".", ",") + "%";
+    const mtdAchFmt = r.MTD_ACH_PCT.toFixed(1).replace(".", ",") + "%";
+    const dailyBg = r.DAILY_ACH_PCT <= 10 ? "background-color: #ffd8d8; color: #b71c1c;" : "background-color: #e2f0d9; color: #155724;";
+    const mtdBg = r.MTD_ACH_PCT < 40 ? "background-color: #fce4d6; color: #b71c1c;" : "background-color: #e2f0d9; color: #155724;";
+
     tbDist.innerHTML += `<tr>
-      <td class="fw-bold">${r.XPDC}</td>
-      <td class="num-col">${fmtNum(r.DAILY_TARGET)}</td>
-      <td class="num-col">${fmtNum(r.DAILY_ACTUAL)}</td>
-      <td class="num-col fw-bold">${r.DAILY_ACH_PCT.toFixed(2)}%</td>
-      <td class="num-col fw-bold bg-azure-lt">${fmtNum(r.MTD_TARGET)}</td>
-      <td class="num-col">${fmtNum(r.MTD_ACTUAL)}</td>
-      <td class="num-col fw-bold text-success">${r.MTD_ACH_PCT.toFixed(2)}%</td>
+      <td class="fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.DAILY_TARGET)}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.DAILY_ACTUAL)}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${dailyBg}">${dailyAchFmt}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_TARGET)}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_ACTUAL)}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${mtdBg}">${mtdAchFmt}</td>
     </tr>`;
   });
   const dt = d.distribution_totals;
-  tbDist.innerHTML += `<tr class="bg-light fw-bold">
-    <td>TOTAL</td>
-    <td class="num-col">${fmtNum(dt.DAILY_TARGET)}</td>
-    <td class="num-col">${fmtNum(dt.DAILY_ACTUAL)}</td>
-    <td class="num-col">${dt.DAILY_ACH_PCT.toFixed(2)}%</td>
-    <td class="num-col bg-azure-lt text-primary fw-bold">${fmtNum(dt.MTD_TARGET)}</td>
-    <td class="num-col">${fmtNum(dt.MTD_ACTUAL)}</td>
-    <td class="num-col text-success">${dt.MTD_ACH_PCT.toFixed(2)}%</td>
+  const totDailyAch = dt.DAILY_ACH_PCT.toFixed(1).replace(".", ",") + "%";
+  const totMtdAch = dt.MTD_ACH_PCT.toFixed(1).replace(".", ",") + "%";
+  tbDist.innerHTML += `<tr style="background-color: #d9e2f3; font-weight: bold;">
+    <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">TOTAL</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(dt.DAILY_TARGET)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(dt.DAILY_ACTUAL)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${totDailyAch}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(dt.MTD_TARGET)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${fmtNum(dt.MTD_ACTUAL)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #103a71;">${totMtdAch}</td>
   </tr>`;
 
   // Render 3.B (Kolom % SHARE TARGET dihilangkan)
@@ -2049,6 +2100,42 @@ function showWaToast(title, desc, dateStr) {
   window._waToastTimer = setTimeout(() => {
     toastEl.style.display = "none";
   }, 9000);
+}
+
+async function shareDistSummaryToWhatsApp(action = 'copy') {
+  if (typeof html2canvas === "undefined") {
+    showAlert("Library html2canvas belum termuat. Harap refresh halaman.");
+    return;
+  }
+  const card = document.getElementById("card-distribution-summary");
+  if (!card) {
+    showAlert("Card Distribution Summary tidak ditemukan.");
+    return;
+  }
+
+  const rawDate = document.getElementById("sum-date") ? document.getElementById("sum-date").value : "";
+  const dateFormatted = document.getElementById("sum-header-date-topright") ? document.getElementById("sum-header-date-topright").textContent.trim() : rawDate;
+  const safeFilename = `DISTRIBUTION_SUMMARY_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      ignoreElements: (el) => el.classList && el.classList.contains("no-capture")
+    });
+
+    if (action === "download") {
+      downloadCanvasAsPng(canvas, safeFilename);
+      showWaToast("Gambar Berhasil Didownload!", `File <b>${safeFilename}</b> telah tersimpan. Siap dilampirkan ke WhatsApp.`, dateFormatted);
+    } else {
+      await copyCanvasImageToClipboard(canvas, safeFilename, dateFormatted);
+    }
+  } catch (err) {
+    console.error("Error capturing distribution summary:", err);
+    showAlert("Gagal memproses gambar: " + err.message);
+  }
 }
 
 async function loadSheetPreview() {
