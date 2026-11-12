@@ -165,7 +165,7 @@ def _round_preserving_sum(float_vals_dict, target_int_sum):
     return floors
 
 
-def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct, enforce_target_pct=False):
+def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct):
     rows = []
     for x in EXPEDITIONS:
         r = {"XPDC": x}
@@ -174,145 +174,20 @@ def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct, enforce_ta
             val = int(alloc_dict[x][p])
             r[p] = val
             gt += val
+        pct = (gt / total_do) if total_do > 0 else 0.0
         t_pct = float(target_pct[x])
         t_units = t_pct * total_do
         gap_u = gt - t_units
-        t_pct_rounded = round(t_pct * 100.0, 2)
-
-        if enforce_target_pct and total_do > 0:
-            # Rule: % akhir sama dengan Target (%) di QUOTA PER EXPEDITION (%) dari Kuota Bulanan (%)
-            pct_val = t_pct_rounded
-            diff_pct = 0.00
-            within_tol = True
-        else:
-            pct = (gt / total_do) if total_do > 0 else 0.0
-            pct_val = round(pct * 100.0, 2)
-            diff_pct = round((pct_val - t_pct_rounded), 2)
-            within_tol = abs(diff_pct) <= tolerance_pct
-
+        diff_pct = (pct - t_pct) * 100.0
         r["GRAND_TOTAL"] = gt
-        r["PCT"] = pct_val
+        r["PCT"] = round(pct * 100.0, 2)
         r["TARGET_UNITS"] = round(t_units, 1)
-        r["TARGET_PCT"] = t_pct_rounded
-        r["GAP_UNITS"] = round(gap_u, 1) if not enforce_target_pct else 0.0
-        r["DIFF_PCT"] = diff_pct
-        r["WITHIN_TOL"] = within_tol
+        r["TARGET_PCT"] = round(t_pct * 100.0, 2)
+        r["GAP_UNITS"] = round(gap_u, 1)
+        r["DIFF_PCT"] = round(diff_pct, 2)
+        r["WITHIN_TOL"] = abs(diff_pct) <= tolerance_pct
         rows.append(r)
     return rows
-
-
-def solve_perfect_target_daily_quota(do_clean, pct_matrix, total_do, target_pct):
-    """
-    Rule Pembagian Alokasi Kuota Presisi:
-    - % akhir (Grand Total / Total DO) sama dengan Target (%) di QUOTA PER EXPEDITION (%)
-      dari Kuota Bulanan (%) untuk masing-masing ekspedisi.
-    - Menjaga integritas alokasi plant:
-      * FM1, FM2, FM7, FM9 dialokasikan eksklusif untuk TUNAS MUDA dan RJTM.
-      * FM6A dialokasikan eksklusif untuk LBK, WSS, dan PUNINAR.
-      * FM6 dan FM8 berfungsi sebagai penyeimbang presisi (balancing) bagi seluruh 5 ekspedisi.
-    - Penjumlahan kolom per plant sama persis dengan DO plant (100% konsisten).
-    - Penjumlahan baris per ekspedisi sama persis dengan Target Unit ekspedisi (100% konsisten).
-    """
-    if total_do <= 0:
-        return {x: {p: 0 for p in PLANTS} for x in EXPEDITIONS}
-
-    target_units = _round_preserving_sum(
-        {x: target_pct[x] * total_do for x in EXPEDITIONS}, total_do
-    )
-
-    alloc = {x: {p: 0 for p in PLANTS} for x in EXPEDITIONS}
-
-    # 1. FM1, FM2, FM7, FM9: Eksklusif untuk TUNAS MUDA & RJTM
-    tm_rj = ["TUNAS MUDA", "RJTM"]
-    for p in ["FM1", "FM2", "FM7", "FM9"]:
-        d_p = do_clean.get(p, 0)
-        if d_p <= 0:
-            continue
-        w = {x: pct_matrix[x][p] for x in tm_rj}
-        tot_w = sum(w.values()) or 1.0
-        p_alloc = _round_preserving_sum({x: (w[x] / tot_w) * d_p for x in tm_rj}, d_p)
-        for x in tm_rj:
-            alloc[x][p] = p_alloc[x]
-
-    # 2. FM6A: Eksklusif untuk LBK, WSS, PUNINAR
-    tri_group = ["LBK", "WSS", "PUNINAR"]
-    d_6a = do_clean.get("FM6A", 0)
-    if d_6a > 0:
-        w_6a = {x: pct_matrix[x]["FM6A"] for x in tri_group}
-        tot_w6a = sum(w_6a.values()) or 1.0
-        p_6a_alloc = _round_preserving_sum({x: (w_6a[x] / tot_w6a) * d_6a for x in tri_group}, d_6a)
-        for x in tri_group:
-            alloc[x]["FM6A"] = p_6a_alloc[x]
-
-    # Sisa kebutuhan unit per ekspedisi untuk mencapai target_units
-    rem_target = {x: target_units[x] - sum(alloc[x][p] for p in PLANTS) for x in EXPEDITIONS}
-
-    # Penanganan over-alokasi pada plant eksklusif (jika ada)
-    for x in tm_rj:
-        if rem_target[x] < 0:
-            excess = -rem_target[x]
-            for p in ["FM9", "FM7", "FM2", "FM1"]:
-                avail = alloc[x][p]
-                red = min(avail, excess)
-                alloc[x][p] -= red
-                excess -= red
-                other = "RJTM" if x == "TUNAS MUDA" else "TUNAS MUDA"
-                alloc[other][p] += red
-                rem_target[other] -= red
-                if excess <= 0:
-                    break
-            rem_target[x] = 0
-
-    for x in tri_group:
-        if rem_target[x] < 0:
-            excess = -rem_target[x]
-            avail = alloc[x]["FM6A"]
-            red = min(avail, excess)
-            alloc[x]["FM6A"] -= red
-            excess -= red
-            for y in tri_group:
-                if y != x and rem_target[y] > 0 and red > 0:
-                    give = min(red, rem_target[y])
-                    alloc[y]["FM6A"] += give
-                    rem_target[y] -= give
-                    red -= give
-            rem_target[x] = 0
-
-    # 3. Distribusi Plant FM8 ke seluruh ekspedisi yang masih membutuhkan
-    d_8 = do_clean.get("FM8", 0)
-    if d_8 > 0:
-        w_8 = {x: max(0, rem_target[x]) * pct_matrix[x]["FM8"] for x in EXPEDITIONS}
-        tot_w8 = sum(w_8.values())
-        if tot_w8 <= 0:
-            w_8 = {x: max(0, rem_target[x]) for x in EXPEDITIONS}
-            tot_w8 = sum(w_8.values()) or 1.0
-        alloc_8 = _round_preserving_sum({x: (w_8[x] / tot_w8) * d_8 for x in EXPEDITIONS}, d_8)
-        # Batasi agar tidak melampaui sisa kebutuhan masing-masing ekspedisi
-        for x in EXPEDITIONS:
-            if alloc_8[x] > rem_target[x]:
-                surplus = alloc_8[x] - rem_target[x]
-                alloc_8[x] = rem_target[x]
-                for y in EXPEDITIONS:
-                    if y != x and alloc_8[y] + surplus <= rem_target[y]:
-                        alloc_8[y] += surplus
-                        surplus = 0
-                        break
-        for x in EXPEDITIONS:
-            alloc[x]["FM8"] = alloc_8[x]
-
-    # 4. Plant FM6 menyerap sisa kebutuhan persis masing-masing ekspedisi
-    for x in EXPEDITIONS:
-        alloc[x]["FM6"] = max(0, rem_target[x] - alloc[x]["FM8"])
-
-    # Rekonsiliasi akhir jika ada selisih integer rounding pada FM6
-    actual_fm6 = sum(alloc[x]["FM6"] for x in EXPEDITIONS)
-    do_fm6 = do_clean.get("FM6", 0)
-    if actual_fm6 != do_fm6:
-        gap = do_fm6 - actual_fm6
-        x_target = max(EXPEDITIONS, key=lambda x: rem_target[x])
-        alloc[x_target]["FM6"] += gap
-
-    return alloc
 
 
 def solve_fm9_allocation(do_fm9, pct_matrix=None):
@@ -741,12 +616,85 @@ def calculate_and_balance_daily_quota(
                 bal_int[x][p] = rounded_col[x]
 
     else:
-        # ATURAN PEMBAGIAN ALOKASI KUOTA:
-        # % akhir HARUS SAMA DENGAN Target (%) di QUOTA PER EXPEDITION (%) dari Kuota Bulanan (%) masing-masing ekspedisi.
-        bal_int = solve_perfect_target_daily_quota(do_clean, pct_matrix, total_do, target_pct)
+        # MODE OPERATIONAL TRAILER & ROLLING RULES
+        target_units_int = _round_preserving_sum(
+            {x: target_pct[x] * total_do for x in EXPEDITIONS}, total_do
+        )
 
-    enforce_tgt = (mode != "excel_formula")
-    balanced_rows = _build_stat_rows(bal_int, total_do, target_pct, tolerance_pct, enforce_target_pct=enforce_tgt)
+        winner = (
+            rolling_winner
+            if rolling_winner in ["TUNAS MUDA", "RJTM"]
+            else "TUNAS MUDA"
+        )
+        bal_int[winner]["FM1"] = do_clean["FM1"]
+        bal_int[winner]["FM2"] = do_clean["FM2"]
+
+        if do_clean["FM9"] > 0:
+            fm9_alloc = solve_fm9_allocation(do_clean["FM9"], pct_matrix)
+            for x in EXPEDITIONS:
+                bal_int[x]["FM9"] = fm9_alloc[x]
+
+        if do_clean["FM7"] > 0:
+            fm7_weights = {
+                "TUNAS MUDA": 0.55,
+                "RJTM": 0.45,
+            }
+            w_sum = sum(fm7_weights.values())
+            fm7_alloc = _round_preserving_sum(
+                {x: (fm7_weights.get(x, 0.0) / w_sum) * do_clean["FM7"] for x in EXPEDITIONS},
+                do_clean["FM7"],
+            )
+            for x in EXPEDITIONS:
+                bal_int[x]["FM7"] = fm7_alloc[x]
+
+        # ATURAN KHUSUS FM6A:
+        # Untuk ketiga ekspedisi (LBK, WSS, PUNINAR) minimal 54 unit dan maksimal 64 unit.
+        # Jika angka min kurang dari 3 ekspedisi (< 162 unit) berikan ke 2 ekspedisi.
+        # Jika kurang dari 2 ekspedisi (< 108 unit) berikan ke 1 ekspedisi.
+        if do_clean["FM6A"] > 0:
+            curr_temp_6a = {
+                x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM7", "FM9"])
+                for x in EXPEDITIONS
+            }
+            fm6a_alloc = solve_fm6a_allocation(
+                do_clean["FM6A"], pct_matrix, target_units_int, curr_temp_6a
+            )
+            for x in EXPEDITIONS:
+                bal_int[x]["FM6A"] = fm6a_alloc[x]
+
+        # ATURAN KHUSUS FM8:
+        # 1. Jika DO >= 270 unit (minimal 5 truk trailer):
+        #    - LBK, WSS, PUNINAR masing-masing 1 rit trailer standar (55 unit).
+        #    - RJTM 2 rit trailer (110 unit = 2 x 55 u).
+        #    - TUNAS MUDA sisa alokasi rit trailer (misal 3 rit = 180 u).
+        # 2. Jika DO < 270 unit: evaluasi bertahap engkel 44 u atau rit trailer 54-64 u.
+        do_fm8 = do_clean["FM8"]
+        if do_fm8 > 0:
+            curr_temp = {
+                x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM9"])
+                for x in EXPEDITIONS
+            }
+            fm8_alloc = solve_fm8_allocation(do_fm8, target_units_int, curr_temp)
+            for x in EXPEDITIONS:
+                bal_int[x]["FM8"] = fm8_alloc[x]
+
+        # ATURAN KHUSUS FM6:
+        # 1. Kelompok Balancing (TUNAS MUDA & RJTM): Dibatasi rit trailer utuh (min 54 - max 64)
+        #    (RJTM 3 rit = 180 u, TUNAS MUDA 2 rit = 110 u)
+        # 2. Kelompok Utama (LBK, WSS, PUNINAR): Menerima sisa DO FM6 dibagi proporsional (muatan ~61-62 u/truk)
+        do_fm6 = do_clean["FM6"]
+        current_alloc = {
+            x: sum(bal_int[x][p] for p in ["FM1", "FM2", "FM6A", "FM7", "FM8", "FM9"])
+            for x in EXPEDITIONS
+        }
+        if do_fm6 > 0:
+            fm6_alloc = solve_fm6_allocation(
+                do_fm6, pct_matrix, target_units_int, current_alloc
+            )
+            for x in EXPEDITIONS:
+                bal_int[x]["FM6"] = fm6_alloc[x]
+
+    balanced_rows = _build_stat_rows(bal_int, total_do, target_pct, tolerance_pct)
 
     trailer_checks = {}
     for x in EXPEDITIONS:
