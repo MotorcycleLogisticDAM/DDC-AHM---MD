@@ -171,118 +171,104 @@
           <!-- ========================================================== -->
           <div class="tab-pane active show" id="tab-do">
             <div class="row row-cards">
-              <!-- KARTU 1: TAMBAH / UPDATE DO AHM (OTOMATIS PUSH KE SHEET LOKAL DO) DENGAN RED BANNER & TABLE GRID STEEL BLUE -->
+              <!-- KARTU 1: TAMBAH / UPDATE DO AHM (OTOMATIS PUSH KE SHEET LOKAL DO) -->
               <div class="col-lg-12">
                 <div class="card mb-3 shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
-                  <!-- RED BANNER HEADER BERKOLOM LOGO DAM & HONDA -->
-                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000; color: #ffffff;">
-                    <div class="px-3 py-2 d-flex align-items-center">
-                      <!-- LOGO DAYA ADICIPTA MOTORA -->
-                      <div class="me-3 p-1 bg-white rounded shadow-sm d-flex align-items-center justify-content-center" style="min-width: 44px; height: 38px;">
-                        <span style="font-weight: 900; color: #d00000; font-size: 1.1rem; line-height: 1;">DAYA</span>
-                      </div>
-                      <div>
-                        <div class="fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px;">
-                          <i class="ti ti-truck-delivery"></i> INPUT DELIVERY ORDER (DO) AHM &bull; OTOMATIS PUSH KE SHEET DO
-                        </div>
-                        <div style="font-size: 0.8rem; color: #ffcccc;">
-                          DO dirilis <b>H-1</b> dari tanggal kalender sistem (Target: <span id="lbl-do-h1-badge" class="fw-bold text-white bg-dark px-1 rounded">06-Nov-26</span>) &bull; Otomatis tersimpan ke Sheet Lokal <b>DO</b> pada <code>DDC.xlsx</code>
-                        </div>
+                  <div class="card-header bg-blue-lt d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="ti ti-truck-delivery fs-2"></i>
+                        Tambah / Update Delivery Order (DO) AHM — Otomatis Push ke Sheet Lokal 'DO'
+                      </h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-primary text-white me-1"><i class="ti ti-calendar me-1"></i>Rule 1</span>
+                        DO dirilis <b>H-1</b> dari tanggal kalender sistem (Target: <span id="lbl-do-h1-badge" class="fw-bold text-primary">06-Nov-26</span>) &bull; Otomatis tersimpan ke Sheet Lokal <b>DO</b> pada <code>DDC.xlsx</code>
                       </div>
                     </div>
-                    <div class="d-flex align-items-center pe-3 gap-2">
-                      <span class="badge bg-white text-danger fw-bold fs-3 px-3 py-2 shadow-sm" id="add-do-total-badge">Total Input DO: 0 Unit</span>
-                      <a href="/api/download_excel" class="btn btn-sm btn-outline-light text-white d-flex align-items-center" title="Unduh file DDC.xlsx lokal dengan data Sheet DO & SL terkini">
-                        <i class="ti ti-download me-1"></i> Download DDC.xlsx
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-blue text-white" id="add-do-total-badge">Total Input DO: 0 Unit</span>
+                      <a href="/api/download_excel" class="btn btn-sm btn-outline-primary d-flex align-items-center" title="Unduh file DDC.xlsx lokal dengan data Sheet DO & SL terkini">
+                        <i class="ti ti-download me-1"></i> Download DDC.xlsx Terkini
                       </a>
-                      <!-- LOGO HONDA -->
-                      <div class="ms-2 d-none d-md-flex align-items-center px-2 py-1 rounded" style="background: rgba(255,255,255,0.15);">
-                        <span style="font-weight: 900; letter-spacing: 1px; color: #ffffff; font-size: 0.85rem;">HONDA</span>
-                      </div>
                     </div>
                   </div>
-
-                  <div class="card-body p-3">
-                    <!-- TABLE INPUT GRID BER-HEADER STEEL BLUE #366092 -->
-                    <div class="table-responsive">
-                      <table class="table table-bordered table-sm mb-2" style="border: 2px solid #366092; width: 100%;">
-                        <thead style="background-color: #366092; color: #ffffff;">
-                          <tr style="font-size: 0.82rem; font-weight: 700; text-align: center;">
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092; min-width: 140px;">TANGGAL DO (H-1)</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092; width: 90px;">BULAN</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
-                            <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092; min-width: 180px;">AKSI</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;">
-                              <input type="date" id="add-do-tgl" class="form-control form-control-sm text-center fw-bold" value="2026-11-06" onchange="onChangeAddDoDate()" style="color: #000000;">
-                            </td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;">
-                              <input type="number" id="add-do-bulan" class="form-control form-control-sm text-center fw-bold bg-azure-lt" min="1" max="12" value="11" style="color: #000000;">
-                            </td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM1" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM2" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM6" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM6A" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM7" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM8" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM9" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
-                            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff; text-align: center;">
-                              <button class="btn btn-primary btn-sm fw-bold w-100" onclick="submitNewDO()">
-                                <i class="ti ti-device-floppy me-1"></i> Simpan DO &amp; Push ke Sheet DO
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <div class="card-body">
+                    <div class="row g-2 align-items-end">
+                      <div class="col-md-2">
+                        <label class="form-label small mb-1 fw-bold">Tanggal DO (H-1 Kalender)</label>
+                        <input type="date" id="add-do-tgl" class="form-control form-control-sm" value="2026-11-06" onchange="onChangeAddDoDate()">
+                      </div>
+                      <div class="col-md-1">
+                        <label class="form-label small mb-1 fw-bold">Bulan (Angka)</label>
+                        <input type="number" id="add-do-bulan" class="form-control form-control-sm text-center fw-bold bg-azure-lt" min="1" max="12" value="11">
+                      </div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM1</label><input type="number" id="add-do-FM1" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM2</label><input type="number" id="add-do-FM2" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM6</label><input type="number" id="add-do-FM6" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM6A</label><input type="number" id="add-do-FM6A" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM7</label><input type="number" id="add-do-FM7" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM8</label><input type="number" id="add-do-FM8" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col"><label class="small text-secondary mb-1 d-block">FM9</label><input type="number" id="add-do-FM9" class="form-control form-control-sm input-cell w-100" value="0" oninput="updateAddDoTotalBadge()"></div>
+                      <div class="col-auto">
+                        <button class="btn btn-primary btn-sm fw-bold px-3" onclick="submitNewDO()">
+                          <i class="ti ti-device-floppy me-1"></i> Simpan DO &amp; Push ke Sheet DO
+                        </button>
+                      </div>
                     </div>
-                    <div class="small text-secondary mt-1 d-flex align-items-center">
-                      <i class="ti ti-info-circle me-1 text-primary"></i><b>Otomatis Push ke Sheet DO:</b> Data Tanggal DO beserta Qty per Plant (FM1..FM9) akan <b>langsung tersimpan &amp; ter-push ke Sheet Lokal 'DO' pada file <code>DDC.xlsx</code></b>, lalu form input otomatis kembali ke 0.
+                    <div class="small text-secondary mt-2">
+                      <i class="ti ti-info-circle me-1"></i><b>Otomatis Push ke Sheet DO:</b> Data Tanggal DO (H-1 Kalender) beserta rincian Qty per Plant (FM1..FM9) dan Bulan (Angka) akan <b>langsung tersimpan &amp; ter-push ke Sheet Lokal 'DO' pada file <code>DDC.xlsx</code></b> dan otomatis memutakhirkan perhitungan di menu Kuota Harian. Klik baris tanggal pada tabel di bawah jika ingin memuat kembali angka DO tanggal tersebut.
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- KARTU 2: DATA DO HARIAN TERBARU (DARI SHEET DO) DENGAN RED BANNER & TABLE BORDER STEEL BLUE -->
+              <!-- KARTU 2: UPLOAD DATA AKTUAL BATCH (OTOMATIS PUSH KE SHEET LOKAL SL) -->
               <div class="col-lg-12">
-                <div class="card shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
-                  <!-- RED BANNER HEADER -->
-                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000; color: #ffffff;">
-                    <div class="px-3 py-2 d-flex align-items-center">
-                      <div class="me-3 p-1 bg-white rounded shadow-sm d-flex align-items-center justify-content-center" style="min-width: 44px; height: 38px;">
-                        <span style="font-weight: 900; color: #d00000; font-size: 1.1rem; line-height: 1;">DAYA</span>
-                      </div>
-                      <div>
-                        <div class="fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px;">
-                          <i class="ti ti-database"></i> DATA DO HARIAN TERBARU (DARI SHEET DO)
-                        </div>
-                        <div style="font-size: 0.8rem; color: #ffcccc;" id="do-history-summary">
-                          Memuat histori Sheet DO...
-                        </div>
+                <div class="card mb-3 shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <div class="card-header bg-teal-lt d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0 text-teal d-flex align-items-center gap-2">
+                        <i class="ti ti-upload fs-2"></i>
+                        Upload Data Aktual Batch (Excel .xlsx) — Otomatis Push ke Sheet Lokal 'SL'
+                      </h3>
+                      <div class="small text-secondary mt-1">
+                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
+                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman &bull; Otomatis ter-push ke Sheet Lokal <b>SL</b> pada <code>DDC.xlsx</code>
                       </div>
                     </div>
-                    <div class="d-flex align-items-center pe-3 gap-2">
-                      <div class="d-none d-md-flex align-items-center px-2 py-1 rounded" style="background: rgba(255,255,255,0.15);">
-                        <span style="font-weight: 900; letter-spacing: 1px; color: #ffffff; font-size: 0.85rem;">HONDA</span>
-                      </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <a href="/api/download_template_sl" class="btn btn-sm btn-outline-teal d-flex align-items-center">
+                        <i class="ti ti-download me-1"></i> Download Template Excel SL
+                      </a>
                     </div>
                   </div>
+                  <div class="card-body py-3">
+                    <div class="mb-2 text-secondary small">
+                      Unggah file Excel (<code>.xlsx</code>) berisi data aktual pengiriman unit. Data yang di-upload akan <b>langsung di-push ke Sheet Lokal 'SL'</b> pada file <code>DDC.xlsx</code> (menambahkan baris baru ke bawah tanpa menghapus data lama).
+                      <div class="mt-1"><span class="badge bg-teal-lt fw-bold">Format Kolom: TANGGAL (contoh: 31-Okt-26), NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY</span></div>
+                    </div>
+                    <div class="input-group">
+                      <input type="file" id="do-tab-sl-file-upload" class="form-control form-control-sm" accept=".xlsx">
+                      <button class="btn btn-teal btn-sm fw-bold px-3" onclick="uploadSLBatchFromDO(event)">
+                        <i class="ti ti-upload me-1"></i> Upload Batch &amp; Push ke Sheet SL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                  <!-- FILTER BAR -->
-                  <div class="card-header bg-light py-2 d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-bottom: 2px solid #366092;">
+              <div class="col-lg-12">
+                <div class="card">
+                  <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <h3 class="card-title fw-bold mb-0">Data DO Harian Terbaru (Dari Sheet DO)</h3>
+                      <div class="small text-secondary" id="do-history-summary">Memuat histori Sheet DO...</div>
+                    </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">
-                      <label class="small fw-bold mb-0 text-dark">Filter Tanggal:</label>
+                      <label class="small fw-bold mb-0">Filter Tanggal:</label>
                       <input type="date" id="filter-do-tgl" class="form-control form-control-sm w-auto" onchange="loadDOTable()">
                       <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('filter-do-tgl').value=''; loadDOTable();">Semua Tanggal</button>
-                      <label class="small fw-bold mb-0 ms-2 text-dark">Bulan (Angka):</label>
+                      <label class="small fw-bold mb-0 ms-2">Bulan (Angka):</label>
                       <select id="filter-do-bulan" class="form-select form-select-sm w-auto" onchange="loadDOTable()">
                         <option value="ALL">Semua Bulan</option>
                         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
@@ -290,17 +276,16 @@
                         <option value="7">7</option><option value="8">8</option><option value="9">9</option>
                         <option value="10">10</option><option value="11">11</option><option value="12">12</option>
                       </select>
-                      <label class="small fw-bold mb-0 ms-2 text-dark">Urutan:</label>
+                      <label class="small fw-bold mb-0 ms-2">Urutan:</label>
                       <select id="filter-do-sort" class="form-select form-select-sm w-auto" onchange="loadDOTable()">
                         <option value="newest" selected>Tanggal Terbaru di Atas</option>
                         <option value="chronological">Urutan Baris Sheet DO (Kronologis)</option>
                       </select>
                     </div>
                   </div>
-
                   <div class="table-responsive" style="max-height: 480px;">
-                    <table class="table table-bordered table-striped table-hover table-sm mb-0" style="border: 2px solid #366092;">
-                      <thead class="sticky-top" id="thead-do-preview" style="background-color: #366092; color: #ffffff;"></thead>
+                    <table class="table table-bordered table-striped table-hover table-sm mb-0">
+                      <thead class="bg-light sticky-top" id="thead-do-preview"></thead>
                       <tbody id="tbody-do-preview"></tbody>
                     </table>
                   </div>
@@ -674,19 +659,19 @@
             <!-- ANALISA PERFORMANCE PER EKSPEDISI -->
             <div class="row row-cards">
               <div class="col-lg-7">
-                <div class="card shadow-sm" id="card-perf-analysis" style="border: 1px solid #cbd5e1; overflow: hidden; background-color: #ffffff;">
-                  <!-- HEADER ANALISA PERFORMANCE SESUAI CONTOH GAMBAR (Clean White Background, Black Bold Text) -->
-                  <div class="d-flex justify-content-between align-items-center px-3 py-2" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0;">
-                    <div class="fw-bold" style="font-size: 1.15rem; color: #000000; font-weight: 800; letter-spacing: 0.3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                <div class="card shadow-sm" id="card-perf-analysis" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <!-- HEADER RED BANNER SEPERTI DISTRIBUTION SUMMARY -->
+                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                    <div class="px-3 py-2 fw-bold d-flex align-items-center" style="font-size: 1.15rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
                       ANALISA PERFORMANCE PER EKSPEDISI
                     </div>
                     <div class="d-flex align-items-center">
                       <!-- TOMBOL SALIN GAMBAR WA (no-capture) -->
-                      <div class="btn-group no-capture me-3">
-                        <button type="button" class="btn btn-sm btn-outline-success d-flex align-items-center py-1 px-2" onclick="sharePerfAnalysisToWhatsApp('copy')" title="Salin Gambar ke Clipboard untuk Paste di WhatsApp (Ctrl+V)">
-                          <i class="ti ti-brand-whatsapp me-1 text-success fs-4"></i> Salin Gambar (WA)
+                      <div class="btn-group no-capture me-2">
+                        <button type="button" class="btn btn-sm btn-outline-light text-white d-flex align-items-center py-1 px-2" onclick="sharePerfAnalysisToWhatsApp('copy')" title="Salin Gambar ke Clipboard untuk Paste di WhatsApp (Ctrl+V)">
+                          <i class="ti ti-brand-whatsapp me-1 text-white fs-4"></i> Salin Gambar (WA)
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-success dropdown-toggle dropdown-toggle-split py-1 px-1" data-bs-toggle="dropdown" aria-expanded="false" title="Pilihan Ekspor">
+                        <button type="button" class="btn btn-sm btn-outline-light text-white dropdown-toggle dropdown-toggle-split py-1 px-1" data-bs-toggle="dropdown" aria-expanded="false" title="Pilihan Ekspor">
                           <span class="visually-hidden">Opsi</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
@@ -711,28 +696,28 @@
                           </li>
                         </ul>
                       </div>
-                      <!-- TANGGAL UP TO DATE PERSIS SESUAI GAMBAR (miring & bold) -->
-                      <div class="d-flex align-items-baseline">
-                        <span class="me-2" style="font-style: italic; font-size: 1rem; color: #000000; font-family: 'Times New Roman', Times, serif, 'Segoe UI';">up to date :</span>
-                        <span id="perf-header-date-topright" class="fw-bold font-monospace" style="font-style: italic; font-size: 1.15rem; color: #000000;">11/11/2026</span>
+                      <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS -->
+                      <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
+                        <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">up to date :</span>
+                        <span id="perf-header-date-topright" class="fw-bold font-monospace" style="font-size: 1.1rem; font-style: normal; color: #000000;">11/11/26</span>
                       </div>
                     </div>
                   </div>
-                  <div class="table-responsive p-0">
-                    <table class="table table-bordered table-sm mb-0" style="border: 2px solid #000000; width: 100%;">
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0" style="border: 2px solid #366092;">
                       <thead style="background-color: #366092; color: #ffffff;">
-                        <tr style="font-size: 0.88rem; font-weight: 700; text-align: center;">
-                          <th style="padding: 6px 12px; border: 1px solid #000000; color: #ffffff; background-color: #366092;">XPDC</th>
-                          <th class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #ffffff; background-color: #366092;">TARGET</th>
-                          <th class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #ffffff; background-color: #366092;">ACTUAL</th>
-                          <th class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #ffffff; background-color: #366092;">GAP</th>
-                          <th class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #ffffff; background-color: #366092;">% ACH</th>
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">XPDC</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">TARGET</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">ACTUAL</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">GAP</th>
+                          <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">% ACH</th>
                         </tr>
                       </thead>
                       <tbody id="tbody-perf-summary"></tbody>
                     </table>
                   </div>
-                </div></div>
+                </div>
               </div>
               <div class="col-lg-5">
                 <div class="card">
@@ -1687,7 +1672,7 @@ async function loadSummary() {
   // Update Tanggal Analisa Performance Kanan Atas
   const perfDateEl = document.getElementById("perf-header-date-topright");
   if (perfDateEl) {
-    perfDateEl.textContent = formatDateDDMMYYYY(repDate);
+    perfDateEl.textContent = formatDateMMDDYY(repDate);
   }
 
   // Render ANALISA PERFORMANCE PER EKSPEDISI (Sesuai contoh gambar)
@@ -1696,28 +1681,26 @@ async function loadSummary() {
   d.performance_analysis.forEach(r => {
     const gapFmt = (r.GAP > 0 ? "+" : "") + fmtNum(r.GAP);
     const achFmt = r.ACH_PCT.toFixed(1).replace(".", ",") + "%";
-    // Sesuai contoh gambar: GAP & % ACH latar soft pink (#ffd8d8) dan teks merah tua (#c00000)
-    const gapBg = r.GAP < 0 ? "background-color: #ffd8d8; color: #c00000;" : (r.GAP > 0 ? "background-color: #d4edda; color: #155724;" : "background-color: #ffffff; color: #000000;");
-    const achBg = r.ACH_PCT < 100 ? "background-color: #ffd8d8; color: #c00000;" : "background-color: #d4edda; color: #155724;";
+    const gapBg = r.GAP < 0 ? "background-color: #ffd8d8; color: #991b1b;" : (r.GAP > 0 ? "background-color: #d4edda; color: #155724;" : "background-color: #ffffff;");
+    const achBg = r.ACH_PCT < 100 ? "background-color: #ffd8d8; color: #991b1b;" : "background-color: #d4edda; color: #155724;";
 
     tbPerf.innerHTML += `<tr>
-      <td class="fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #ffffff; text-align: left;">${r.XPDC}</td>
-      <td class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #ffffff; text-align: right;">${fmtNum(r.TARGET_UPTO)}</td>
-      <td class="num-col" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #ffffff; text-align: right;">${fmtNum(r.ACTUAL_UPTO)}</td>
-      <td class="num-col" style="padding: 6px 12px; border: 1px solid #000000; ${gapBg} text-align: right;">${gapFmt}</td>
-      <td class="num-col" style="padding: 6px 12px; border: 1px solid #000000; ${achBg} text-align: right;">${achFmt}</td>
+      <td class="fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.TARGET_UPTO)}</td>
+      <td class="num-col" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${fmtNum(r.ACTUAL_UPTO)}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${gapBg}">${gapFmt}</td>
+      <td class="num-col fw-bold" style="padding: 6px 10px; border: 1px solid #cbd5e1; ${achBg}">${achFmt}</td>
     </tr>`;
   });
   const pt = d.performance_totals;
   const totGapFmt = (pt.GAP > 0 ? "+" : "") + fmtNum(pt.GAP);
   const totAchFmt = pt.ACH_PCT.toFixed(1).replace(".", ",") + "%";
-  // Sesuai contoh gambar: baris TOTAL berlatar ICE BLUE (#d9e1f2) untuk SEMUA kolom termasuk GAP & % ACH dengan teks hitam tebal
-  tbPerf.innerHTML += `<tr style="background-color: #d9e1f2; font-weight: bold; border: 1px solid #000000;">
-    <td class="fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #d9e1f2; text-align: left;">TOTAL</td>
-    <td class="num-col fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #d9e1f2; text-align: right;">${fmtNum(pt.TARGET_UPTO)}</td>
-    <td class="num-col fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #d9e1f2; text-align: right;">${fmtNum(pt.ACTUAL_UPTO)}</td>
-    <td class="num-col fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #d9e1f2; text-align: right;">${totGapFmt}</td>
-    <td class="num-col fw-bold" style="padding: 6px 12px; border: 1px solid #000000; color: #000000; background-color: #d9e1f2; text-align: right;">${totAchFmt}</td>
+  tbPerf.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+    <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.TARGET_UPTO)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.ACTUAL_UPTO)}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">${totGapFmt}</td>
+    <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">${totAchFmt}</td>
   </tr>`;
 
   // Render Chart
@@ -2144,23 +2127,6 @@ async function loadMonthlyQuota() {
   } finally {
     hideLoading();
   }
-}
-
-
-function formatDateDDMMYYYY(dateStr) {
-  if (!dateStr) return "-";
-  const clean = String(dateStr).trim();
-  const parts = clean.split("-");
-  if (parts.length === 3) {
-    if (parts[0].length === 4) {
-      // YYYY-MM-DD -> DD/MM/YYYY
-      return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
-    } else if (parts[2].length === 4) {
-      // DD-MM-YYYY -> DD/MM/YYYY
-      return `${parts[0].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[2]}`;
-    }
-  }
-  return clean;
 }
 
 function formatDateMMDDYY(dateStr) {
@@ -2813,15 +2779,15 @@ async function loadDOTable() {
 
   const th = document.getElementById("thead-do-preview");
   const tb = document.getElementById("tbody-do-preview");
-  th.innerHTML = `<tr style="background-color: #366092; color: #ffffff; font-size: 0.85rem; font-weight: 700; text-align: center;">
-    <th style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">TANGGAL</th>
-    <th style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">PLANT</th>
-    <th class="num-col" style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">QTY AWAL</th>
-    <th class="text-center" style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">ADJUSTMENT (+/-)</th>
-    <th class="num-col" style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">QTY AKHIR (NETTO)</th>
-    <th style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">KETERANGAN / STATUS</th>
-    <th class="text-center" style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092;">BULAN</th>
-    <th class="text-center" style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092; width: 100px;">AKSI</th>
+  th.innerHTML = `<tr>
+    <th>TANGGAL</th>
+    <th>PLANT</th>
+    <th class="num-col">QTY AWAL</th>
+    <th class="text-center">ADJUSTMENT (+/-)</th>
+    <th class="num-col">QTY AKHIR (NETTO)</th>
+    <th>KETERANGAN / STATUS</th>
+    <th class="text-center">BULAN</th>
+    <th class="text-center" style="width: 100px;">AKSI</th>
   </tr>`;
 
   tb.innerHTML = d.rows.map(r => {
@@ -2944,12 +2910,8 @@ async function submitNewDO() {
       showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-primary ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx Terkini</a>`);
       await initApp();
       await loadDOTable();
-      // Otomatis angka per plant/FM kembali ke 0 karena data inputan sudah masuk ke Data DO Harian Terbaru (Dari Sheet DO)
-      PLANTS.forEach(p => {
-        const el = document.getElementById(`add-do-${p}`);
-        if (el) el.value = "0";
-      });
-      updateAddDoTotalBadge();
+      document.getElementById("add-do-tgl").value = tglVal;
+      onChangeAddDoDate();
       // Langsung hubungkan tanggal DO yang baru disimpan ke menu Kuota Harian (Tahap 1 & Tahap 2)
       document.getElementById("dq-date-input").value = tglVal;
       const selDq = document.getElementById("dq-date-select");
