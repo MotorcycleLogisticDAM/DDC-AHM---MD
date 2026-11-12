@@ -315,90 +315,84 @@
           <div class="tab-pane" id="tab-sl">
             <div class="row row-cards">
               
-              <!-- FORM TAMBAH TRANSAKSI SL (MANUAL) -->
+              <!-- KARTU 1: UPLOAD DATA AKTUAL BATCH DENGAN RED BANNER SEPERTI DELIVERY ORDER -->
               <div class="col-lg-12">
-                <div class="card mb-3">
-                  <div class="card-header bg-azure-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                      <h3 class="card-title fw-bold mb-0">Tambah Pengiriman Aktual Baru ke Sheet 'SL' (Manual)</h3>
-                      <div class="small text-secondary mt-1">
-                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
-                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman
+                <div class="card mb-3 shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <!-- RED BANNER HEADER BERKOLOM LOGO DAM & HONDA SEPERTI DELIVERY ORDER -->
+                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000; color: #ffffff;">
+                    <div class="px-3 py-2 d-flex align-items-center">
+                      <!-- LOGO DAYA ADICIPTA MOTORA -->
+                      <div class="me-3 p-1 bg-white rounded shadow-sm d-flex align-items-center justify-content-center" style="min-width: 44px; height: 38px;">
+                        <span style="font-weight: 900; color: #d00000; font-size: 1.1rem; line-height: 1;">DAYA</span>
+                      </div>
+                      <div>
+                        <div class="fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px;">
+                          <i class="ti ti-upload"></i> UPLOAD DATA AKTUAL BATCH (EXCEL .XLSX) &bull; OTOMATIS PUSH KE SHEET SL
+                        </div>
+                        <div style="font-size: 0.8rem; color: #ffcccc;">
+                          SL di-upload <b>H+1</b> dari tanggal kalender pengiriman &bull; Otomatis ter-push ke Sheet Lokal <b>SL</b> pada <code>DDC.xlsx</code>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center pe-3 gap-2">
+                      <a href="/api/download_template_sl" class="btn btn-sm btn-outline-light text-white d-flex align-items-center" title="Unduh template format Excel SL">
+                        <i class="ti ti-download me-1"></i> Download Template SL
+                      </a>
+                      <!-- LOGO HONDA -->
+                      <div class="ms-2 d-none d-md-flex align-items-center px-2 py-1 rounded" style="background: rgba(255,255,255,0.15);">
+                        <span style="font-weight: 900; letter-spacing: 1px; color: #ffffff; font-size: 0.85rem;">HONDA</span>
                       </div>
                     </div>
                   </div>
-                  <div class="card-body">
-                    <div class="row g-2">
-                      <div class="col-md-2"><label class="form-label small mb-1 fw-bold">Tanggal Pengiriman SL</label><input type="date" id="sl-tgl" class="form-control form-control-sm" value="2026-10-31"></div>
-                      <div class="col-md-2"><label class="form-label small mb-1">No. Polisi Truk</label><input type="text" id="sl-nopol" class="form-control form-control-sm" placeholder="B 9123 UWY"></div>
-                      <div class="col-md-2"><label class="form-label small mb-1">Nama Sopir</label><input type="text" id="sl-sopir" class="form-control form-control-sm" placeholder="BUDI"></div>
-                      <div class="col-md-2">
-                        <label class="form-label small mb-1">Ekspedisi (XPDC)</label>
-                        <select id="sl-xpdc" class="form-select form-select-sm">
-                          <option>TUNAS MUDA</option><option>RJTM</option><option>LBK</option><option>WSS</option><option>PUNINAR</option>
-                        </select>
-                      </div>
-                      <div class="col-md-1">
-                        <label class="form-label small mb-1">Plant</label>
-                        <select id="sl-plant" class="form-select form-select-sm">
-                          <option>FM1</option><option>FM2</option><option>FM6</option><option>FM6A</option><option>FM7</option><option>FM8</option><option>FM9</option>
-                        </select>
-                      </div>
-                      <div class="col-md-2">
-                        <label class="form-label small mb-1">Gudang Tujuan</label>
-                        <select id="sl-gudang" class="form-select form-select-sm">
-                          <option>KARAWANG</option><option>BANDUNG</option><option>CIREBON</option>
-                        </select>
-                      </div>
-                      <div class="col-md-1"><label class="form-label small mb-1">Qty</label><input type="number" id="sl-qty" class="form-control form-control-sm" value="64"></div>
-                    </div>
-                    <button class="btn btn-primary btn-sm mt-3" onclick="submitNewSL()">
-                      <i class="ti ti-plus me-1"></i> Simpan Baris Baru ke Sheet SL
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              <!-- FORM UPLOAD DATA AKTUAL BATCH -->
-              <div class="col-lg-12">
-                <div class="card mb-3">
-                  <div class="card-header bg-teal-lt d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                      <h3 class="card-title fw-bold mb-0">Upload Data Aktual Batch (Excel .xlsx)</h3>
-                      <div class="small text-secondary mt-1">
-                        <span class="badge bg-teal text-white me-1"><i class="ti ti-truck me-1"></i>Rule 2</span>
-                        SL di-upload <b>H+1</b> dari tanggal kalender pengiriman
+                  <div class="card-body p-3">
+                    <div class="mb-2 text-secondary small">
+                      Unggah file Excel (<code>.xlsx</code>) berisi data aktual pengiriman unit. Sistem akan <b>langsung menambahkan data ke Sheet Lokal 'SL'</b> pada file <code>DDC.xlsx</code> tanpa menghapus data yang sudah ada sebelumnya.
+                      <div class="mt-1">
+                        <span class="badge bg-light text-dark fw-bold border" style="font-size: 0.8rem;">
+                          <i class="ti ti-table me-1 text-primary"></i>Format Kolom Wajib: TANGGAL (contoh: 31-Okt-26), NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <div class="card-body">
-                    <div class="mb-3 text-secondary small">
-                      Anda dapat mengunggah file Excel berisi banyak data sekaligus. Sistem akan <b>menambahkan</b> baris di bawah data SL yang sudah ada (tidak menghapus data lama).
-                      <div class="mt-1"><span class="badge bg-teal-lt fw-bold">Format Kolom: TANGGAL (contoh: 31-Okt-26), NOPOL, SOPIR, XPDC, PLANT, GUDANG, QTY</span></div>
-                    </div>
-                    <div class="input-group mb-2">
-                      <input type="file" id="sl-file-upload" class="form-control" accept=".xlsx">
-                      <button class="btn btn-teal" onclick="uploadSLBatch(event)">
-                        <i class="ti ti-upload me-1"></i> Upload Batch
+                    <div class="input-group">
+                      <input type="file" id="sl-file-upload" class="form-control form-control-sm" accept=".xlsx">
+                      <button class="btn btn-primary btn-sm fw-bold px-3" onclick="uploadSLBatch(event)">
+                        <i class="ti ti-upload me-1"></i> Upload Batch &amp; Push ke Sheet SL
                       </button>
                     </div>
-                    <div>
-                      <a href="/api/download_template_sl" class="small text-decoration-none fw-bold"><i class="ti ti-download me-1"></i>Download Template Excel SL (Format Tanggal: 31-Okt-26)</a>
-                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- PREVIEW DATA SHIPPING LIST -->
-              <div class="col-lg-12 mt-3">
-                <div class="card">
-                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h3 class="card-title fw-bold mb-0">Data Shipping List Terbaru (Dari Sheet SL)</h3>
-                    <span class="badge bg-teal text-white fw-bold" id="sl-total-badge">Memuat data...</span>
+              <!-- KARTU 2: PREVIEW DATA SHIPPING LIST DENGAN RED BANNER SEPERTI DELIVERY ORDER -->
+              <div class="col-lg-12">
+                <div class="card shadow-sm" style="border: 1px solid #b0c4de; overflow: hidden;">
+                  <!-- RED BANNER HEADER -->
+                  <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000; color: #ffffff;">
+                    <div class="px-3 py-2 d-flex align-items-center">
+                      <div class="me-3 p-1 bg-white rounded shadow-sm d-flex align-items-center justify-content-center" style="min-width: 44px; height: 38px;">
+                        <span style="font-weight: 900; color: #d00000; font-size: 1.1rem; line-height: 1;">DAYA</span>
+                      </div>
+                      <div>
+                        <div class="fw-bold d-flex align-items-center gap-2" style="font-size: 1.05rem; letter-spacing: 0.5px;">
+                          <i class="ti ti-database"></i> DATA SHIPPING LIST TERBARU (DARI SHEET SL)
+                        </div>
+                        <div style="font-size: 0.8rem; color: #ffcccc;">
+                          Sumber Data: Sheet Lokal <b>SL</b> pada file <code>DDC.xlsx</code>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center pe-3 gap-2">
+                      <span class="badge bg-white text-danger fw-bold fs-3 px-3 py-2 shadow-sm" id="sl-total-badge">Memuat data...</span>
+                      <div class="ms-2 d-none d-md-flex align-items-center px-2 py-1 rounded" style="background: rgba(255,255,255,0.15);">
+                        <span style="font-weight: 900; letter-spacing: 1px; color: #ffffff; font-size: 0.85rem;">HONDA</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="table-responsive" style="max-height: 400px;">
-                    <table class="table table-bordered table-striped table-sm mb-0">
-                      <thead class="bg-light sticky-top" id="thead-sl-preview"></thead>
+
+                  <div class="table-responsive" style="max-height: 480px;">
+                    <table class="table table-bordered table-striped table-hover table-sm mb-0" style="border: 2px solid #366092;">
+                      <thead class="sticky-top" id="thead-sl-preview" style="background-color: #366092; color: #ffffff;"></thead>
                       <tbody id="tbody-sl-preview"></tbody>
                     </table>
                   </div>
@@ -2884,11 +2878,14 @@ async function loadSLTable() {
   if (badge && d.total_rows) {
     badge.textContent = `Total: ${d.total_rows.toLocaleString()} Baris di DDC.xlsx`;
   }
-  th.innerHTML = `<tr>${d.columns.map(c => `<th>${c}</th>`).join("")}</tr>`;
+  th.innerHTML = `<tr style="background-color: #366092; color: #ffffff; font-size: 0.85rem; font-weight: 700; text-align: center;">
+    ${d.columns.map(c => `<th style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092; text-align: ${c === 'QTY' ? 'right' : 'center'};">${c}</th>`).join("")}
+  </tr>`;
   tb.innerHTML = d.rows.map(r => `<tr>${d.columns.map(c => {
     let val = r[c] || "";
     if (c === "TANGGAL") val = formatIndoDate(val);
-    return `<td>${val}</td>`;
+    const isNum = (c === "QTY");
+    return `<td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: ${isNum ? 'right' : 'left'}; font-weight: ${isNum ? 'bold' : 'normal'}; color: #000000;">${isNum ? fmtNum(val) : val}</td>`;
   }).join("")}</tr>`).join("");
   } catch (err) {
     showAlert("Gagal memuat data SL: " + err.message);
