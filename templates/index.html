@@ -2363,6 +2363,7 @@ async function saveDailyAllocationToExcel() {
     showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-primary ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx</a>`);
     await loadPerDayTab();
     await loadSummary();
+    saveAppStateImmediate();
   } catch (err) {
     showAlert("Gagal menyimpan kuota harian: " + err.message, "danger");
   } finally {
@@ -2920,6 +2921,16 @@ async function submitNewDO() {
     const d = await res.json();
     if (d.status === "ok") {
       showAlert(`<b>Sukses!</b> ${d.message} <a href="/api/download_excel" class="btn btn-sm btn-outline-primary ms-2"><i class="ti ti-download me-1"></i>Download DDC.xlsx Terkini</a>`);
+      // Update state snapshot agar input form tetap 0 dan tanggal kuota harian terarah ke DO baru
+      try {
+        const localStr = localStorage.getItem(DDC_STATE_KEY);
+        let currState = localStr ? JSON.parse(localStr) : {};
+        PLANTS.forEach(p => { currState[`add-do-${p}`] = "0"; });
+        currState["add-do-tgl"] = tglVal;
+        currState["dq-date-input"] = tglVal;
+        localStorage.setItem(DDC_STATE_KEY, JSON.stringify(currState));
+      } catch(e) {}
+
       await initApp();
       await loadDOTable();
       // Otomatis angka per plant/FM kembali ke 0 karena data inputan sudah masuk ke Data DO Harian Terbaru (Dari Sheet DO)
@@ -2934,6 +2945,7 @@ async function submitNewDO() {
       if (selDq) selDq.value = tglVal;
       await calculateDailyQuota(false, true);
       await loadSummary();
+      saveAppStateImmediate();
     } else {
       showAlert("Gagal menyimpan DO: " + (d.message || "Terjadi kesalahan"), "danger");
     }
