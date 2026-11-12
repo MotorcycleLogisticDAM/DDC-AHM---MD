@@ -404,7 +404,7 @@ def api_add_do():
         "tanggal": tanggal,
         "bulan": bulan_num,
         "total_qty": tot_unit,
-        "message": f"Data DO Harian tanggal {tanggal} (Bulan: {bulan_num}, Total: {tot_unit:,} unit) berhasil disimpan dan otomatis ter-push ke Sheet Lokal 'DO' pada file DDC.xlsx!",
+        "message": f"Data DO Harian tanggal {tanggal} (Bulan: {bulan_num}, Total: {tot_unit:,} unit) berhasil di-SUBMIT, otomatis tersimpan di sistem, dan tercatat di Sheet DO DDC.xlsx!",
     })
 
 

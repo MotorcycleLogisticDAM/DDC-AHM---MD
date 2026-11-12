@@ -236,8 +236,8 @@
                             <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM8" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
                             <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff;"><input type="number" id="add-do-FM9" class="form-control form-control-sm text-end fw-bold" value="0" min="0" oninput="updateAddDoTotalBadge()" style="color: #000000;"></td>
                             <td style="padding: 6px; border: 1px solid #cbd5e1; background: #ffffff; text-align: center;">
-                              <button class="btn btn-primary btn-sm fw-bold w-100" onclick="submitNewDO()">
-                                <i class="ti ti-device-floppy me-1"></i> Simpan DO &amp; Push ke Sheet DO
+                              <button class="btn btn-primary btn-sm fw-bold w-100 px-3" onclick="submitNewDO()">
+                                <i class="ti ti-send me-1"></i> SUBMIT
                               </button>
                             </td>
                           </tr>
@@ -245,7 +245,7 @@
                       </table>
                     </div>
                     <div class="small text-secondary mt-1 d-flex align-items-center">
-                      <i class="ti ti-info-circle me-1 text-primary"></i><b>Otomatis Push ke Sheet DO:</b> Data Tanggal DO beserta Qty per Plant (FM1..FM9) akan <b>langsung tersimpan &amp; ter-push ke Sheet Lokal 'DO' pada file <code>DDC.xlsx</code></b>, lalu form input otomatis kembali ke 0.
+                      <i class="ti ti-info-circle me-1 text-primary"></i><b>Otomatis Tersimpan &amp; Tercatat:</b> Data DO yang di-<b>SUBMIT</b> otomatis tersimpan di sistem dan langsung tercatat di Sheet Lokal <b>'DO'</b> pada file <code>DDC.xlsx</code>, lalu form input otomatis kembali ke 0.
                     </div>
                   </div>
                 </div>
@@ -2910,7 +2910,7 @@ async function submitNewDO() {
       "FM9": parseInt(document.getElementById("add-do-FM9").value || "0", 10),
     }
   };
-  showLoading("Menyimpan Delivery Order (DO)...", "Sedang mem-push data DO (H-1) ke Sheet Lokal 'DO' pada file DDC.xlsx dan menyinkronkan kuota...");
+  showLoading("Menyimpan & Submit DO...", "Sedang mencatat ke file DDC.xlsx dan menyinkronkan sistem...");
   try {
     const res = await fetch("/api/add_do", {
       method: "POST",
@@ -2940,7 +2940,7 @@ async function submitNewDO() {
   } catch (err) {
     showAlert("Terjadi kesalahan saat menyimpan DO: " + err.message, "danger");
   } finally {
-    hideLoading("Data DO Berhasil Disimpan");
+    hideLoading("Data DO Berhasil Di-submit & Tercatat di DDC.xlsx");
   }
 }
 
