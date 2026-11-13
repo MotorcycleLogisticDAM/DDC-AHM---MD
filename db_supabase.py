@@ -733,3 +733,140 @@ class SupabaseDatabase:
 
     def add_or_replace_sheet(self, sheet_name, headers, rows):
         return True
+
+    def export_to_excel_bytes(self):
+        """
+        Men-generate file Excel DDC.xlsx secara in-memory (real-time)
+        berdasarkan seluruh data mutakhir yang ada di Supabase Cloud Database.
+        """
+        import io
+        import openpyxl
+        from datetime import datetime
+
+        if os.path.exists(self.excel_path):
+            wb = openpyxl.load_workbook(self.excel_path)
+        else:
+            wb = openpyxl.Workbook()
+
+        # 1. Update Sheet DO
+        if "DO" in wb.sheetnames:
+            ws_do = wb["DO"]
+            if ws_do.max_row >= 4:
+                ws_do.delete_rows(4, ws_do.max_row - 3)
+        else:
+            ws_do = wb.create_sheet(title="DO")
+
+        ws_do.cell(1, 1, "DO OPEN AHM")
+        ws_do.cell(3, 1, "TANGGAL")
+        ws_do.cell(3, 2, "PLANT")
+        ws_do.cell(3, 3, "QTY")
+        ws_do.cell(3, 4, "BULAN")
+        ws_do.cell(3, 5, "QTY_AWAL")
+        ws_do.cell(3, 6, "ADJUSTMENT")
+        ws_do.cell(3, 7, "KETERANGAN")
+
+        do_recs = self.get_do_data()
+        do_recs.sort(key=lambda r: (r["TANGGAL_STR"], PLANTS.index(r["PLANT"]) if r["PLANT"] in PLANTS else 99))
+        curr_r = 4
+        for r in do_recs:
+            d_dt = datetime.strptime(r["TANGGAL_STR"], "%Y-%m-%d")
+            c_tgl = ws_do.cell(curr_r, 1, d_dt)
+            c_tgl.number_format = "yyyy-mm-dd"
+            ws_do.cell(curr_r, 2, r["PLANT"])
+            ws_do.cell(curr_r, 3, int(r["QTY"]))
+            ws_do.cell(curr_r, 4, int(r.get("BULAN", d_dt.month)))
+            ws_do.cell(curr_r, 5, int(r.get("QTY_AWAL", r["QTY"])))
+            ws_do.cell(curr_r, 6, int(r.get("ADJUSTMENT", 0)))
+            ws_do.cell(curr_r, 7, str(r.get("KETERANGAN", "Normal")))
+            curr_r += 1
+
+        # 2. Update Sheet SL
+        if "SL" in wb.sheetnames:
+            ws_sl = wb["SL"]
+            if ws_sl.max_row >= 2:
+                ws_sl.delete_rows(2, ws_sl.max_row - 1)
+        else:
+            ws_sl = wb.create_sheet(title="SL")
+
+        ws_sl.cell(1, 1, "Tgl SL")
+        ws_sl.cell(1, 2, "No Polisi")
+        ws_sl.cell(1, 3, "Driver")
+        ws_sl.cell(1, 4, "Ekspedisi")
+        ws_sl.cell(1, 5, "Plant")
+        ws_sl.cell(1, 6, "Warehouse")
+        ws_sl.cell(1, 7, "Qty")
+        ws_sl.cell(1, 8, "MONTH")
+        ws_sl.cell(1, 9, "DAY")
+        ws_sl.cell(1, 10, "YEAR")
+
+        sl_recs = self.get_sl_data()
+        curr_r = 2
+        for r in sl_recs:
+            tgl_str = r.get("TANGGAL_STR") or r.get("TANGGAL")
+            try:
+                d_dt = datetime.strptime(str(tgl_str)[:10], "%Y-%m-%d")
+            except Exception:
+                d_dt = datetime(2026, 1, 1)
+            c_tgl = ws_sl.cell(curr_r, 1, d_dt)
+            c_tgl.number_format = "d-mmm-yy"
+            ws_sl.cell(curr_r, 2, str(r.get("NOPOL", "")))
+            ws_sl.cell(curr_r, 3, str(r.get("SOPIR", "")))
+            ws_sl.cell(curr_r, 4, str(r.get("XPDC", "")))
+            ws_sl.cell(curr_r, 5, str(r.get("PLANT", "")))
+            ws_sl.cell(curr_r, 6, str(r.get("GUDANG", "ALL")))
+            ws_sl.cell(curr_r, 7, int(r.get("QTY", 0)))
+            ws_sl.cell(curr_r, 8, int(r.get("MONTH", d_dt.month)))
+            ws_sl.cell(curr_r, 9, int(r.get("DAY", d_dt.day)))
+            ws_sl.cell(curr_r, 10, int(r.get("YEAR", d_dt.year)))
+            curr_r += 1
+
+        # 3. Update Sheet ALOKASI_HARIAN
+        if "ALOKASI_HARIAN" in wb.sheetnames:
+            del wb["ALOKASI_HARIAN"]
+        ws_ah = wb.create_sheet(title="ALOKASI_HARIAN")
+        ah_headers = ["TANGGAL", "XPDC", "FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9", "GRAND_TOTAL", "PCT", "BULAN", "TAHUN", "TOTAL_AWAL", "ADJUSTMENT", "KETERANGAN", "DETAILS_JSON"]
+        ws_ah.append(ah_headers)
+
+        alloc_recs = self.get_saved_daily_allocations()
+        for r in alloc_recs:
+            ws_ah.append([r.get(h, "") for h in ah_headers])
+
+        # 4. Update Sheet PER DAY
+        if "PER DAY" in wb.sheetnames and alloc_recs:
+            ws_pd = wb["PER DAY"]
+            if ws_pd.max_row >= 14:
+                ws_pd.delete_rows(14, ws_pd.max_row - 13)
+
+            unique_dates = sorted(list({r["TANGGAL"] for r in alloc_recs}))
+            curr_pd_r = 14
+            for d_str in unique_dates:
+                d_dt = datetime.strptime(d_str, "%Y-%m-%d")
+                d_sub = {r["XPDC"]: r for r in alloc_recs if r["TANGGAL"] == d_str}
+                for x in EXPEDITIONS:
+                    r_data = d_sub.get(x, {"TANGGAL": d_str, "XPDC": x, **{p: 0 for p in PLANTS}, "GRAND_TOTAL": 0, "PCT": 0.0})
+                    for offset in [0, 12]:
+                        c_tgl = ws_pd.cell(curr_pd_r, 1 + offset, d_dt)
+                        c_tgl.number_format = "yyyy-mm-dd"
+                        ws_pd.cell(curr_pd_r, 2 + offset, x)
+                        for p_i, p in enumerate(PLANTS):
+                            ws_pd.cell(curr_pd_r, 3 + p_i + offset, int(r_data.get(p, 0)))
+                        ws_pd.cell(curr_pd_r, 10 + offset, int(r_data.get("GRAND_TOTAL", 0)))
+                        ws_pd.cell(curr_pd_r, 11 + offset, float(r_data.get("PCT", 0.0)))
+                    curr_pd_r += 1
+                curr_pd_r += 1
+
+        # 5. Update Sheet TARGET_BULANAN
+        if "TARGET_BULANAN" in wb.sheetnames:
+            del wb["TARGET_BULANAN"]
+        ws_tb = wb.create_sheet(title="TARGET_BULANAN")
+        ws_tb.append(["TAHUN", "BULAN", "XPDC", "TARGET_BULAN", "TOTAL_TARGET", "UPDATED_AT", "CATATAN"])
+        targets = self.get_all_target_bulanan()
+        for t in targets:
+            for xpdc, u in t.get("TARGETS", {}).items():
+                ws_tb.append([t.get("TAHUN"), t.get("BULAN"), xpdc, u, t.get("TOTAL_TARGET"), t.get("UPDATED_AT"), t.get("CATATAN")])
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        wb.close()
+        buf.seek(0)
+        return buf

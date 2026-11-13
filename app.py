@@ -865,6 +865,21 @@ def api_download_template_sl():
 
 @app.route("/api/download_excel", methods=["GET"])
 def api_download_excel():
+    """
+    Men-download file Excel DDC yang selalu merujuk dan ter-update
+    100% dari data live di Supabase Cloud Database secara real-time.
+    """
+    if hasattr(db, "export_to_excel_bytes"):
+        try:
+            buf = db.export_to_excel_bytes()
+            return send_file(
+                buf,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name="DDC.xlsx"
+            )
+        except Exception as e:
+            print(f"Error generating real-time Excel from Supabase: {e}")
     target_path = getattr(db, "excel_path", EXCEL_PATH)
     return send_file(target_path, as_attachment=True, download_name="DDC.xlsx")
 
