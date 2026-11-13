@@ -134,27 +134,91 @@ class SupabaseDatabase:
         self._do_cache = None  # Invalidate cache
         return True
 
-    def adjust_do(self, tanggal_str, plant, qty_final, keterangan):
-        """Menyesuaikan DO plant tertentu."""
-        existing = self._get(f"delivery_orders?tanggal=eq.{tanggal_str}&plant=eq.{plant}")
+    def adjust_do(self, tanggal_str, plant, adjustment_val=None, keterangan="", qty_final=None, qty_awal=None):
+        """
+        Menyimpan adjustment khusus untuk satu baris (TANGGAL, PLANT) pada tabel 'delivery_orders'.
+        Mendukung pembatalan, pengurangan, dan penambahan unit DO yang sudah disubmit.
+        """
+        from datetime import datetime
+        clean_tgl = str(tanggal_str)[:10]
+        plant = str(plant or "").strip().upper()
+        if plant not in PLANTS:
+            raise ValueError(f"Plant tidak valid: {plant}")
+
+        existing = self._get(f"delivery_orders?tanggal=eq.{clean_tgl}&plant=eq.{plant}")
         if not existing:
-            return self.upsert_daily_do(tanggal_str, {plant: qty_final})
+            raise ValueError(f"Baris DO untuk {clean_tgl} plant {plant} tidak ditemukan di database!")
 
         row = existing[0]
-        q_awal = int(row.get("qty_awal", row["qty"]))
-        adj = int(qty_final) - q_awal
-        self._post("delivery_orders", [{
-            "tanggal": tanggal_str,
+        current_qty = int(row.get("qty", 0))
+        current_qty_awal = row.get("qty_awal")
+
+        # Tentukan Qty Awal
+        if current_qty_awal is not None:
+            base_awal = int(current_qty_awal)
+        elif qty_awal is not None:
+            base_awal = int(qty_awal)
+        else:
+            base_awal = current_qty
+
+        # Hitung Qty Final dan Adjustment
+        if qty_final is not None and adjustment_val is None:
+            final_q = max(0, int(qty_final))
+            adj = final_q - base_awal
+        elif adjustment_val is not None:
+            adj = int(adjustment_val)
+            if qty_final is not None:
+                final_q = max(0, int(qty_final))
+            else:
+                final_q = max(0, base_awal + adj)
+        else:
+            final_q = current_qty
+            adj = 0
+
+        # Keterangan default jika kosong
+        ket = str(keterangan or "").strip()
+        if not ket:
+            if final_q == 0 and base_awal > 0:
+                ket = "Pembatalan DO"
+            elif adj < 0:
+                ket = f"Pengurangan DO ({adj})"
+            elif adj > 0:
+                ket = f"Penambahan DO (+{adj})"
+            else:
+                ket = "Normal"
+
+        dt = datetime.strptime(clean_tgl, "%Y-%m-%d")
+        payload = [{
+            "tanggal": clean_tgl,
             "plant": plant,
-            "qty": int(qty_final),
-            "bulan": int(row["bulan"]),
-            "tahun": int(row["tahun"]),
-            "qty_awal": q_awal,
-            "adjustment": adj,
-            "keterangan": str(keterangan)
-        }], on_conflict="tanggal,plant")
-        self._do_cache = None
-        return True
+            "qty": int(final_q),
+            "bulan": int(row.get("bulan", dt.month)),
+            "tahun": int(row.get("tahun", dt.year)),
+            "qty_awal": int(base_awal),
+            "adjustment": int(adj),
+            "keterangan": str(ket),
+            "updated_at": datetime.now().isoformat()
+        }]
+
+        self._post("delivery_orders", payload, on_conflict="tanggal,plant")
+        self._do_cache = None  # Invalidate cache
+
+        # Sinkronkan juga ke DDC.xlsx lokal jika ada
+        try:
+            from db_excel import ExcelDatabase
+            db_ex = ExcelDatabase(self.excel_path)
+            db_ex.adjust_do(clean_tgl, plant, adjustment_val=adj, keterangan=ket, qty_final=final_q, qty_awal=base_awal)
+        except Exception as e:
+            pass
+
+        return {
+            "tanggal": clean_tgl,
+            "plant": plant,
+            "qty_awal": int(base_awal),
+            "adjustment": int(adj),
+            "qty_final": int(final_q),
+            "keterangan": ket,
+        }
 
     # =========================================================
     # 2. SHIPPING LIST (SL)
@@ -318,30 +382,221 @@ class SupabaseDatabase:
         self._alloc_cache = None
         return True
 
-    def adjust_daily_allocation(self, tanggal_str, xpdc, plant, delta_val, keterangan):
-        """Adjust alokasi manual."""
+    def adjust_daily_allocation(self, tanggal_str, xpdc, plant_adjustments=None, keterangan=None, adj_type=None, amount=0, target_plant=None):
+        """
+        Melakukan penyesuaian (pembatalan, pengurangan, penambahan, set, reset) kuota
+        pada ekspedisi & tanggal tertentu pada tabel 'daily_allocations'.
+        """
         clean_tgl = str(tanggal_str)[:10]
-        existing = self._get(f"daily_allocations?tanggal=eq.{clean_tgl}&xpdc=eq.{xpdc}")
-        if not existing:
-            return False
+        target_xpdc = str(xpdc or "").strip().upper()
+        if target_xpdc not in EXPEDITIONS:
+            raise ValueError(f"Ekspedisi tidak valid: {xpdc}")
 
-        r = existing[0]
-        p_col = plant.lower()
-        curr_p = int(r.get(p_col, 0))
-        new_p = max(0, curr_p + int(delta_val))
-        r[p_col] = new_p
+        all_recs = self.get_saved_daily_allocations()
+        target_rec = next((r for r in all_recs if r["TANGGAL"] == clean_tgl and r["XPDC"] == target_xpdc), None)
 
-        gt = sum(int(r.get(p.lower(), 0)) for p in PLANTS)
-        tot_awal = int(r.get("total_awal", gt))
-        adj_total = gt - tot_awal
+        if not target_rec:
+            raise ValueError(f"Data kuota harian tersimpan untuk {target_xpdc} tanggal {clean_tgl} tidak ditemukan!")
 
-        r["grand_total"] = gt
-        r["adjustment"] = adj_total
-        r["keterangan"] = str(keterangan)
+        try:
+            details = json.loads(target_rec.get("DETAILS_JSON", "{}"))
+        except Exception:
+            details = {}
 
-        self._post("daily_allocations", [r], on_conflict="tanggal,xpdc")
-        self._alloc_cache = None
-        return True
+        for p in PLANTS:
+            if p not in details:
+                details[p] = {
+                    "awal": int(target_rec.get(p, 0)),
+                    "adj": 0,
+                    "final": int(target_rec.get(p, 0))
+                }
+
+        reasons_list = []
+
+        if adj_type:
+            action = str(adj_type).strip().lower()
+            tp = str(target_plant or "").strip().upper()
+            if tp not in PLANTS:
+                tp = "ALL"
+
+            if action == "reset":
+                if tp == "ALL":
+                    for p in PLANTS:
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": 0, "final": base}
+                        target_rec[p] = base
+                    if not keterangan:
+                        keterangan = "Normal"
+                else:
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    details[tp] = {"awal": base, "adj": 0, "final": base}
+                    target_rec[tp] = base
+                    if not keterangan:
+                        keterangan = f"Reset {tp} Normal"
+
+            elif action == "batal":
+                if tp == "ALL":
+                    for p in PLANTS:
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": -base, "final": 0}
+                        target_rec[p] = 0
+                    if not keterangan:
+                        keterangan = "Pembatalan DO Seluruh Plant"
+                else:
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    details[tp] = {"awal": base, "adj": -base, "final": 0}
+                    target_rec[tp] = 0
+                    if not keterangan:
+                        keterangan = f"Pembatalan DO {tp}"
+
+            elif action == "tambah":
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    cur_final = int(target_rec.get(tp, 0))
+                    new_final = cur_final + amt
+                    diff = new_final - base
+                    details[tp] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[tp] = new_final
+                    if not keterangan:
+                        keterangan = f"Penambahan DO (+{amt} u {tp})"
+                else:
+                    active_plants = [p for p in PLANTS if int(target_rec.get(p, 0)) > 0]
+                    chosen_p = max(active_plants, key=lambda p: int(target_rec[p])) if active_plants else "FM6"
+                    base = int(details[chosen_p].get("awal", target_rec.get(chosen_p, 0)))
+                    cur_final = int(target_rec.get(chosen_p, 0))
+                    new_final = cur_final + amt
+                    diff = new_final - base
+                    details[chosen_p] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[chosen_p] = new_final
+                    if not keterangan:
+                        keterangan = f"Penambahan DO (+{amt} u {chosen_p})"
+
+            elif action == "kurang":
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    cur_final = int(target_rec.get(tp, 0))
+                    new_final = max(0, cur_final - amt)
+                    diff = new_final - base
+                    details[tp] = {"awal": base, "adj": diff, "final": new_final}
+                    target_rec[tp] = new_final
+                    if not keterangan:
+                        keterangan = f"Pengurangan DO (-{amt} u {tp})"
+                else:
+                    remain_to_cut = amt
+                    active_plants = sorted([p for p in PLANTS if int(target_rec.get(p, 0)) > 0], key=lambda p: int(target_rec[p]), reverse=True)
+                    subs = []
+                    for p in active_plants:
+                        if remain_to_cut <= 0:
+                            break
+                        cur = int(target_rec[p])
+                        take = min(cur, remain_to_cut)
+                        remain_to_cut -= take
+                        new_val = cur - take
+                        base = int(details[p].get("awal", target_rec.get(p, 0)))
+                        details[p] = {"awal": base, "adj": new_val - base, "final": new_val}
+                        target_rec[p] = new_val
+                        if take > 0:
+                            subs.append(f"{p} -{take}u")
+                    if not keterangan:
+                        desc = ", ".join(subs) if subs else f"-{amt} u"
+                        keterangan = f"Pengurangan DO ({desc})"
+
+            elif action in ("set", "direct"):
+                amt = max(0, int(amount or 0))
+                if tp != "ALL":
+                    base = int(details[tp].get("awal", target_rec.get(tp, 0)))
+                    diff = amt - base
+                    details[tp] = {"awal": base, "adj": diff, "final": amt}
+                    target_rec[tp] = amt
+                    if not keterangan:
+                        keterangan = f"Set DO {tp} = {amt} u"
+                else:
+                    active_plants = [p for p in PLANTS if int(target_rec.get(p, 0)) > 0]
+                    chosen_p = active_plants[0] if len(active_plants) == 1 else "FM6"
+                    base = int(details[chosen_p].get("awal", target_rec.get(chosen_p, 0)))
+                    diff = amt - base
+                    details[chosen_p] = {"awal": base, "adj": diff, "final": amt}
+                    target_rec[chosen_p] = amt
+                    if not keterangan:
+                        keterangan = f"Set DO = {amt} u ({chosen_p})"
+
+        elif plant_adjustments and isinstance(plant_adjustments, dict):
+            for p, adj_info in plant_adjustments.items():
+                p_upper = str(p).strip().upper()
+                if p_upper not in PLANTS:
+                    continue
+
+                base_awal = int(details[p_upper].get("awal", target_rec.get(p_upper, 0)))
+
+                if isinstance(adj_info, dict):
+                    if "final" in adj_info:
+                        new_final = max(0, int(adj_info["final"]))
+                        diff = new_final - base_awal
+                    elif "adj" in adj_info:
+                        diff = int(adj_info["adj"])
+                        new_final = max(0, base_awal + diff)
+                    else:
+                        diff = 0
+                        new_final = base_awal
+                else:
+                    diff = int(adj_info)
+                    new_final = max(0, base_awal + diff)
+
+                details[p_upper] = {
+                    "awal": base_awal,
+                    "adj": diff,
+                    "final": new_final
+                }
+                target_rec[p_upper] = new_final
+
+                if diff != 0:
+                    sign = f"+{diff}" if diff > 0 else str(diff)
+                    reasons_list.append(f"{p_upper} ({sign} u)")
+
+        target_rec["GRAND_TOTAL"] = sum(int(target_rec[p]) for p in PLANTS)
+        target_rec["TOTAL_AWAL"] = sum(int(details[p]["awal"]) for p in PLANTS)
+        target_rec["ADJUSTMENT"] = target_rec["GRAND_TOTAL"] - target_rec["TOTAL_AWAL"]
+
+        if keterangan and str(keterangan).strip():
+            target_rec["KETERANGAN"] = str(keterangan).strip()
+        else:
+            if target_rec["ADJUSTMENT"] == 0:
+                target_rec["KETERANGAN"] = "Normal"
+            else:
+                adj_desc = ", ".join(reasons_list) if reasons_list else f"Adj: {target_rec['ADJUSTMENT']:+d} u"
+                target_rec["KETERANGAN"] = f"Penyesuaian: {adj_desc}"
+
+        target_rec["DETAILS_JSON"] = json.dumps(details)
+
+        day_total = sum(int(r["GRAND_TOTAL"]) for r in all_recs if r["TANGGAL"] == clean_tgl)
+        for r in all_recs:
+            if r["TANGGAL"] == clean_tgl:
+                r["PCT"] = round(r["GRAND_TOTAL"] / day_total, 6) if day_total > 0 else 0.0
+
+        alloc_dict = {
+            r["XPDC"]: {
+                **{p: r[p] for p in PLANTS},
+                "TOTAL_AWAL": r.get("TOTAL_AWAL", r["GRAND_TOTAL"]),
+                "ADJUSTMENT": r.get("ADJUSTMENT", 0),
+                "KETERANGAN": r.get("KETERANGAN", "Normal"),
+                "DETAILS_JSON": r.get("DETAILS_JSON", "{}"),
+            }
+            for r in all_recs if r["TANGGAL"] == clean_tgl
+        }
+        self.save_daily_allocation(clean_tgl, alloc_dict)
+
+        return {
+            "status": "ok",
+            "tanggal": clean_tgl,
+            "xpdc": target_xpdc,
+            "total_awal": target_rec["TOTAL_AWAL"],
+            "adjustment": target_rec["ADJUSTMENT"],
+            "total_final": target_rec["GRAND_TOTAL"],
+            "keterangan": target_rec["KETERANGAN"],
+            "details": details,
+        }
 
     # =========================================================
     # 4. TARGET BULANAN
