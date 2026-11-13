@@ -2884,7 +2884,13 @@ async function loadSLTable() {
     ${d.columns.map(c => `<th style="padding: 8px; border: 1px solid #244b7a; color: #ffffff; background-color: #366092; text-align: ${c === 'QTY' ? 'right' : 'center'};">${c}</th>`).join("")}
   </tr>`;
   tb.innerHTML = d.rows.map(r => `<tr>${d.columns.map(c => {
-    let val = r[c] || "";
+    let val = "";
+    if (Array.isArray(r)) {
+      const idx = d.columns.indexOf(c);
+      val = (idx >= 0 && idx < r.length) ? r[idx] : "";
+    } else if (r && typeof r === "object") {
+      val = r[c] !== undefined ? r[c] : "";
+    }
     if (c === "TANGGAL") val = formatIndoDate(val);
     const isNum = (c === "QTY");
     return `<td style="padding: 6px 10px; border: 1px solid #cbd5e1; text-align: ${isNum ? 'right' : 'left'}; font-weight: ${isNum ? 'bold' : 'normal'}; color: #000000;">${isNum ? fmtNum(val) : val}</td>`;

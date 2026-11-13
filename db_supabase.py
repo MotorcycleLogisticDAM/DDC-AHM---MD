@@ -651,22 +651,84 @@ class SupabaseDatabase:
     # 5. METODE DUMMY / HELPER UNTUK SHEET PREVIEW
     # =========================================================
     def read_any_sheet(self, sheet_name, max_rows=200):
-        """Membuat representasi tabular untuk tab Database Viewer."""
-        if sheet_name == "DO":
-            rows = self.get_do_data()
-            headers = ["TANGGAL", "PLANT", "QTY", "BULAN", "QTY_AWAL", "ADJUSTMENT", "KETERANGAN"]
-            data = [[r["TANGGAL_STR"], r["PLANT"], r["QTY"], r["BULAN"], r["QTY_AWAL"], r["ADJUSTMENT"], r["KETERANGAN"]] for r in rows[:max_rows]]
-            return headers, data
-        elif sheet_name == "SL":
-            rows = self.get_sl_data()
-            headers = ["TANGGAL", "NOPOL", "SOPIR", "XPDC", "PLANT", "GUDANG", "QTY", "BULAN", "HARI", "TAHUN"]
-            data = [[r["TANGGAL"], r["NOPOL"], r["SOPIR"], r["XPDC"], r["PLANT"], r["GUDANG"], r["QTY"], r["BULAN"], r["HARI"], r["TAHUN"]] for r in rows[:max_rows]]
-            return headers, data
-        elif sheet_name in ["PER DAY", "ALOKASI_HARIAN"]:
-            rows = self.get_saved_daily_allocations()
-            headers = ["TANGGAL", "XPDC", "FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9", "GRAND_TOTAL", "PCT", "BULAN", "TAHUN"]
-            data = [[r["TANGGAL"], r["XPDC"], r["FM1"], r["FM2"], r["FM6"], r["FM6A"], r["FM7"], r["FM8"], r["FM9"], r["GRAND_TOTAL"], r["PCT"], r["BULAN"], r["TAHUN"]] for r in rows[:max_rows]]
-            return headers, data
+        """Membuat representasi tabular (list of dicts) untuk tab Database Viewer dan SL Table."""
+        s_upper = str(sheet_name).strip().upper()
+        if s_upper == "DO":
+            do_recs = self.get_do_data()
+            do_recs_sorted = sorted(
+                do_recs,
+                key=lambda r: (
+                    r["TANGGAL_STR"],
+                    -(PLANTS.index(r["PLANT"]) if r["PLANT"] in PLANTS else 99),
+                ),
+                reverse=True,
+            )
+            if max_rows and max_rows > 0:
+                do_recs_sorted = do_recs_sorted[:max_rows]
+            cols = ["TANGGAL", "PLANT", "QTY", "BULAN", "QTY_AWAL", "ADJUSTMENT", "KETERANGAN"]
+            rows = [
+                {
+                    "TANGGAL": r["TANGGAL_STR"],
+                    "PLANT": r["PLANT"],
+                    "QTY": str(r["QTY"]),
+                    "BULAN": str(r["BULAN"]),
+                    "QTY_AWAL": str(r.get("QTY_AWAL", r["QTY"])),
+                    "ADJUSTMENT": str(r.get("ADJUSTMENT", 0)),
+                    "KETERANGAN": str(r.get("KETERANGAN", "Normal")),
+                }
+                for r in do_recs_sorted
+            ]
+            return cols, rows
+
+        elif s_upper == "SL":
+            sl_recs = self.get_sl_data()
+            sl_recs_rev = list(reversed(sl_recs))
+            if max_rows and max_rows > 0:
+                sl_recs_rev = sl_recs_rev[:max_rows]
+            cols = ["TANGGAL", "NOPOL", "SOPIR", "XPDC", "PLANT", "GUDANG", "QTY", "BULAN", "HARI", "TAHUN"]
+            rows = [
+                {
+                    "TANGGAL": r.get("TANGGAL_STR") or r.get("TANGGAL") or "",
+                    "NOPOL": str(r.get("NOPOL", "")),
+                    "SOPIR": str(r.get("SOPIR", "")),
+                    "XPDC": str(r.get("XPDC", "")),
+                    "PLANT": str(r.get("PLANT", "")),
+                    "GUDANG": str(r.get("GUDANG", "ALL")),
+                    "QTY": int(r.get("QTY", 0)),
+                    "BULAN": int(r.get("BULAN", 10)),
+                    "HARI": int(r.get("HARI", 1)),
+                    "TAHUN": int(r.get("TAHUN", 2026)),
+                }
+                for r in sl_recs_rev
+            ]
+            return cols, rows
+
+        elif s_upper in ["PER DAY", "ALOKASI_HARIAN"]:
+            alloc_recs = self.get_saved_daily_allocations()
+            alloc_recs_sorted = sorted(alloc_recs, key=lambda r: r["TANGGAL"], reverse=True)
+            if max_rows and max_rows > 0:
+                alloc_recs_sorted = alloc_recs_sorted[:max_rows]
+            cols = ["TANGGAL", "XPDC", "FM1", "FM2", "FM6", "FM6A", "FM7", "FM8", "FM9", "GRAND_TOTAL", "PCT", "BULAN", "TAHUN"]
+            rows = [
+                {
+                    "TANGGAL": r["TANGGAL"],
+                    "XPDC": r["XPDC"],
+                    "FM1": str(r.get("FM1", 0)),
+                    "FM2": str(r.get("FM2", 0)),
+                    "FM6": str(r.get("FM6", 0)),
+                    "FM6A": str(r.get("FM6A", 0)),
+                    "FM7": str(r.get("FM7", 0)),
+                    "FM8": str(r.get("FM8", 0)),
+                    "FM9": str(r.get("FM9", 0)),
+                    "GRAND_TOTAL": str(r.get("GRAND_TOTAL", 0)),
+                    "PCT": f"{float(r.get('PCT', 0.0))*100:.2f}%",
+                    "BULAN": str(r.get("BULAN", 10)),
+                    "TAHUN": str(r.get("TAHUN", 2026)),
+                }
+                for r in alloc_recs_sorted
+            ]
+            return cols, rows
+
         return [], []
 
     def add_or_replace_sheet(self, sheet_name, headers, rows):
