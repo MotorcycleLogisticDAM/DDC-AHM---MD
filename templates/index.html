@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { background-color: #f4f6fa; }
     .navbar-brand-title { font-weight: 700; letter-spacing: -0.02em; }
@@ -156,7 +157,7 @@
           <span id="nav-system-status" class="badge bg-success-lt text-success py-1 px-3 fs-6 d-flex align-items-center" title="Status Sinkronisasi Sistem">
             <i class="ti ti-check me-1"></i> Sistem Siap
           </span>
-          <span class="badge bg-azure-lt py-1 px-3 fs-6"><i class="ti ti-brand-python me-1"></i> Python Engine + Excel DB</span>
+          <span id="realtime-badge" class="badge bg-success-lt text-success py-1 px-3 fs-6" title="Koneksi Cloud Database Supabase Realtime"><span class="status-dot status-dot-animated bg-success me-1"></span> Supabase Realtime Active</span>
         </div>
       </div>
     </header>
@@ -3637,8 +3638,58 @@ function resetAppStateToDefault() {
   window.location.reload();
 }
 
+// ==========================================
+// KONEKSI REALTIME SUPABASE MULTI-DEVICE
+// ==========================================
+const SUPABASE_REALTIME_URL = "https://jpquejyuuhwzudwodbth.supabase.co";
+const SUPABASE_REALTIME_KEY = "sb_publishable_XXS_kSxECzJIlD_dUjJflA_v4pAnc4n";
+let supabaseRealtimeClient = null;
+
+function initSupabaseRealtime() {
+  if (typeof window.supabase !== "undefined" && window.supabase.createClient) {
+    try {
+      supabaseRealtimeClient = window.supabase.createClient(SUPABASE_REALTIME_URL, SUPABASE_REALTIME_KEY);
+      supabaseRealtimeClient
+        .channel('realtime-ddc-broadcast')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_orders' }, payload => {
+          console.log("[Supabase Realtime] Perubahan DO terdeteksi:", payload);
+          loadDOTable();
+          calculateDailyQuota(false, false);
+          loadSummary();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_allocations' }, payload => {
+          console.log("[Supabase Realtime] Perubahan Kuota Harian terdeteksi:", payload);
+          loadPerDayTab();
+          loadSummary();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'shipping_lists' }, payload => {
+          console.log("[Supabase Realtime] Perubahan SL terdeteksi:", payload);
+          loadSLTable();
+          loadSummary();
+          loadMonthlyQuota();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_targets' }, payload => {
+          console.log("[Supabase Realtime] Perubahan Target Bulanan terdeteksi:", payload);
+          loadTargetBulananPage();
+          loadMonthlyQuota();
+        })
+        .subscribe((status) => {
+          console.log("[Supabase Realtime] Status channel:", status);
+          const badge = document.getElementById("realtime-badge");
+          if (badge && (status === "SUBSCRIBED" || status === "JOINED")) {
+            badge.className = "badge bg-success-lt text-success py-1 px-3 fs-6";
+            badge.innerHTML = `<span class="status-dot status-dot-animated bg-success me-1"></span> Supabase Realtime Active`;
+          }
+        });
+    } catch (e) {
+      console.warn("Gagal inisialisasi Supabase Realtime:", e);
+    }
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   initApp();
+  initSupabaseRealtime();
 
   // Listen for tab switches
   document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {

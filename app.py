@@ -17,7 +17,19 @@ from engine_ddc import (
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_PATH = os.environ.get("DDC_EXCEL_PATH", os.path.join(BASE_DIR, "DDC.xlsx"))
-db = ExcelDatabase(EXCEL_PATH)
+
+# Integrasi Database: Prioritaskan Supabase Cloud Database (Real-time Multi-Device)
+USE_SUPABASE = os.environ.get("USE_SUPABASE", "1") == "1"
+if USE_SUPABASE:
+    try:
+        from db_supabase import SupabaseDatabase
+        db = SupabaseDatabase(EXCEL_PATH)
+        print("✓ Connected to Supabase Cloud Database (Real-time Multi-Device Active)!")
+    except Exception as e:
+        print(f"! Failed to connect to Supabase, fallback to Excel: {e}")
+        db = ExcelDatabase(EXCEL_PATH)
+else:
+    db = ExcelDatabase(EXCEL_PATH)
 
 
 def get_calendar_info():
