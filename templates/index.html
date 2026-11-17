@@ -1899,10 +1899,11 @@
 
               <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
 
-                <div class="px-3 py-2 fw-bold d-flex align-items-center" style="font-size: 1.15rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
-
-                  QUOTA PER EXPEDITION (%)
-
+                                <div class="px-3 py-2 fw-bold d-flex align-items-center gap-2" style="font-size: 1.15rem; letter-spacing: 0.5px; color: #ffffff !important; font-weight: 800;">
+                  <div class="bg-white rounded px-2 py-1 d-flex align-items-center shadow-xs">
+                    <img src="/static/img/logo_daya.png" alt="Daya Adicipta Motora" style="height: 22px; max-width: 85px; object-fit: contain;">
+                  </div>
+                  <span>QUOTA PER EXPEDITION (%)</span>
                 </div>
 
                 <div class="d-flex align-items-center">
@@ -1921,49 +1922,28 @@
 
               </div>
 
-              <div class="table-responsive">
-
-                <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
-
-                  <thead style="background-color: #366092; color: #ffffff;">
-
-                    <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
-
-                      <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">TOTAL AWAL</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">% AWAL</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">TARGET (%)</th>
-
-                      <th class="num-col" style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">DEVIASI (%)</th>
-
-                      <th style="padding: 6px 8px; border: 1px solid #244b7a; color: white; background-color: #366092;">STATUS (±0.1%)</th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody id="tbody-dq-raw"></tbody>
-
-                </table>
-
-              </div>
+                                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092; table-layout: fixed; width: 100%; min-width: 980px;">
+                      <thead style="background-color: #366092; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="width: 14%; padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092; text-align: left;">EKSPEDISI</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">TOTAL AWAL</th>
+                          <th class="num-col" style="width: 6.5%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">% AWAL</th>
+                          <th class="num-col" style="width: 6.5%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">TARGET (%)</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">DEVIASI (%)</th>
+                          <th style="width: 10%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">STATUS (±0.1%)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbody-dq-raw"></tbody>
+                    </table>
+                  </div>
 
             </div>
 
@@ -2089,43 +2069,25 @@
 
               </div>
 
-              <div class="table-responsive">
-
-                <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092;">
-
-                  <thead style="background-color: #366092; color: #ffffff;">
-
-                    <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
-
-                      <th style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">EKSPEDISI</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
-
-                      <th class="num-col" style="padding: 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
-
-                      <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">GRAND TOTAL</th>
-
-                      <th class="num-col" style="padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">% AKHIR</th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody id="tbody-dq-bal"></tbody>
-
-                </table>
-
-              </div>
+                                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #366092; table-layout: fixed; width: 100%; min-width: 980px;">
+                      <thead style="background-color: #366092; color: #ffffff;">
+                        <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
+                          <th style="width: 14%; padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092; text-align: left;">EKSPEDISI</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM1</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM2</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM6A</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM7</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM8</th>
+                          <th class="num-col" style="width: 7%; padding: 6px 6px; border: 1px solid #244b7a; color: white; background-color: #366092;">FM9</th>
+                          <th class="num-col" style="width: 18.5%; padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">GRAND TOTAL</th>
+                          <th class="num-col" style="width: 18.5%; padding: 6px 10px; border: 1px solid #244b7a; color: white; background-color: #366092;">% AKHIR</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tbody-dq-bal"></tbody>
+                    </table>
+                  </div>
 
             </div>
 
@@ -4308,44 +4270,28 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
 
-    tbRaw.innerHTML += `<tr>
-
-      <td class="fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
-
-      ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r[p])}</td>`).join("")}
-
-      <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.GRAND_TOTAL)}</td>
-
-      <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.PCT.toFixed(2)}%</td>
-
-      <td class="num-col text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.TARGET_PCT.toFixed(2)}%</td>
-
-      <td class="num-col fw-bold" style="padding: 6px 8px; border: 1px solid #cbd5e1; ${devBg}">${r.DIFF_PCT > 0 ? "+" : ""}${r.DIFF_PCT.toFixed(2)}%</td>
-
-      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${stBadge}</td>
-
+        tbRaw.innerHTML += `<tr>
+      <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+      ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 6px; border: 1px solid #cbd5e1;">${fmtNum(r[p])}</td>`).join("")}
+      <td class="num-col fw-bold text-dark" style="padding: 6px 6px; border: 1px solid #cbd5e1;">${fmtNum(r.GRAND_TOTAL)}</td>
+      <td class="num-col fw-bold text-dark" style="padding: 6px 6px; border: 1px solid #cbd5e1;">${r.PCT.toFixed(2)}%</td>
+      <td class="num-col text-dark" style="padding: 6px 6px; border: 1px solid #cbd5e1;">${r.TARGET_PCT.toFixed(2)}%</td>
+      <td class="num-col fw-bold" style="padding: 6px 6px; border: 1px solid #cbd5e1; ${devBg}">${r.DIFF_PCT > 0 ? "+" : ""}${r.DIFF_PCT.toFixed(2)}%</td>
+      <td style="padding: 6px 4px; border: 1px solid #cbd5e1; text-align: center;">${stBadge}</td>
     </tr>`;
 
   });
 
 
 
-  tbRaw.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
-
-    <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
-
-    ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(rawTotPlant[p])}</td>`).join("")}
-
-    <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(rawTotGrand)}</td>
-
-    <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
-
-    <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${rawTotTarget.toFixed(2)}%</td>
-
-    <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">0.00%</td>
-
-    <td style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000; text-align: center;">-</td>
-
+    tbRaw.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+    <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
+    ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(rawTotPlant[p])}</td>`).join("")}
+    <td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(rawTotGrand)}</td>
+    <td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
+    <td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;">${rawTotTarget.toFixed(2)}%</td>
+    <td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;">0.00%</td>
+    <td style="padding: 6px 4px; border: 1px solid #b0c4de; color: #000000; text-align: center;">-</td>
   </tr>`;
 
 
@@ -4384,40 +4330,25 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
   rowsToEdit.forEach((r, idx) => {
 
-    tbBal.innerHTML += `<tr data-xpdc="${r.XPDC}">
-
-      <td class="fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
-
+        tbBal.innerHTML += `<tr data-xpdc="${r.XPDC}">
+      <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
       ${PLANTS.map(p => `
-
-        <td class="num-col" style="padding: 4px; border: 1px solid #cbd5e1;">
-
+        <td class="num-col" style="padding: 4px 3px; border: 1px solid #cbd5e1;">
           <input type="number" class="form-control form-control-sm d-inline-block input-cell bal-cell"
-
-                 style="font-weight: 600; text-align: right; border: 1px solid #cbd5e1;"
-
+                 style="font-weight: 600; text-align: right; border: 1px solid #cbd5e1; width: 100%; min-width: 48px; padding: 2px 4px; font-size: 0.85rem;"
                  data-xpdc="${r.XPDC}" data-plant="${p}" value="${r[p]}" oninput="recalcEditableTable()">
-
         </td>`).join("")}
-
       <td class="num-col fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;" id="bal-tot-${idx}">${fmtNum(r.GRAND_TOTAL)}</td>
-
       <td class="num-col fw-bold text-dark" style="padding: 6px 10px; border: 1px solid #cbd5e1;" id="bal-pct-${idx}">${r.PCT.toFixed(2)}%</td>
-
     </tr>`;
 
   });
 
-  tbBal.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
-
-    <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL DO PLANT</td>
-
-    ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;" id="bal-col-${p}">0</td>`).join("")}
-
+    tbBal.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+    <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL DO PLANT</td>
+    ${PLANTS.map(p => `<td class="num-col" style="padding: 6px 6px; border: 1px solid #b0c4de; color: #000000;" id="bal-col-${p}">0</td>`).join("")}
     <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;" id="bal-grand-all">0</td>
-
     <td class="num-col" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
-
   </tr>`;
 
   recalcEditableTable();
