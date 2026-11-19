@@ -230,8 +230,24 @@ def api_daily_quota():
     mq = calculate_monthly_quota(
         sl_records, target_month=target_month, target_year=target_year, cutoff_date=cutoff_date
     )
+
+    # Ambil Target Bulanan % Share aktif untuk bulan dan tahun berjalan
+    target_bulanan_plan = db.get_target_bulanan(tahun=target_year, bulan=target_month)
+    target_pct_dict = None
+    if target_bulanan_plan and target_bulanan_plan.get("TOTAL_TARGET"):
+        tot_tb = float(target_bulanan_plan.get("TOTAL_TARGET"))
+        if tot_tb > 0 and target_bulanan_plan.get("TARGETS"):
+            target_pct_dict = {
+                x: float(target_bulanan_plan["TARGETS"].get(x, 0)) / tot_tb
+                for x in EXPEDITIONS
+            }
+
     dq = calculate_and_balance_daily_quota(
-        do_dict, mq["pct_matrix"], rolling_winner=rolling_winner, mode=mode
+        do_dict,
+        mq["pct_matrix"],
+        rolling_winner=rolling_winner,
+        mode=mode,
+        target_pct_override=target_pct_dict,
     )
 
     saved_all = db.get_saved_daily_allocations()
@@ -248,6 +264,8 @@ def api_daily_quota():
             r["PCT"] = round(float(r_in["PCT"]) * 100, 2)
             saved_rows.append(r)
 
+    eff_target_pct = target_pct_dict if target_pct_dict else {x: float(mq["pct_matrix"][x]["TARGET_PCT"]) for x in EXPEDITIONS}
+
     return jsonify({
         "status": "ok",
         "tanggal": tanggal,
@@ -260,6 +278,7 @@ def api_daily_quota():
         "balanced_rows": dq["balanced_rows"],
         "saved_rows": saved_rows,
         "trailer_checks": dq["trailer_checks"],
+        "target_shares": {x: round(eff_target_pct[x] * 100, 2) for x in EXPEDITIONS},
     })
 
 

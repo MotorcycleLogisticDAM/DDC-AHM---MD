@@ -12357,16 +12357,7 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
     const d = await res.json();
-
-
-
-
-
-
-
-
-
-
+    window._dqTargetShares = d.target_shares || {};
 
   // Update DO input boxes
 
@@ -12991,12 +12982,19 @@ function recalcEditableTable() {
 
 
     const pctEl = document.getElementById(`bal-pct-${idx}`);
-
-
-
-
-
-    if (pctEl) pctEl.textContent = pct.toFixed(2) + "%";
+    if (pctEl) {
+      pctEl.textContent = pct.toFixed(2) + "%";
+      const tgt = (window._dqTargetShares && window._dqTargetShares[x] !== undefined) ? window._dqTargetShares[x] : null;
+      if (tgt !== null) {
+        if (pct < tgt - 0.05) {
+          pctEl.title = `Target Bulanan % Share: ${tgt.toFixed(2)}% (Di bawah target)`;
+          pctEl.style.color = "#dc2626"; // merah jika di bawah target
+        } else {
+          pctEl.title = `Target Bulanan % Share: ${tgt.toFixed(2)}% (Sesuai / Minimal Target)`;
+          pctEl.style.color = "#000000";
+        }
+      }
+    }
 
 
 
