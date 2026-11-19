@@ -602,7 +602,23 @@ class SupabaseDatabase:
     # 4. TARGET BULANAN
     # =========================================================
     def get_all_target_bulanan(self):
-        """Mengambil seluruh target bulanan."""
+        """
+        Mengambil seluruh riwayat target bulanan perencanaan.
+        Memprioritaskan riwayat lengkap dari target_bulanan.json / DDC.xlsx,
+        disertai sinkronisasi data aktif dari Supabase monthly_targets.
+        """
+        history_list = []
+        json_path = os.path.join(os.path.dirname(os.path.abspath(self.excel_path)), "target_bulanan.json")
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r", encoding="utf-8") as jf:
+                    data = json.load(jf)
+                    if isinstance(data, list):
+                        history_list = [d for d in data if isinstance(d, dict)]
+            except Exception as e:
+                print(f"[Supabase] Warning reading target_bulanan.json: {e}")
+
+        # Sinkronkan juga dari Supabase monthly_targets jika ada periode yang belum tercatat di JSON
         try:
             records = self._get("monthly_targets?select=*&order=tahun.desc,bulan.desc")
             grouped = {}
@@ -614,38 +630,151 @@ class SupabaseDatabase:
                         "TAHUN": int(r["tahun"]),
                         "TARGETS": {},
                         "TOTAL_TARGET": 0,
-                        "UPDATED_AT": str(r.get("created_at", "")),
+                        "UPDATED_AT": str(r.get("created_at", "")).replace("T", " ")[:19],
                         "CATATAN": f"Perencanaan Target {r['bulan']}/{r['tahun']}"
                     }
                 grouped[k]["TARGETS"][r["xpdc"]] = int(r.get("target_unit", 0))
                 grouped[k]["TOTAL_TARGET"] += int(r.get("target_unit", 0))
-            return list(grouped.values())
-        except Exception as e:
-            print(f"[Supabase] Error get_all_target_bulanan: {e}")
-            return []
 
-    def get_target_bulanan(self, bulan, tahun):
+            existing_keys = {(int(h.get("TAHUN", 0)), int(h.get("BULAN", 0))) for h in history_list}
+            for (bl, th), item in grouped.items():
+                if (th, bl) not in existing_keys:
+                    history_list.append(item)
+        except Exception as e:
+            print(f"[Supabase] Warning reading Supabase monthly_targets in get_all: {e}")
+
+        # Urutkan berdasarkan waktu submit terbaru di atas (history teratas = terbaru)
+        history_list.sort(key=lambda t: str(t.get("UPDATED_AT", "")), reverse=True)
+        return history_list
+
+    def get_target_bulanan(self, tahun=None, bulan=None, **kwargs):
+        """
+        Mengambil target bulanan aktif spesifik untuk tahun dan bulan tertentu.
+        Jika terdapat beberapa submit untuk bulan yang sama, selalu mengambil submit TERBARU.
+        """
+        if bulan is None and "month" in kwargs:
+            bulan = kwargs["month"]
+        if tahun is None and "year" in kwargs:
+            tahun = kwargs["year"]
+        if tahun is not None and bulan is not None:
+            if tahun < 100 and bulan > 1900:  # jika parameter tertukar (bulan, tahun)
+                tahun, bulan = bulan, tahun
+        th = int(tahun) if tahun is not None else 2026
+        bl = int(bulan) if bulan is not None else 10
+
+        # 1. Cek langsung ke Supabase monthly_targets untuk target aktif
+        try:
+            records = self._get(f"monthly_targets?bulan=eq.{bl}&tahun=eq.{th}")
+            if records and len(records) >= len(EXPEDITIONS):
+                targets_dict = {r["xpdc"]: int(r.get("target_unit", 0)) for r in records}
+                tot = sum(targets_dict.values())
+                upd = str(records[0].get("created_at", "")).replace("T", " ")[:19]
+                return {
+                    "TAHUN": th,
+                    "BULAN": bl,
+                    "TARGETS": targets_dict,
+                    "TOTAL_TARGET": tot,
+                    "UPDATED_AT": upd,
+                    "CATATAN": f"Perencanaan Target {bl}/{th}"
+                }
+        except Exception as e:
+            print(f"[Supabase] Warning direct get target: {e}")
+
+        # 2. Fallback ke list history (ambil submit paling baru untuk bulan/tahun tsb)
         all_t = self.get_all_target_bulanan()
         for t in all_t:
-            if t["BULAN"] == int(bulan) and t["TAHUN"] == int(tahun):
+            if int(t.get("TAHUN", 0)) == th and int(t.get("BULAN", 0)) == bl:
                 return t
         return None
 
-    def save_target_bulanan(self, bulan, tahun, targets_dict, total_target, catatan=""):
+    def save_target_bulanan(self, tahun, bulan, target_per_xpdc_dict=None, total_target=None, catatan="", targets_dict=None, **kwargs):
+        """
+        Menyimpan / Men-submit Target Bulanan Perencanaan langsung ke Supabase Cloud Database (monthly_targets)
+        serta mempertahankan riwayat (history) perencanaan sebelumnya di target_bulanan.json & DDC.xlsx tanpa menimpa.
+        """
+        th = int(tahun)
+        bl = int(bulan)
+        t_dict = target_per_xpdc_dict if target_per_xpdc_dict is not None else (targets_dict or {})
+        targets_clean = {x: int(t_dict.get(x, 0)) for x in EXPEDITIONS}
+        calc_tot = sum(targets_clean.values())
+        tot = int(total_target) if total_target is not None and int(total_target) > 0 else calc_tot
+        if tot == 0:
+            tot = calc_tot
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 1. Update ke Supabase Cloud (monthly_targets) secara real-time
         rows = []
-        tot = int(total_target) if total_target > 0 else sum(int(v) for v in targets_dict.values())
         for xpdc in EXPEDITIONS:
-            unit_val = int(targets_dict.get(xpdc, 0))
+            unit_val = targets_clean.get(xpdc, 0)
             pct = round(unit_val / tot * 100.0, 4) if tot > 0 else 0.0
             rows.append({
-                "bulan": int(bulan),
-                "tahun": int(tahun),
+                "bulan": bl,
+                "tahun": th,
                 "xpdc": xpdc,
                 "target_pct": pct,
                 "target_unit": unit_val
             })
-        self._post("monthly_targets", rows, on_conflict="bulan,tahun,xpdc")
-        return True
+        try:
+            self._post("monthly_targets", rows, on_conflict="bulan,tahun,xpdc")
+            print(f"[Supabase] Target Bulanan {bl}/{th} ({tot} Unit) berhasil diupdate ke monthly_targets!")
+        except Exception as e:
+            print(f"[Supabase] Warning saat update monthly_targets: {e}")
+
+        # 2. Simpan Riwayat Submission ke target_bulanan.json (TIDAK MENIMPA HISTORY SEBELUMNYA)
+        json_path = os.path.join(os.path.dirname(os.path.abspath(self.excel_path)), "target_bulanan.json")
+        existing_json = []
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r", encoding="utf-8") as jf:
+                    existing_json = json.load(jf)
+                    if not isinstance(existing_json, list):
+                        existing_json = []
+            except Exception:
+                existing_json = []
+
+        new_entry = {
+            "TAHUN": th,
+            "BULAN": bl,
+            "TARGETS": targets_clean,
+            "TOTAL_TARGET": tot,
+            "UPDATED_AT": now_str,
+            "CATATAN": catatan or f"Perencanaan Target {bl}/{th}",
+        }
+        # Tambahkan ke histori tanpa menghapus entri sebelumnya untuk bulan/tahun yang sama
+        existing_json.append(new_entry)
+        try:
+            with open(json_path, "w", encoding="utf-8") as jf:
+                json.dump(existing_json, jf, indent=2)
+            print(f"[Supabase] Riwayat Target Bulanan {bl}/{th} tersimpan di target_bulanan.json ({len(existing_json)} riwayat).")
+        except Exception as e:
+            print(f"Warning saving target_bulanan.json: {e}")
+
+        # 3. Simpan Riwayat ke Sheet TARGET_BULANAN di DDC.xlsx (TIDAK MENIMPA / APPEND HISTORI)
+        try:
+            import openpyxl
+            if os.path.exists(self.excel_path):
+                wb = openpyxl.load_workbook(self.excel_path)
+                if "TARGET_BULANAN" not in wb.sheetnames:
+                    ws = wb.create_sheet("TARGET_BULANAN")
+                    ws.append(["TAHUN", "BULAN", "XPDC", "TARGET_BULAN", "TOTAL_TARGET", "UPDATED_AT", "CATATAN"])
+                else:
+                    ws = wb["TARGET_BULANAN"]
+                for xpdc in EXPEDITIONS:
+                    ws.append([th, bl, xpdc, targets_clean.get(xpdc, 0), tot, now_str, catatan or f"Perencanaan Target {bl}/{th}"])
+                wb.save(self.excel_path)
+                wb.close()
+                print(f"[Supabase] Riwayat Target Bulanan {bl}/{th} berhasil di-append ke DDC.xlsx.")
+        except Exception as e:
+            print(f"Warning appending TARGET_BULANAN to Excel: {e}")
+
+        return {
+            "status": "ok",
+            "tahun": th,
+            "bulan": bl,
+            "total_target": tot,
+            "targets": targets_clean,
+            "updated_at": now_str
+        }
 
     # =========================================================
     # 5. METODE DUMMY / HELPER UNTUK SHEET PREVIEW

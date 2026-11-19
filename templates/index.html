@@ -2879,35 +2879,10 @@
 
 
                     <button class="btn btn-danger btn-sm w-100 py-2 fw-bold" onclick="submitTargetBulanan()">
-
-
-
-
-
-                      <i class="ti ti-device-floppy me-1"></i> Simpan Target Bulanan ke DDC.xlsx & Terapkan
-
-
-
-
-
+                      <i class="ti ti-send me-1"></i> Submit Target Bulanan
                     </button>
-
-
-
-
-
                     <div class="small text-secondary mt-2">
-
-
-
-
-
-                      <i class="ti ti-info-circle me-1"></i>Target bulanan ini akan langsung tersimpan di Sheet <code>TARGET_BULANAN</code> pada <b>DDC.xlsx</b> dan otomatis tampil pada kolom <b>TARGET BULAN</b> di menu <b>3.A DISTRIBUTION SUMMARY</b>.
-
-
-
-
-
+                      <i class="ti ti-info-circle me-1"></i>Target bulanan ini akan langsung ter-update ke <b>Supabase Cloud Database</b> dan tersimpan di riwayat perencanaan. Jika di-submit ulang, data baru tidak akan menimpa histori sebelumnya melainkan menambah catatan submit baru.
                     </div>
 
 
@@ -10685,300 +10660,127 @@ async function submitTargetBulanan() {
 
 
 
-  showLoading("Menyimpan Target Bulanan...", "Sedang menyimpan perencanaan target unit ke file DDC.xlsx dan konfigurasi sistem...");
-
-
-
-
+  showLoading("Menyimpan Target Bulanan...", "Sedang mengupdate target bulanan ke Supabase Cloud Database dan mencatat riwayat...");
 
   try {
 
-
-
-
-
     const res = await fetch("/api/save_target_bulanan", {
-
-
-
-
 
       method: "POST",
 
-
-
-
-
       headers: { "Content-Type": "application/json" },
-
-
-
-
 
       body: JSON.stringify(payload)
 
-
-
-
-
     });
 
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      const rawTxt = await res.text().catch(() => "");
+      throw new Error(rawTxt.slice(0, 120) || "Respon server tidak valid");
+    }
 
+    if (res.ok && data.status === "ok") {
 
-
-
-    const data = await res.json();
-
-
-
-
-
-    if (data.status === "ok") {
-
-
-
-
-
-      showAlert(`Berhasil! Target Bulanan Periode ${m}/${y} sebesar ${fmtNum(total)} Unit berhasil disimpan ke DDC.xlsx dan aktif pada kolom TARGET BULAN.`);
-
-
-
-
+      showAlert(`Berhasil! Target Bulanan Periode ${m}/${y} sebesar ${fmtNum(total)} Unit berhasil disubmit dan langsung aktif di Supabase Cloud.`);
 
       await loadTargetBulananPage();
 
-
-
-
-
       await loadSummary();
-
-
-
-
 
     } else {
 
-
-
-
-
       showAlert("Gagal menyimpan target bulanan: " + (data.message || "Terjadi kesalahan"), "danger");
-
-
-
-
 
     }
 
-
-
-
-
   } catch (err) {
-
-
-
-
 
     showAlert("Gagal menghubungi server: " + err.message, "danger");
 
-
-
-
-
   } finally {
-
-
-
-
 
     hideLoading("Target Bulanan Berhasil Disimpan");
 
-
-
-
-
   }
-
-
-
-
 
 }
 
-
-
-
-
-
-
-
-
-
-
 function renderTargetBulananHistory(list) {
-
-
-
-
 
   const tb = document.getElementById("tbody-target-bulanan-history");
 
-
-
-
-
   tb.innerHTML = "";
 
+  window._tbHistoryList = list || [];
 
+  document.getElementById("tb-history-count").textContent = `${window._tbHistoryList.length} Riwayat Target Tersimpan`;
 
-
-
-  document.getElementById("tb-history-count").textContent = `${list.length} Periode Target Tersimpan`;
-
-
-
-
-
-  
-
-
-
-
-
-  if (list.length === 0) {
-
-
-
-
+  if (!list || list.length === 0) {
 
     tb.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Belum ada perencanaan target bulanan yang disimpan.</td></tr>`;
 
-
-
-
-
     return;
-
-
-
-
 
   }
 
-
-
-
-
-
-
-
-
-
-
-  list.forEach(item => {
-
-
-
-
+  list.forEach((item, idx) => {
 
     const breakdown = Object.entries(item.TARGETS || {})
 
-
-
-
-
       .map(([x, u]) => `<span class="badge bg-blue-lt me-1 mb-1">${x}: <b>${fmtNum(u)}</b></span>`)
-
-
-
-
 
       .join(" ");
 
-
-
-
-
-    
-
-
-
-
-
     tb.innerHTML += `<tr>
-
-
-
-
 
       <td class="fw-bold text-nowrap"><i class="ti ti-calendar me-1"></i>Bulan ${item.BULAN} / ${item.TAHUN}</td>
 
-
-
-
-
       <td class="num-col fw-bold text-danger">${fmtNum(item.TOTAL_TARGET)} Unit</td>
-
-
-
-
 
       <td>${breakdown}</td>
 
-
-
-
-
       <td class="small text-secondary text-nowrap">${item.UPDATED_AT || '-'}</td>
-
-
-
-
 
       <td class="text-center text-nowrap">
 
-
-
-
-
-        <button class="btn btn-outline-primary btn-sm py-1 px-2" onclick="editSavedTargetBulanan(${item.BULAN}, ${item.TAHUN})">
-
-
-
-
+        <button class="btn btn-outline-primary btn-sm py-1 px-2" onclick="loadTargetFromHistory(${idx})" title="Muat riwayat target ini ke form">
 
           <i class="ti ti-edit me-1"></i> Muat
 
-
-
-
-
         </button>
-
-
-
-
 
       </td>
 
-
-
-
-
     </tr>`;
-
-
-
-
 
   });
 
+}
 
-
-
-
+function loadTargetFromHistory(idx) {
+  if (!window._tbHistoryList || !window._tbHistoryList[idx]) return;
+  const item = window._tbHistoryList[idx];
+  document.getElementById("tb-month").value = item.BULAN;
+  document.getElementById("tb-year").value = item.TAHUN;
+  if (document.getElementById("tb-catatan")) {
+    document.getElementById("tb-catatan").value = item.CATATAN || "";
+  }
+  if (document.getElementById("tb-total-input")) {
+    document.getElementById("tb-total-input").value = item.TOTAL_TARGET || "";
+  }
+  if (item.TARGETS) {
+    document.querySelectorAll(".tb-xpdc-input").forEach(inp => {
+      const x = inp.getAttribute("data-xpdc");
+      if (item.TARGETS[x] !== undefined) {
+        inp.value = item.TARGETS[x];
+      }
+    });
+    recalcTargetBulananFooters();
+  }
+  showAlert(`Data riwayat target periode ${item.BULAN}/${item.TAHUN} (${item.UPDATED_AT || ''}) berhasil dimuat ke formulir.`);
 }
 
 

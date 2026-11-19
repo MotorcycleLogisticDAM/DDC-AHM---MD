@@ -675,25 +675,33 @@ def api_get_target_bulanan():
 
 @app.route("/api/save_target_bulanan", methods=["POST"])
 def api_save_target_bulanan():
-    payload = request.get_json(force=True)
-    year = int(payload.get("year", 2026))
-    month = int(payload.get("month", 10))
-    targets = payload.get("targets", {})
-    total_target = payload.get("total_target", None)
-    catatan = payload.get("catatan", "")
+    try:
+        payload = request.get_json(silent=True) or {}
+        year = int(payload.get("year", 2026))
+        month = int(payload.get("month", 10))
+        targets = payload.get("targets", {})
+        total_target = payload.get("total_target", None)
+        catatan = payload.get("catatan", "")
 
-    saved = db.save_target_bulanan(
-        tahun=year,
-        bulan=month,
-        target_per_xpdc_dict=targets,
-        total_target=total_target,
-        catatan=catatan,
-    )
-    return jsonify({
-        "status": "ok",
-        "message": f"Target Bulanan periode {month}/{year} berhasil disimpan!",
-        "data": saved,
-    })
+        saved = db.save_target_bulanan(
+            tahun=year,
+            bulan=month,
+            target_per_xpdc_dict=targets,
+            total_target=total_target,
+            catatan=catatan,
+        )
+        return jsonify({
+            "status": "ok",
+            "message": f"Target Bulanan periode {month}/{year} berhasil di-submit dan diperbarui ke Supabase Cloud!",
+            "data": saved,
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "message": f"Gagal menyimpan target bulanan: {str(e)}"
+        }), 500
 
 
 @app.route("/api/sheet/<sheet_name>", methods=["GET"])

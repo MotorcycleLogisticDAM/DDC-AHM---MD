@@ -1187,39 +1187,39 @@ class ExcelDatabase:
                 with open(json_path, "r", encoding="utf-8") as jf:
                     j_data = json.load(jf)
                     if isinstance(j_data, list):
-                        ex_keys = {(t["TAHUN"], t["BULAN"]) for t in targets}
+                        # Prioritaskan seluruh histori dari JSON
                         for jd in j_data:
-                            k = (to_int(jd.get("TAHUN")), to_int(jd.get("BULAN")))
-                            if k not in ex_keys:
+                            if jd not in targets:
                                 targets.append(jd)
             except Exception:
                 pass
 
-        targets.sort(key=lambda t: (t["TAHUN"], t["BULAN"]), reverse=True)
+        targets.sort(key=lambda t: str(t.get("UPDATED_AT", "")), reverse=True)
         return targets
 
     def get_target_bulanan(self, tahun=2026, bulan=10):
-        """Mengambil target bulanan spesifik untuk tahun dan bulan tertentu."""
+        """Mengambil target bulanan spesifik untuk tahun dan bulan tertentu (terbaru jika ada multiple submit)."""
         th = to_int(tahun)
         bl = to_int(bulan)
         all_tgt = self.get_all_target_bulanan()
         for t in all_tgt:
-            if t["TAHUN"] == th and t["BULAN"] == bl:
+            if t.get("TAHUN") == th and t.get("BULAN") == bl:
                 return t
         return None
 
-    def save_target_bulanan(self, tahun, bulan, target_per_xpdc_dict, total_target=None, catatan=""):
-        """Menyimpan Target Bulanan Perencanaan ke Excel Sheet TARGET_BULANAN dan cache target_bulanan.json."""
+    def save_target_bulanan(self, tahun, bulan, target_per_xpdc_dict=None, total_target=None, catatan="", targets_dict=None, **kwargs):
+        """Menyimpan / Men-submit Target Bulanan Perencanaan ke Excel Sheet TARGET_BULANAN dan cache target_bulanan.json tanpa menimpa histori."""
         th = to_int(tahun)
         bl = to_int(bulan)
-        targets_clean = {x: to_int(target_per_xpdc_dict.get(x, 0)) for x in EXPEDITIONS}
+        t_dict = target_per_xpdc_dict if target_per_xpdc_dict is not None else (targets_dict or {})
+        targets_clean = {x: to_int(t_dict.get(x, 0)) for x in EXPEDITIONS}
         calc_tot = sum(targets_clean.values())
         tot = to_int(total_target, calc_tot)
         if tot == 0:
             tot = calc_tot
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 1. Update ke file JSON
+        # 1. Update ke file JSON (TIDAK MENIMPA HISTORI)
         json_path = os.path.join(os.path.dirname(os.path.abspath(self.excel_path)), "target_bulanan.json")
         existing_json = []
         if os.path.exists(json_path):
@@ -1227,16 +1227,18 @@ class ExcelDatabase:
                 import json
                 with open(json_path, "r", encoding="utf-8") as jf:
                     existing_json = json.load(jf)
+                    if not isinstance(existing_json, list):
+                        existing_json = []
             except Exception:
                 existing_json = []
-        existing_json = [r for r in existing_json if not (r.get("TAHUN") == th and r.get("BULAN") == bl)]
+        
         new_entry = {
             "TAHUN": th,
             "BULAN": bl,
             "TARGETS": targets_clean,
             "TOTAL_TARGET": tot,
             "UPDATED_AT": now_str,
-            "CATATAN": catatan,
+            "CATATAN": catatan or f"Perencanaan Target {bl}/{th}",
         }
         existing_json.append(new_entry)
         try:
@@ -1246,7 +1248,7 @@ class ExcelDatabase:
         except Exception as e:
             print("Warning saving target_bulanan.json:", e)
 
-        # 2. Update ke Sheet TARGET_BULANAN di DDC.xlsx
+        # 2. Append ke Sheet TARGET_BULANAN di DDC.xlsx (TIDAK MENIMPA HISTORI)
         try:
             wb = openpyxl.load_workbook(self.excel_path)
             if "TARGET_BULANAN" not in wb.sheetnames:
@@ -1255,21 +1257,8 @@ class ExcelDatabase:
             else:
                 ws = wb["TARGET_BULANAN"]
 
-            rows_keep = []
-            for r in ws.iter_rows(values_only=True):
-                if not r or r[0] == "TAHUN":
-                    continue
-                if to_int(r[0]) == th and to_int(r[1]) == bl:
-                    continue
-                rows_keep.append(list(r))
-
             for x in EXPEDITIONS:
-                rows_keep.append([th, bl, x, targets_clean[x], tot, now_str, catatan])
-
-            ws.delete_rows(1, max(1, ws.max_row))
-            ws.append(["TAHUN", "BULAN", "XPDC", "TARGET_BULAN", "TOTAL_TARGET", "UPDATED_AT", "CATATAN"])
-            for row in rows_keep:
-                ws.append(row)
+                ws.append([th, bl, x, targets_clean[x], tot, now_str, catatan or f"Perencanaan Target {bl}/{th}"])
 
             wb.save(self.excel_path)
             wb.close()
