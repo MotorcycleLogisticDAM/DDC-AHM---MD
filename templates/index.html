@@ -5352,169 +5352,48 @@
 
 
 
-                  <div class="col-md-3">
-
-
-
-
-
-                    <label class="form-label mb-1">Pilih Tanggal DO (Sheet DO)</label>
-
-
-
-
-
+                  <div class="col-md-2">
+                    <label class="form-label mb-1">Pilih Tanggal DO</label>
                     <select id="dq-date-select" class="form-select form-select-sm" onchange="onChangeDoDate()"></select>
-
-
-
-
-
                   </div>
-
-
-
-
-
                   <div class="col-md-2">
-
-
-
-
-
                     <label class="form-label mb-1">Atau Tanggal Baru</label>
-
-
-
-
-
                     <input type="date" id="dq-date-input" class="form-control form-control-sm" value="2026-10-30">
-
-
-
-
-
                   </div>
-
-
-
-
-
                   <div class="col-md-2">
-
-
-
-
-
-                    <label class="form-label mb-1">Giliran Rolling FM1 & FM2</label>
-
-
-
-
-
+                    <label class="form-label mb-1">Rolling FM1 & FM2</label>
                     <select id="dq-rolling" class="form-select form-select-sm">
-
-
-
-
-
                       <option value="AUTO">Otomatis Hari Kerja</option>
-
-
-
-
-
                       <option value="TUNAS MUDA">TUNAS MUDA</option>
-
-
-
-
-
                       <option value="RJTM">RJTM</option>
-
-
-
-
-
                     </select>
-
-
-
-
-
                   </div>
-
-
-
-
-
-                  <div class="col-md-3">
-
-
-
-
-
-                    <label class="form-label mb-1">Metode Auto-Balancing</label>
-
-
-
-
-
-                    <select id="dq-mode" class="form-select form-select-sm">
-
-
-
-
-
-                      <option value="operational_trailer">Rule Gudang + Balancing Presisi (±0.1%)</option>
-
-
-
-
-
-                      <option value="excel_formula">Rumus Helper Sheet QUOTA (AdjFM6/FM8)</option>
-
-
-
-
-
-                    </select>
-
-
-
-
-
-                  </div>
-
-
-
-
-
                   <div class="col-md-2">
-
-
-
-
-
-                    <button class="btn btn-warning btn-sm w-100" onclick="calculateDailyQuota(false, true)">
-
-
-
-
-
-                      <i class="ti ti-bolt me-1"></i> Hitung & Balance
-
-
-
-
-
-                    </button>
-
-
-
-
-
+                    <label class="form-label mb-1">Rule FM8 PUNINAR</label>
+                    <select id="dq-puninar-fm8" class="form-select form-select-sm">
+                      <option value="auto">Otomatis (Min 1x/Mgg 54-64 u)</option>
+                      <option value="yes">Aktifkan FM8 (1 Rit 54 u)</option>
+                      <option value="no">Alihkan ke FM6A/FM6 (0 u)</option>
+                    </select>
                   </div>
+                  <div class="col-md-2">
+                    <label class="form-label mb-1">Metode Balancing</label>
+                    <select id="dq-mode" class="form-select form-select-sm">
+                      <option value="operational_trailer">Rule Gudang + Presisi (±0.1%)</option>
+                      <option value="excel_formula">Rumus Helper Sheet QUOTA</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <button class="btn btn-warning btn-sm w-100" onclick="calculateDailyQuota(false, true)">
+                      <i class="ti ti-bolt me-1"></i> Hitung & Balance
+                    </button>
+                  </div>
+                </div>
+
+                <!-- STATUS RULE FM8 PUNINAR INFO BADGE -->
+                <div id="puninar-fm8-status-container" class="mt-2 py-1 px-3 rounded small d-flex align-items-center" style="background-color: #f1f5f9; border: 1px solid #cbd5e1; display: none !important;">
+                  <span class="badge bg-secondary me-2 px-2 py-1" id="puninar-fm8-badge">FM8 PUNINAR</span>
+                  <span id="puninar-fm8-info" class="text-dark fw-bold"></span>
 
 
 
@@ -8483,6 +8362,7 @@ async function initApp() {
 
 
   if (savedState["dq-mode"] && document.getElementById("dq-mode")) document.getElementById("dq-mode").value = savedState["dq-mode"];
+  if (savedState["dq-puninar-fm8"] && document.getElementById("dq-puninar-fm8")) document.getElementById("dq-puninar-fm8").value = savedState["dq-puninar-fm8"];
 
 
 
@@ -12255,6 +12135,7 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
   const cutoff = document.getElementById("mq-cutoff").value;
+  const puninar_fm8 = document.getElementById("dq-puninar-fm8") ? document.getElementById("dq-puninar-fm8").value : "auto";
 
 
 
@@ -12344,7 +12225,7 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
 
-      body: JSON.stringify({ tanggal, rolling_winner: rolling, mode, cutoff_date: cutoff, custom_do })
+      body: JSON.stringify({ tanggal, rolling_winner: rolling, mode, cutoff_date: cutoff, custom_do, puninar_fm8 })
 
 
 
@@ -12358,6 +12239,22 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
     const d = await res.json();
     window._dqTargetShares = d.target_shares || {};
+    // Update Badge Status Rule FM8 PUNINAR
+    const pfm8 = d.puninar_fm8;
+    const pfm8Container = document.getElementById("puninar-fm8-status-container");
+    const pfm8Badge = document.getElementById("puninar-fm8-badge");
+    const pfm8Info = document.getElementById("puninar-fm8-info");
+    if (pfm8 && pfm8Container && pfm8Badge && pfm8Info) {
+      pfm8Container.style.setProperty("display", "flex", "important");
+      if (pfm8.eligible) {
+        pfm8Badge.className = "badge bg-success me-2 px-2 py-1";
+        pfm8Badge.textContent = "FM8 PUNINAR: 54 UNIT (1 RIT STANDAR AKTIF)";
+      } else {
+        pfm8Badge.className = "badge bg-primary me-2 px-2 py-1";
+        pfm8Badge.textContent = "FM8 PUNINAR: 0 UNIT (DIALIHKAN KE FM6A/FM6)";
+      }
+      pfm8Info.textContent = pfm8.reason || "";
+    }
 
   // Update DO input boxes
 
@@ -20422,7 +20319,7 @@ function collectCurrentAppState() {
 
 
 
-    "dq-date-input", "dq-date-select", "dq-rolling", "dq-mode",
+    "dq-date-input", "dq-date-select", "dq-rolling", "dq-puninar-fm8", "dq-mode",
 
 
 

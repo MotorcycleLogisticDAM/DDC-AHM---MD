@@ -242,12 +242,54 @@ def api_daily_quota():
                 for x in EXPEDITIONS
             }
 
+    # Evaluasi Aturan FM8 PUNINAR (Minimal 1x per minggu 54-64 u, hari lain dialihkan ke FM6A/FM6)
+    puninar_fm8_param = str(payload.get("puninar_fm8", "auto")).lower()
+    if puninar_fm8_param == "yes":
+        puninar_fm8_eligible = True
+        puninar_fm8_reason = "Manual: Jatah 1 rit trailer PUNINAR di FM8 diaktifkan (54-64 u)"
+    elif puninar_fm8_param == "no":
+        puninar_fm8_eligible = False
+        puninar_fm8_reason = "Manual: Jatah PUNINAR di FM8 dialihkan ke FM6A/FM6"
+    else:  # "auto" (Rolling 7 Hari)
+        from datetime import datetime, timedelta
+        try:
+            cur_dt = datetime.strptime(tanggal, "%Y-%m-%d")
+            past_6_dates = [(cur_dt - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, 7)]
+        except Exception:
+            past_6_dates = []
+
+        saved_allocs = db.get_saved_daily_allocations()
+        had_fm8_recently = False
+        last_fm8_date = None
+        for r in saved_allocs:
+            if r.get("XPDC") == "PUNINAR" and r.get("TANGGAL") in past_6_dates:
+                try:
+                    fm8_qty = int(r.get("FM8", 0))
+                except Exception:
+                    fm8_qty = 0
+                if fm8_qty >= 54:
+                    had_fm8_recently = True
+                    last_fm8_date = r.get("TANGGAL")
+                    break
+
+        d8_val = do_dict.get("FM8", 0)
+        if had_fm8_recently or d8_val < 54:
+            puninar_fm8_eligible = False
+            if had_fm8_recently:
+                puninar_fm8_reason = f"Otomatis: PUNINAR sudah dapat FM8 pada {last_fm8_date} (< 7 hari), dialihkan ke FM6A/FM6"
+            else:
+                puninar_fm8_reason = "Otomatis: DO FM8 < 54 unit, dialihkan ke FM6A/FM6"
+        else:
+            puninar_fm8_eligible = True
+            puninar_fm8_reason = "Otomatis: PUNINAR belum mendapat FM8 dalam 7 hari terakhir (Jatah mingguan aktif 54 u)"
+
     dq = calculate_and_balance_daily_quota(
         do_dict,
         mq["pct_matrix"],
         rolling_winner=rolling_winner,
         mode=mode,
         target_pct_override=target_pct_dict,
+        puninar_fm8_eligible=puninar_fm8_eligible,
     )
 
     saved_all = db.get_saved_daily_allocations()
@@ -279,6 +321,11 @@ def api_daily_quota():
         "saved_rows": saved_rows,
         "trailer_checks": dq["trailer_checks"],
         "target_shares": {x: round(eff_target_pct[x] * 100, 2) for x in EXPEDITIONS},
+        "puninar_fm8": {
+            "eligible": puninar_fm8_eligible,
+            "mode": puninar_fm8_param,
+            "reason": puninar_fm8_reason,
+        },
     })
 
 

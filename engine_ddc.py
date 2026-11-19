@@ -201,7 +201,14 @@ def _build_stat_rows(alloc_dict, total_do, target_pct, tolerance_pct, enforce_ta
     return rows
 
 
-def solve_perfect_target_daily_quota(do_clean, pct_matrix, total_do, target_pct, rolling_winner="TUNAS MUDA"):
+def solve_perfect_target_daily_quota(
+    do_clean,
+    pct_matrix,
+    total_do,
+    target_pct,
+    rolling_winner="TUNAS MUDA",
+    puninar_fm8_eligible=False,
+):
     """
     Rule Pembagian Alokasi Kuota Presisi:
     - % akhir (Grand Total / Total DO) minimal = sama dengan Target (%) dari Target Bulanan % Share
@@ -210,7 +217,9 @@ def solve_perfect_target_daily_quota(do_clean, pct_matrix, total_do, target_pct,
       * FM1 & FM2 dialokasikan ke pemenang rolling (TUNAS MUDA / RJTM).
       * FM7 & FM9 dialokasikan eksklusif untuk TUNAS MUDA dan RJTM.
       * FM6A dialokasikan eksklusif untuk LBK, WSS, dan PUNINAR.
-      * FM6 dan FM8 berfungsi sebagai penyeimbang presisi (balancing) bagi seluruh 5 ekspedisi.
+      * FM8 & FM6 menyeimbangkan alokasi presisi.
+      * Aturan Khusus FM8 PUNINAR: Minimal 1 minggu sekali PUNINAR mendapat 1 rit trailer (54-64 u) di FM8.
+        Jika pada hari tersebut PUNINAR tidak mendapat FM8 (FM8=0), jatah dialihkan ke FM6A / FM6.
     - Penjumlahan kolom per plant sama persis dengan DO plant (100% konsisten).
     - Penjumlahan baris per ekspedisi sama persis dengan Target Unit ekspedisi (100% konsisten).
     """
@@ -296,30 +305,43 @@ def solve_perfect_target_daily_quota(do_clean, pct_matrix, total_do, target_pct,
                     red -= give
             rem_target[x] = 0
 
-    # 5. Distribusi Plant FM8 ke seluruh ekspedisi yang masih membutuhkan
+    # 5. Distribusi Plant FM8
     d_8 = do_clean.get("FM8", 0)
     if d_8 > 0:
-        w_8 = {x: max(0, rem_target[x]) * pct_matrix[x]["FM8"] for x in EXPEDITIONS}
-        tot_w8 = sum(w_8.values())
-        if tot_w8 <= 0:
-            w_8 = {x: max(0, rem_target[x]) for x in EXPEDITIONS}
-            tot_w8 = sum(w_8.values()) or 1.0
-        alloc_8 = _round_preserving_sum({x: (w_8[x] / tot_w8) * d_8 for x in EXPEDITIONS}, d_8)
-        for x in EXPEDITIONS:
-            if alloc_8[x] > rem_target[x]:
-                surplus = alloc_8[x] - rem_target[x]
-                alloc_8[x] = rem_target[x]
-                for y in EXPEDITIONS:
-                    if y != x and alloc_8[y] + surplus <= rem_target[y]:
-                        alloc_8[y] += surplus
-                        surplus = 0
-                        break
-        for x in EXPEDITIONS:
-            alloc[x]["FM8"] = alloc_8[x]
+        # Aturan Khusus PUNINAR di FM8:
+        # Jika puninar_fm8_eligible (jadwal mingguan aktif): berikan 1 rit trailer standar (54-64 u)
+        # Jika TIDAK puninar_fm8_eligible: alokasi PUNINAR = 0 di FM8, dialihkan ke FM6A/FM6
+        puninar_fm8_u = 0
+        if puninar_fm8_eligible and d_8 >= 54 and rem_target["PUNINAR"] > 0:
+            puninar_fm8_u = min(54, rem_target["PUNINAR"], d_8)
+            alloc["PUNINAR"]["FM8"] = puninar_fm8_u
+            rem_target["PUNINAR"] -= puninar_fm8_u
+
+        rem_d8 = d_8 - puninar_fm8_u
+        other_exp = [x for x in EXPEDITIONS if x != "PUNINAR"]
+        if rem_d8 > 0:
+            w_8 = {x: max(0, rem_target[x]) * pct_matrix[x]["FM8"] for x in other_exp}
+            tot_w8 = sum(w_8.values())
+            if tot_w8 <= 0:
+                w_8 = {x: max(0, rem_target[x]) for x in other_exp}
+                tot_w8 = sum(w_8.values()) or 1.0
+            alloc_8 = _round_preserving_sum({x: (w_8[x] / tot_w8) * rem_d8 for x in other_exp}, rem_d8)
+            for x in other_exp:
+                if alloc_8[x] > rem_target[x]:
+                    surplus = alloc_8[x] - rem_target[x]
+                    alloc_8[x] = rem_target[x]
+                    for y in other_exp:
+                        if y != x and alloc_8[y] + surplus <= rem_target[y]:
+                            alloc_8[y] += surplus
+                            surplus = 0
+                            break
+            for x in other_exp:
+                alloc[x]["FM8"] = alloc_8[x]
 
     # 6. Plant FM6 menyerap sisa kebutuhan persis masing-masing ekspedisi
+    # (Untuk PUNINAR, jika FM8=0, FM6 menyerap sisa target sehingga kapasitas trailer 54-64 unit terpenuhi)
     for x in EXPEDITIONS:
-        alloc[x]["FM6"] = max(0, rem_target[x] - alloc[x]["FM8"])
+        alloc[x]["FM6"] = max(0, rem_target[x] - (alloc[x]["FM8"] if x != "PUNINAR" else 0))
 
     # Rekonsiliasi akhir jika ada selisih integer rounding pada FM6
     actual_fm6 = sum(alloc[x]["FM6"] for x in EXPEDITIONS)
@@ -665,10 +687,12 @@ def calculate_and_balance_daily_quota(
     mode="operational_trailer",
     tolerance_pct=0.10,
     target_pct_override=None,
+    puninar_fm8_eligible=False,
 ):
     """
     Menghitung Kuota Harian (Unit) dari DO Harian dan Kuota Bulanan (%).
     Menerapkan aturan bahwa % QUOTA PER EXPEDITION PER DAY H-1 minimal = sama dengan Target Bulanan % Share.
+    Serta aturan khusus PUNINAR di FM8 (minimal 1x per minggu kapasitas 54-64 u, hari lain dialihkan ke FM6A/FM6).
     """
     do_clean = {p: int(do_dict.get(p, 0)) for p in PLANTS}
     total_do = sum(do_clean.values())
@@ -765,8 +789,14 @@ def calculate_and_balance_daily_quota(
     else:
         # ATURAN PEMBAGIAN ALOKASI KUOTA:
         # % akhir HARUS MINIMAL = SAMA DENGAN Target (%) di QUOTA PER EXPEDITION (%) dari Target Bulanan % Share masing-masing ekspedisi.
+        # Serta aturan rit trailer PUNINAR di FM8 (minimal 1x per minggu kapasitas 54-64 u, hari lain dialihkan ke FM6A/FM6).
         bal_int = solve_perfect_target_daily_quota(
-            do_clean, pct_matrix, total_do, target_pct, rolling_winner=rolling_winner
+            do_clean,
+            pct_matrix,
+            total_do,
+            target_pct,
+            rolling_winner=rolling_winner,
+            puninar_fm8_eligible=puninar_fm8_eligible,
         )
 
     enforce_tgt = (mode != "excel_formula")
