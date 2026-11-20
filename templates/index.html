@@ -630,7 +630,7 @@
 
 
 
-            <a href="#tab-daily" class="nav-link" data-bs-toggle="tab" role="tab">
+            <a href="#tab-daily" class="nav-link" data-bs-toggle="tab" role="tab" onclick="refreshMtdGapMonitoring()">
 
 
 
@@ -659,13 +659,6 @@
 
 
 
-
-          <li class="nav-item">
-            <a href="#tab-mtd-gap" class="nav-link" data-bs-toggle="tab" role="tab" onclick="loadMtdGapMonitoring()">
-              <span class="nav-link-icon"><i class="ti ti-scale text-primary"></i></span>
-              <span class="nav-link-title">Monitoring MTD Gap</span>
-            </a>
-          </li>
 
           <li class="nav-item">
 
@@ -6106,6 +6099,12 @@
                   <button class="btn btn-sm btn-outline-light py-1 px-2" onclick="refreshMtdGapMonitoring()" title="Refresh MTD Gap">
                     <i class="ti ti-refresh me-1"></i> Refresh MTD
                   </button>
+                  <button class="btn btn-sm btn-outline-light py-1 px-2" onclick="shareMtdGapTable('copy')" title="Salin Gambar ke Clipboard WA">
+                    <i class="ti ti-clipboard-copy me-1"></i> Salin WA
+                  </button>
+                  <button class="btn btn-sm btn-outline-light py-1 px-2" onclick="shareMtdGapTable('download')" title="Download PNG">
+                    <i class="ti ti-download me-1"></i> PNG
+                  </button>
                 </div>
               </div>
               <div class="table-responsive">
@@ -6142,127 +6141,6 @@
 
 
 
-
-
-
-
-
-          <!-- ========================================================== -->
-          <!-- TAB MONITORING MTD GAP: MTD QUOTA PER DAY & GAP MONITORING -->
-          <!-- ========================================================== -->
-          <div class="tab-pane" id="tab-mtd-gap">
-            <!-- Filter & Controls Card -->
-            <div class="card mb-3 shadow-sm border-0">
-              <div class="card-body py-3">
-                <div class="row g-2 align-items-center">
-                  <div class="col-md-3">
-                    <label class="form-label small mb-1 fw-bold text-dark">
-                      <i class="ti ti-calendar me-1 text-primary"></i> Tanggal Cut-off MTD:
-                    </label>
-                    <input type="date" id="mtd-tab-cutoff-date" class="form-control form-control-sm" onchange="loadMtdGapMonitoring()">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label small mb-1 text-muted">Shortcut Periode:</label>
-                    <div class="btn-group btn-group-sm w-100" role="group">
-                      <button type="button" class="btn btn-outline-secondary" onclick="setMtdCutoff('today')">Hari Ini</button>
-                      <button type="button" class="btn btn-outline-secondary" onclick="setMtdCutoff('h-1')">H-1</button>
-                      <button type="button" class="btn btn-outline-secondary" onclick="setMtdCutoff('end_month')">Akhir Bulan</button>
-                    </div>
-                  </div>
-                  <div class="col-md-2">
-                    <label class="form-label small mb-1 d-none d-md-block">&nbsp;</label>
-                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="loadMtdGapMonitoring()">
-                      <i class="ti ti-refresh me-1"></i> Muat Data
-                    </button>
-                  </div>
-                  <div class="col-md-3 text-md-end">
-                    <label class="form-label small mb-1 d-none d-md-block">&nbsp;</label>
-                    <div class="d-flex justify-content-md-end gap-1">
-                      <button class="btn btn-sm btn-outline-success" onclick="shareMtdGapTable('copy')" title="Salin Gambar ke Clipboard">
-                        <i class="ti ti-clipboard-copy me-1"></i> Salin WA
-                      </button>
-                      <button class="btn btn-sm btn-outline-primary" onclick="shareMtdGapTable('download')" title="Download Gambar PNG">
-                        <i class="ti ti-download me-1"></i> PNG
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Main Monitoring Card -->
-            <div class="card mb-3 shadow-sm" id="card-mtd-tab-monitoring" style="border: 1px solid #b0c4de; overflow: hidden;">
-              <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background-color: #1e3a8a; color: #ffffff;">
-                <div class="d-flex align-items-center gap-2">
-                  <i class="ti ti-scale fs-3 text-cyan"></i>
-                  <div>
-                    <span class="fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 1.05rem;">
-                      MTD Quota Per Day &amp; Gap Monitoring
-                    </span>
-                    <span class="badge bg-light text-dark fw-bold ms-2" id="mtd-tab-cutoff-display">s.d. -</span>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 no-capture">
-                  <span id="mtd-tab-zero-sum-badge" class="badge bg-success text-white fw-bold px-2 py-1">
-                    <i class="ti ti-check me-1"></i> Zero-Sum Balance (Gap = 0)
-                  </span>
-                </div>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-bordered table-sm mb-0 text-center" style="border: 2px solid #1e3a8a; table-layout: fixed; width: 100%; min-width: 880px;">
-                  <thead style="background-color: #2563eb; color: #ffffff;">
-                    <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
-                      <th style="width: 20%; padding: 6px 10px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb; text-align: left;">EKSPEDISI</th>
-                      <th class="num-col" style="width: 15%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">MTD QUOTA TEORITIS</th>
-                      <th class="num-col" style="width: 12%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">TARGET (%)</th>
-                      <th class="num-col" style="width: 15%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">MTD QUOTA PER DAY</th>
-                      <th class="num-col" style="width: 12%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">ACTUAL (%)</th>
-                      <th class="num-col" style="width: 13%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">GAP (UNIT)</th>
-                      <th class="num-col" style="width: 13%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">GAP (%)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbody-mtd-tab-gap">
-                    <tr><td colspan="7" class="text-muted py-3">Memuat data MTD Gap Monitoring...</td></tr>
-                  </tbody>
-                  <tfoot id="tfoot-mtd-tab-gap" style="background-color: #e0e7ff; font-weight: bold; border-top: 2px solid #1e3a8a;">
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-
-            <!-- Card Panduan & Logika Bisnis -->
-            <div class="card mb-3 border-0 bg-light">
-              <div class="card-body py-3">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <h5 class="fw-bold text-primary mb-2"><i class="ti ti-info-circle me-1"></i> Rumus &amp; Definisi Kolom:</h5>
-                    <ul class="small text-muted mb-0 ps-3">
-                      <li><strong>MTD Quota Teoritis:</strong> Total akumulasi target unit eksak <code>(Total DO Harian per Plant × % Quota Ekspedisi per Plant)</code> dari awal bulan s.d. cut-off.</li>
-                      <li><strong>Target (%):</strong> Persentase target kuota bulanan ekspedisi.</li>
-                      <li><strong>MTD Quota Per Day:</strong> Total akumulasi alokasi unit riil yang sudah dirilis <code>(final_allocated_qty)</code> dari awal bulan s.d. cut-off.</li>
-                      <li><strong>Actual (%):</strong> Porsi realisasi terhadap total unit yang dirilis <code>(MTD Quota Per Day / Total MTD)</code>.</li>
-                    </ul>
-                  </div>
-                  <div class="col-md-6">
-                    <h5 class="fw-bold text-success mb-2"><i class="ti ti-check-circle me-1"></i> Auto-Balancing &amp; Zero-Sum Balance:</h5>
-                    <ul class="small text-muted mb-0 ps-3">
-                      <li><strong>GAP (UNIT) = <code>ROUND(MTD Quota Per Day - MTD Quota Teoritis, 0)</code></strong>. Nilai positif (hijau) berarti alokasi surplus, negatif (merah muda) berarti defisit.</li>
-                      <li><strong>Zero-Sum Guarantee:</strong> Total seluruh GAP (UNIT) wajib = 0. Selisih pembulatan harian dialokasikan berdasarkan prioritas saldo defisit MTD ekspedisi.</li>
-                      <li><strong>GAP (%) = <code>Actual (%) - Target (%)</code></strong> (format 4 desimal).</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ========================================================== -->
-
-
-
-
-
-          <!-- TAB PER DAY: MONITORING QUOTA HARIAN (SESUAI SHEET PER DAY)-->
 
 
 
@@ -21359,148 +21237,89 @@ window.addEventListener("DOMContentLoaded", () => {
 function renderMtdGapTable(mtdData) {
   if (!mtdData) return;
 
-  // 1. Update Cutoff Displays
-  const cutoffStr = mtdData.cutoff_date ? ("s.d. " + mtdData.cutoff_date) : "Bulan Berjalan";
-  ["mtd-cutoff-display", "mtd-tab-cutoff-display"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = cutoffStr;
-  });
-
-  const tabCutoffInput = document.getElementById("mtd-tab-cutoff-date");
-  if (tabCutoffInput && !tabCutoffInput.value && mtdData.cutoff_date) {
-    tabCutoffInput.value = mtdData.cutoff_date;
+  // 1. Update Cutoff Display
+  const cutoffDisp = document.getElementById("mtd-cutoff-display");
+  if (cutoffDisp && mtdData.cutoff_date) {
+    cutoffDisp.textContent = "s.d. " + mtdData.cutoff_date;
   }
 
-  // 2. Update Zero-Sum Badges
-  ["mtd-zero-sum-badge", "mtd-tab-zero-sum-badge"].forEach(id => {
-    const zeroBadge = document.getElementById(id);
-    if (zeroBadge) {
-      if (mtdData.is_zero_sum) {
-        zeroBadge.className = "badge bg-success text-white fw-bold px-2 py-1";
-        zeroBadge.innerHTML = `<i class="ti ti-check me-1"></i> Zero-Sum Balance (Gap = 0)`;
-      } else {
-        zeroBadge.className = "badge bg-danger text-white fw-bold px-2 py-1";
-        zeroBadge.innerHTML = `<i class="ti ti-alert-triangle me-1"></i> Gap Selisih: ${mtdData.totals ? mtdData.totals.GAP_UNIT : "?"}`;
-      }
+  // 2. Update Zero-Sum Badge
+  const zeroBadge = document.getElementById("mtd-zero-sum-badge");
+  if (zeroBadge) {
+    if (mtdData.is_zero_sum) {
+      zeroBadge.className = "badge bg-success text-white fw-bold px-2 py-1";
+      zeroBadge.innerHTML = `<i class="ti ti-check me-1"></i> Zero-Sum Balance (Gap = 0)`;
+    } else {
+      zeroBadge.className = "badge bg-danger text-white fw-bold px-2 py-1";
+      zeroBadge.innerHTML = `<i class="ti ti-alert-triangle me-1"></i> Gap Selisih: ${mtdData.totals ? mtdData.totals.GAP_UNIT : "?"}`;
     }
+  }
+
+  // 3. Render Table Rows
+  const tbody = document.getElementById("tbody-mtd-gap");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  (mtdData.rows || []).forEach(r => {
+    const gapU = r.GAP_UNIT || 0;
+    let gapBg = "background-color: #f8fafc; color: #334155;";
+    let gapSign = "";
+    if (gapU > 0) {
+      gapBg = "background-color: #dcfce7; color: #166534; font-weight: 700;"; // soft pastel green
+      gapSign = "+";
+    } else if (gapU < 0) {
+      gapBg = "background-color: #fee2e2; color: #991b1b; font-weight: 700;"; // soft pastel red/pink
+    }
+
+    const gapPct = r.GAP_PCT || 0;
+    const gapPctSign = gapPct > 0 ? "+" : "";
+
+    tbody.innerHTML += `<tr>
+      <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.Ekspedisi}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Teoritis.toFixed(2))}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Quota_Pct.toFixed(2)}%</td>
+      <td class="num-col fw-bold text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Per_Day)}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Actual_Pct.toFixed(2)}%</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1; ${gapBg}">${gapSign}${fmtNum(gapU)}</td>
+      <td class="num-col text-end fw-semibold" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${gapPctSign}${gapPct.toFixed(4)}%</td>
+    </tr>`;
   });
 
-  // 3. Render Rows for both target tables
-  const tbodyTargets = ["tbody-mtd-gap", "tbody-mtd-tab-gap"];
-  tbodyTargets.forEach(tbId => {
-    const tbody = document.getElementById(tbId);
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    (mtdData.rows || []).forEach(r => {
-      const gapU = r.GAP_UNIT || 0;
-      let gapBg = "background-color: #f8fafc; color: #334155;";
-      let gapSign = "";
-      if (gapU > 0) {
-        gapBg = "background-color: #dcfce7; color: #166534; font-weight: 700;"; // soft pastel green
-        gapSign = "+";
-      } else if (gapU < 0) {
-        gapBg = "background-color: #fee2e2; color: #991b1b; font-weight: 700;"; // soft pastel red/pink
-      }
-
-      const gapPct = r.GAP_PCT || 0;
-      const gapPctSign = gapPct > 0 ? "+" : "";
-
-      tbody.innerHTML += `<tr>
-        <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.Ekspedisi}</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Teoritis.toFixed(2))}</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Quota_Pct.toFixed(2)}%</td>
-        <td class="num-col fw-bold text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Per_Day)}</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Actual_Pct.toFixed(2)}%</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1; ${gapBg}">${gapSign}${fmtNum(gapU)}</td>
-        <td class="num-col text-end fw-semibold" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${gapPctSign}${gapPct.toFixed(4)}%</td>
-      </tr>`;
-    });
-  });
-
-  // 4. Render Footers for both target tables
-  const tfootTargets = ["tfoot-mtd-gap", "tfoot-mtd-tab-gap"];
-  if (mtdData.totals) {
+  // 4. Render Table Footer (TOTAL)
+  const tfoot = document.getElementById("tfoot-mtd-gap");
+  if (tfoot && mtdData.totals) {
     const tot = mtdData.totals;
-    tfootTargets.forEach(tfId => {
-      const tfoot = document.getElementById(tfId);
-      if (!tfoot) return;
-      tfoot.innerHTML = `<tr style="background-color: #e0e7ff; font-weight: bold; border-top: 2px solid #1e3a8a;">
-        <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #1e3a8a;">TOTAL</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Teoritis.toFixed(2))}</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Quota_Pct.toFixed(2)}%</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Per_Day)}</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Actual_Pct.toFixed(2)}%</td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; background-color: #dcfce7; color: #166534; font-weight: 800;">
-          ${fmtNum(tot.GAP_UNIT)}
-        </td>
-        <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">
-          ${(tot.GAP_PCT > 0 ? "+" : "") + tot.GAP_PCT.toFixed(4)}%
-        </td>
-      </tr>`;
-    });
+    tfoot.innerHTML = `<tr style="background-color: #e0e7ff; font-weight: bold; border-top: 2px solid #1e3a8a;">
+      <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #1e3a8a;">TOTAL</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Teoritis.toFixed(2))}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Quota_Pct.toFixed(2)}%</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Per_Day)}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Actual_Pct.toFixed(2)}%</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; background-color: #dcfce7; color: #166534; font-weight: 800;">
+        ${fmtNum(tot.GAP_UNIT)}
+      </td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">
+        ${(tot.GAP_PCT > 0 ? "+" : "") + tot.GAP_PCT.toFixed(4)}%
+      </td>
+    </tr>`;
   }
 }
 
-async function loadMtdGapMonitoring(dateOverride) {
-  let cutoff = dateOverride;
-  if (!cutoff) {
-    const inputEl = document.getElementById("mtd-tab-cutoff-date");
-    if (inputEl && inputEl.value) {
-      cutoff = inputEl.value;
-    } else {
-      const dqInput = document.getElementById("dq-date-input");
-      cutoff = (dqInput && dqInput.value) ? dqInput.value : new Date().toISOString().slice(0, 10);
-      if (inputEl) inputEl.value = cutoff;
-    }
-  }
-
-  showLoading("Memuat MTD Gap Monitoring...", "Sedang mengagregasi data DO dan Alokasi Harian s.d. " + cutoff + "...");
+async function refreshMtdGapMonitoring() {
+  const tanggal = document.getElementById("dq-date-input") ? document.getElementById("dq-date-input").value : "";
   try {
-    const res = await fetch("/api/mtd_gap_monitoring?cutoff_date=" + encodeURIComponent(cutoff));
+    const res = await fetch("/api/mtd_gap_monitoring" + (tanggal ? ("?cutoff_date=" + tanggal) : ""));
     const d = await res.json();
     if (d.status === "ok" && d.data) {
       renderMtdGapTable(d.data);
-    } else {
-      showAlert("Gagal memuat MTD Gap: " + (d.message || "Unknown error"), "warning");
     }
   } catch (e) {
-    console.error("Error loadMtdGapMonitoring:", e);
-    showAlert("Gagal memuat MTD Gap Monitoring: " + e.message, "danger");
-  } finally {
-    hideLoading();
-  }
-}
-
-function setMtdCutoff(type) {
-  const inputEl = document.getElementById("mtd-tab-cutoff-date");
-  const now = new Date();
-  let targetDate = "";
-
-  if (type === "today") {
-    targetDate = now.toISOString().slice(0, 10);
-  } else if (type === "h-1") {
-    const yest = new Date(now);
-    yest.setDate(yest.getDate() - 1);
-    targetDate = yest.toISOString().slice(0, 10);
-  } else if (type === "end_month") {
-    let base = inputEl && inputEl.value ? new Date(inputEl.value) : now;
-    if (isNaN(base.getTime())) base = now;
-    const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-    const y = lastDay.getFullYear();
-    const m = String(lastDay.getMonth() + 1).padStart(2, "0");
-    const d = String(lastDay.getDate()).padStart(2, "0");
-    targetDate = `${y}-${m}-${d}`;
-  }
-
-  if (targetDate && inputEl) {
-    inputEl.value = targetDate;
-    loadMtdGapMonitoring(targetDate);
+    console.error("Gagal refresh MTD Gap:", e);
   }
 }
 
 async function shareMtdGapTable(action) {
-  const card = document.getElementById("card-mtd-tab-monitoring");
+  const card = document.getElementById("card-mtd-gap-monitoring");
   if (!card) return;
   if (typeof html2canvas === "undefined") {
     showAlert("Library html2canvas belum termuat. Harap refresh halaman.");
@@ -21515,7 +21334,7 @@ async function shareMtdGapTable(action) {
       ignoreElements: (el) => el.classList.contains("no-capture")
     });
     hideLoading();
-    const cutoff = document.getElementById("mtd-tab-cutoff-date")?.value || "latest";
+    const cutoff = document.getElementById("dq-date-input")?.value || "latest";
 
     if (action === "copy") {
       canvas.toBlob(async (blob) => {
@@ -21553,18 +21372,6 @@ async function shareMtdGapTable(action) {
   }
 }
 
-async function refreshMtdGapMonitoring() {
-  const tanggal = document.getElementById("dq-date-input") ? document.getElementById("dq-date-input").value : "";
-  try {
-    const res = await fetch("/api/mtd_gap_monitoring" + (tanggal ? ("?cutoff_date=" + tanggal) : ""));
-    const d = await res.json();
-    if (d.status === "ok" && d.data) {
-      renderMtdGapTable(d.data);
-    }
-  } catch (e) {
-    console.error("Gagal refresh MTD Gap:", e);
-  }
-}
 
 </script>
 
