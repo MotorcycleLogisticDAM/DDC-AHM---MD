@@ -254,15 +254,16 @@ def api_daily_quota():
         from datetime import datetime, timedelta
         try:
             cur_dt = datetime.strptime(tanggal, "%Y-%m-%d")
-            past_6_dates = [(cur_dt - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, 7)]
+            # Siklus 5 hari sekali: cek 4 hari kalender sebelumnya (H-1 s.d. H-4)
+            past_4_dates = [(cur_dt - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, 5)]
         except Exception:
-            past_6_dates = []
+            past_4_dates = []
 
         saved_allocs = db.get_saved_daily_allocations()
         had_fm8_recently = False
         last_fm8_date = None
         for r in saved_allocs:
-            if r.get("XPDC") == "PUNINAR" and r.get("TANGGAL") in past_6_dates:
+            if r.get("XPDC") == "PUNINAR" and r.get("TANGGAL") in past_4_dates:
                 try:
                     fm8_qty = int(r.get("FM8", 0))
                 except Exception:
@@ -276,12 +277,12 @@ def api_daily_quota():
         if had_fm8_recently or d8_val < 54:
             puninar_fm8_eligible = False
             if had_fm8_recently:
-                puninar_fm8_reason = f"Otomatis: PUNINAR sudah dapat FM8 pada {last_fm8_date} (< 7 hari), dialihkan ke FM6A/FM6"
+                puninar_fm8_reason = f"Otomatis: PUNINAR sudah dapat FM8 pada {last_fm8_date} (< 5 hari), dialihkan ke FM6A/FM6"
             else:
                 puninar_fm8_reason = "Otomatis: DO FM8 < 54 unit, dialihkan ke FM6A/FM6"
         else:
             puninar_fm8_eligible = True
-            puninar_fm8_reason = "Otomatis: PUNINAR belum mendapat FM8 dalam 7 hari terakhir (Jatah mingguan aktif 54 u)"
+            puninar_fm8_reason = "Otomatis: PUNINAR belum mendapat FM8 dalam 5 hari terakhir (Jatah 5 hari 1x aktif 54 u)"
 
     dq = calculate_and_balance_daily_quota(
         do_dict,
