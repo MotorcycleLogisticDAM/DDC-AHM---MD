@@ -1251,7 +1251,7 @@ def calculate_monthly_pacing_analysis(
             badge_color = "#166534"
             badge_class = "badge bg-success text-white"
             icon = "ti ti-check"
-            note = "Sesuai target pacing bulanan"
+            note = "Sesuai target bulanan"
             arahan_aksi = "Pertahankan"
 
         rows.append({
