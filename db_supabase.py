@@ -694,7 +694,7 @@ class SupabaseDatabase:
         """
         th = int(tahun)
         bl = int(bulan)
-        t_dict = target_per_xpdc_dict if target_per_xpdc_dict is not None else (targets_dict or {})
+        t_dict = target_per_xpdc_dict if target_per_xpdc_dict is not None else (targets_dict or kwargs.get("targets") or {})
         targets_clean = {x: int(t_dict.get(x, 0)) for x in EXPEDITIONS}
         calc_tot = sum(targets_clean.values())
         tot = int(total_target) if total_target is not None and int(total_target) > 0 else calc_tot

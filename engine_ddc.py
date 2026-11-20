@@ -302,11 +302,12 @@ def solve_perfect_target_daily_quota(
                 rem_target["TUNAS MUDA"] -= tm_8
                 rem_target["RJTM"] -= rj_8
                 rem_d8_b = rem_d8 - 236
-                alloc_b = _round_preserving_sum({"LBK": 0.5 * rem_d8_b, "WSS": 0.5 * rem_d8_b}, rem_d8_b)
-                alloc["LBK"]["FM8"] = alloc_b["LBK"]
-                alloc["WSS"]["FM8"] = alloc_b["WSS"]
-                rem_target["LBK"] -= alloc_b["LBK"]
-                rem_target["WSS"] -= alloc_b["WSS"]
+                lbk_8 = rem_d8_b // 2
+                wss_8 = rem_d8_b - lbk_8
+                alloc["LBK"]["FM8"] = lbk_8
+                alloc["WSS"]["FM8"] = wss_8
+                rem_target["LBK"] -= lbk_8
+                rem_target["WSS"] -= wss_8
             else:
                 tm_engkel = min(rem_d8, (rem_d8 // 44) * 44)
                 if tm_engkel == 0 and rem_d8 >= 44:
@@ -329,27 +330,50 @@ def solve_perfect_target_daily_quota(
                     alloc["TUNAS MUDA"]["FM8"] += rem_d8
                     rem_target["TUNAS MUDA"] -= rem_d8
 
-    # 7. FM7 (Dawuan Lama): Alokasi eksklusif TM & RJTM
+    # 7. FM6 (Cibitung Lama) Auto-Balancing Rit Trailer TM & RJTM:
+    # Dialokasikan masing-masing 1 rit trailer standar (58 unit) untuk TUNAS MUDA dan RJTM
+    d_6 = do_clean.get("FM6", 0)
+    if d_6 >= 116:
+        tm_fm6 = 58 if rem_target["TUNAS MUDA"] >= 58 else max(0, rem_target["TUNAS MUDA"])
+        rj_fm6 = 58 if rem_target["RJTM"] >= 58 else max(0, rem_target["RJTM"])
+    else:
+        tm_fm6 = min(d_6 // 2, max(0, rem_target["TUNAS MUDA"]))
+        rj_fm6 = min(d_6 - tm_fm6, max(0, rem_target["RJTM"]))
+
+    alloc["TUNAS MUDA"]["FM6"] = tm_fm6
+    alloc["RJTM"]["FM6"] = rj_fm6
+    rem_target["TUNAS MUDA"] -= tm_fm6
+    rem_target["RJTM"] -= rj_fm6
+
+    # 8. FM7 (Dawuan Lama) Penyeimbang (Balancing) Sisa TM & RJTM:
+    # FM7 melayani eksklusif TM & RJTM, menyeimbangkan sisa kebutuhan target TM & RJTM
     d_7 = do_clean.get("FM7", 0)
     if d_7 > 0:
-        w7_tm = target_pct["TUNAS MUDA"] / (target_pct["TUNAS MUDA"] + target_pct["RJTM"])
-        alloc_7 = _round_preserving_sum({"TUNAS MUDA": w7_tm * d_7, "RJTM": (1.0 - w7_tm) * d_7}, d_7)
-        for x in ["TUNAS MUDA", "RJTM"]:
-            alloc[x]["FM7"] = alloc_7[x]
-            rem_target[x] -= alloc_7[x]
+        tot_rem_tm_rj = max(0, rem_target["TUNAS MUDA"]) + max(0, rem_target["RJTM"])
+        if tot_rem_tm_rj > 0:
+            alloc_7 = _round_preserving_sum({
+                "TUNAS MUDA": (max(0, rem_target["TUNAS MUDA"]) / tot_rem_tm_rj) * d_7,
+                "RJTM": (max(0, rem_target["RJTM"]) / tot_rem_tm_rj) * d_7
+            }, d_7)
+            alloc["TUNAS MUDA"]["FM7"] = alloc_7["TUNAS MUDA"]
+            alloc["RJTM"]["FM7"] = alloc_7["RJTM"]
+            rem_target["TUNAS MUDA"] -= alloc_7["TUNAS MUDA"]
+            rem_target["RJTM"] -= alloc_7["RJTM"]
+        else:
+            w7_tm = target_pct["TUNAS MUDA"] / (target_pct["TUNAS MUDA"] + target_pct["RJTM"])
+            alloc_7 = _round_preserving_sum({"TUNAS MUDA": w7_tm * d_7, "RJTM": (1.0 - w7_tm) * d_7}, d_7)
+            alloc["TUNAS MUDA"]["FM7"] = alloc_7["TUNAS MUDA"]
+            alloc["RJTM"]["FM7"] = alloc_7["RJTM"]
 
-    # 8. FM6 (Cibitung Lama):
-    # - Auto-Balancing Tahap Akhir: Menampung kebutuhan sisa TM & RJTM
-    # - Sisa kuota didistribusikan ke Group B (LBK, WSS, PUNINAR)
-    d_6 = do_clean.get("FM6", 0)
+    # Jika ada sisa selisih target TM / RJTM setelah FM7, serap ke FM6:
     for x in ["TUNAS MUDA", "RJTM"]:
-        if rem_target[x] > 0:
-            alloc[x]["FM6"] = rem_target[x]
+        if rem_target[x] != 0:
+            alloc[x]["FM6"] += rem_target[x]
             rem_target[x] = 0
 
+    # 9. Sisa FM6 dialokasikan penuh ke Group B (LBK, WSS, PUNINAR):
     cur_fm6 = sum(alloc[x]["FM6"] for x in EXPEDITIONS)
     rem_fm6 = max(0, d_6 - cur_fm6)
-
     w_tri = {x: max(0, rem_target[x]) for x in tri_group}
     tot_w_tri = sum(w_tri.values())
     if tot_w_tri > 0:

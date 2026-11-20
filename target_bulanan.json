@@ -40,5 +40,19 @@
     "TOTAL_TARGET": 85500,
     "UPDATED_AT": "2026-11-19 11:47:33",
     "CATATAN": "Uji Coba Submission 2 - Revisi Target Tambahan 500 Unit"
+  },
+  {
+    "TAHUN": 2026,
+    "BULAN": 11,
+    "TARGETS": {
+      "TUNAS MUDA": 22359,
+      "RJTM": 18646,
+      "LBK": 10859,
+      "WSS": 12948,
+      "PUNINAR": 8712
+    },
+    "TOTAL_TARGET": 73524,
+    "UPDATED_AT": "2026-11-20 09:50:00",
+    "CATATAN": "Target Bulanan November 2026 (Sesuai Standar Operasional AHM Logistik)"
   }
 ]

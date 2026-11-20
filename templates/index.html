@@ -8572,79 +8572,14 @@ async function initApp() {
 
 
 
-  // Jika ada draft editan bal-cell Tahap 2 untuk tanggal ini, pulihkan!
-
-
-
-
-
-  if (savedState.bal_draft && savedState["dq-date-input"] === targetDqDate) {
-
-
-
-
-
-    Object.keys(savedState.bal_draft).forEach(key => {
-
-
-
-
-
-      const parts = key.split("_");
-
-
-
-
-
-      if (parts.length === 2) {
-
-
-
-
-
-        const x = parts[0];
-
-
-
-
-
-        const p = parts[1];
-
-
-
-
-
-        const cell = document.querySelector(`.bal-cell[data-xpdc="${x}"][data-plant="${p}"]`);
-
-
-
-
-
-        if (cell) cell.value = savedState.bal_draft[key];
-
-
-
-
-
-      }
-
-
-
-
-
-    });
-
-
-
-
-
-    recalcEditableTable();
-
-
-
-
-
-  }
+  // State inisialisasi: pastikan draft lama dibersihkan agar hasil auto-balancing server tampil murni dan akurat
+  try {
+    let cs = JSON.parse(localStorage.getItem(DDC_STATE_KEY) || "{}");
+    if (cs.bal_draft) {
+      delete cs.bal_draft;
+      localStorage.setItem(DDC_STATE_KEY, JSON.stringify(cs));
+    }
+  } catch(e) {}
 
 
 
@@ -12105,11 +12040,15 @@ function onChangeDoDate() {
 
 
 async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
-
-
-
-
-
+  if (forceRebalance) {
+    try {
+      let cs = JSON.parse(localStorage.getItem(DDC_STATE_KEY) || "{}");
+      if (cs.bal_draft) {
+        delete cs.bal_draft;
+        localStorage.setItem(DDC_STATE_KEY, JSON.stringify(cs));
+      }
+    } catch(e) {}
+  }
   const tanggal = document.getElementById("dq-date-input").value;
 
 
@@ -20409,67 +20348,7 @@ function collectCurrentAppState() {
 
 
 
-  const balCells = document.querySelectorAll('.bal-cell');
-
-
-
-
-
-  if (balCells.length > 0) {
-
-
-
-
-
-    state.bal_draft = {};
-
-
-
-
-
-    balCells.forEach(cell => {
-
-
-
-
-
-      const x = cell.getAttribute("data-xpdc");
-
-
-
-
-
-      const p = cell.getAttribute("data-plant");
-
-
-
-
-
-      if (x && p) {
-
-
-
-
-
-        state.bal_draft[`${x}_${p}`] = cell.value;
-
-
-
-
-
-      }
-
-
-
-
-
-    });
-
-
-
-
-
-  }
+  // Draft sel tidak disimpan ke state global server agar alokasi harian selalu terhitung dinamis dari engine
 
 
 

@@ -80,7 +80,10 @@ def load_app_state():
     if os.path.exists(STATE_FILE_PATH):
         try:
             with open(STATE_FILE_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if isinstance(data, dict):
+                    data.pop("bal_draft", None)
+                return data
         except Exception as e:
             print(f"Error loading app_state.json: {e}")
     return {}
@@ -88,8 +91,9 @@ def load_app_state():
 def save_app_state(state):
     """Menyimpan snapshot state aplikasi ke app_state.json."""
     try:
+        clean_state = {k: v for k, v in state.items() if k != "bal_draft"} if isinstance(state, dict) else state
         with open(STATE_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2, ensure_ascii=False)
+            json.dump(clean_state, f, indent=2, ensure_ascii=False)
         return True
     except Exception as e:
         print(f"Error saving app_state.json: {e}")
