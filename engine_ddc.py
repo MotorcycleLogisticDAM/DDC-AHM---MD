@@ -210,26 +210,24 @@ def solve_perfect_target_daily_quota(
     puninar_fm8_eligible=False,
 ):
     """
-    Rule Pembagian Alokasi & Auto-Balancing Kuota Harian per Plant:
-    1. FM1 (Sunter): Rolling TUNAS MUDA & RJTM. Jika DO Pabrikan <= 64 unit (1 rit trailer)
-       atau pas kebutuhan, prioritaskan alokasi penuh ke 1 ekspedisi pemenang rolling.
-    2. FM2 (Pegangsaan): Rolling TUNAS MUDA & RJTM mengikuti pola alokasi yang berjalan di FM1.
-    3. FM5: Jika ada DO, dialokasikan langsung ke 1 ekspedisi jika <= 1 atau 2 kapasitas truk.
-    4. FM7 (Dawuan Lama): Dialokasikan sesuai kuota bulanan ke TUNAS MUDA dan RJTM (54-64 u/truk).
-    5. FM9 (Deltamas): Dialokasikan ke TUNAS MUDA dan RJTM (54-64 u/truk, rasio 50:50 trailer).
-    6. FM6A (Cibitung): Ekspedisi Utama LBK, WSS, PUNINAR (54-64 u/truk).
-    7. FM8 (Dawuan): Ekspedisi Utama TUNAS MUDA, RJTM, LBK, WSS, dan PUNINAR (dijadwalkan 5 hari 1x).
-       - Kondisi DO Besar (> 5 Truk = > 270 u): Dibagi rata ke ekspedisi. PUNINAR mendapat 1 rit
-         trailer (54-64 u) jika giliran 5 hari 1x aktif; jika tidak, dialihkan ke FM6A/FM6.
-       - Kondisi DO Kecil (<= 270 u): Alokasi dikirimkan ke TUNAS MUDA menggunakan armada truk engkel
-         (kelipatan 44 unit), sisa dialokasikan ke partner FM8.
-    8. FM6 (Cibitung Lama): Ekspedisi Utama LBK, WSS, PUNINAR (54-64 u/truk).
-       - Aturan Auto-Balancing Tahap Akhir: Jika setelah alokasi ke LBK, WSS, dan PUNINAR masih
-         diperlukan balancing akhir untuk memenuhi Target Bulanan TUNAS MUDA dan RJTM, tambahkan
-         alokasi TUNAS MUDA dan RJTM dengan perhitungan rit trailer (54-64 u/truk).
+    Rule Pembagian Alokasi Kuota Presisi & Auto-Balancing per Plant (Sesuai Standar Operasional AHM Logistik):
+    1. FM1 (Sunter): 100% ke 1 ekspedisi pemenang rolling (TUNAS MUDA / RJTM) jika DO <= 64 u atau pas target.
+    2. FM2 (Pegangsaan): Mengikuti pola pemenang FM1 (100% ke pemenang FM1).
+    3. FM5: Jika ada DO <= 1 atau 2 kapasitas truk, dialokasikan langsung ke 1 ekspedisi.
+    4. FM9 (Deltamas): Rasio 50:50 trailer standar ke TUNAS MUDA dan RJTM (54-64 u/truk).
+    5. FM7 (Dawuan Lama): TUNAS MUDA dan RJTM dalam rit trailer standar (54-64 u/rit) sesuai kuota bulanan.
+    6. FM6A (Cibitung): Ekspedisi Utama Group B (LBK, WSS, PUNINAR). Jika DO <= 64 u, utuh ke 1 ekspedisi (PUNINAR).
+    7. FM8 (Dawuan):
+       - PUNINAR (siklus 5 hari 1x): Jatah 1 rit trailer standar (54 u) jika eligible; 0 jika tidak.
+       - Kondisi DO Besar (> 270 u / > 5 Truk): TM & RJTM masing-masing 2 rit trailer (118 u @ 59 u/rit),
+         LBK 1 rit trailer (54 u), WSS 1 rit trailer (55 u).
+       - Kondisi DO Kecil (<= 270 u): Prioritas ke TUNAS MUDA armada engkel (kelipatan 44 u).
+    8. FM6 (Cibitung Lama):
+       - Auto-Balancing Tahap Akhir: Menampung kebutuhan sisa TUNAS MUDA & RJTM (54-64 u/rit) untuk memenuhi target.
+       - Sisa kuota FM6 dialokasikan penuh ke Group B (LBK, WSS, PUNINAR) dalam rit trailer standar.
     9. Kepatuhan Target Bulanan:
        - % akhir per ekspedisi konsisten minimal = sama dengan Target Bulanan % Share.
-       - Penjumlahan unit per plant sama persis dengan DO Pabrikan per plant.
+       - Total kolom per plant sama persis dengan DO Pabrik per plant.
     """
     if total_do <= 0:
         return {x: {p: 0 for p in PLANTS} for x in EXPEDITIONS}
@@ -237,52 +235,29 @@ def solve_perfect_target_daily_quota(
     target_units = _round_preserving_sum(
         {x: target_pct[x] * total_do for x in EXPEDITIONS}, total_do
     )
-
     alloc = {x: {p: 0 for p in PLANTS} for x in EXPEDITIONS}
     rem_target = {x: target_units[x] for x in EXPEDITIONS}
 
     winner = rolling_winner if rolling_winner in ["TUNAS MUDA", "RJTM"] else "TUNAS MUDA"
     other = "RJTM" if winner == "TUNAS MUDA" else "TUNAS MUDA"
 
-    # 1. FM1 (Sunter) & 2. FM2 (Pegangsaan)
-    # FM1: Rolling antara TM & RJTM. Jika DO <= 64 (1 rit trailer), prioritaskan alokasi penuh ke 1 ekspedisi pemenang.
-    d_fm1 = do_clean.get("FM1", 0)
-    d_fm2 = do_clean.get("FM2", 0)
+    # 1. FM1 (Sunter): 100% ke pemenang rolling
+    d_1 = do_clean.get("FM1", 0)
+    alloc[winner]["FM1"] = d_1
+    rem_target[winner] -= d_1
 
-    if d_fm1 <= 64 or d_fm1 <= rem_target[winner]:
-        alloc[winner]["FM1"] = d_fm1
-    else:
-        alloc[winner]["FM1"] = rem_target[winner]
-        alloc[other]["FM1"] = d_fm1 - rem_target[winner]
-    rem_target[winner] -= alloc[winner]["FM1"]
-    rem_target[other] -= alloc[other]["FM1"]
-
-    # FM2: Mengikuti pola alokasi FM1 (pemenang FM1 diprioritaskan)
-    if d_fm2 <= 64 or d_fm2 <= rem_target[winner]:
-        alloc[winner]["FM2"] = d_fm2
-    else:
-        alloc[winner]["FM2"] = rem_target[winner]
-        alloc[other]["FM2"] = d_fm2 - rem_target[winner]
-    rem_target[winner] -= alloc[winner]["FM2"]
-    rem_target[other] -= alloc[other]["FM2"]
+    # 2. FM2 (Pegangsaan): Mengikuti pemenang FM1
+    d_2 = do_clean.get("FM2", 0)
+    alloc[winner]["FM2"] = d_2
+    rem_target[winner] -= d_2
 
     # 3. FM5 (jika ada DO)
     d_5 = do_clean.get("FM5", 0)
     if d_5 > 0 and "FM5" in PLANTS:
-        top_exp = winner if rem_target[winner] >= d_5 else max(EXPEDITIONS, key=lambda x: rem_target[x])
-        alloc[top_exp]["FM5"] = d_5
-        rem_target[top_exp] -= d_5
+        alloc[winner]["FM5"] = d_5
+        rem_target[winner] -= d_5
 
-    # 4. FM7 (Dawuan Lama): Sesuai kuota bulanan ke TUNAS MUDA (55%) dan RJTM (45%) (54-64 u/truk)
-    d_7 = do_clean.get("FM7", 0)
-    if d_7 > 0:
-        w7_tm = target_pct["TUNAS MUDA"] / (target_pct["TUNAS MUDA"] + target_pct["RJTM"])
-        alloc_7 = _round_preserving_sum({"TUNAS MUDA": w7_tm * d_7, "RJTM": (1.0 - w7_tm) * d_7}, d_7)
-        for x in ["TUNAS MUDA", "RJTM"]:
-            alloc[x]["FM7"] = alloc_7[x]
-            rem_target[x] -= alloc_7[x]
-
-    # 5. FM9 (Deltamas): TUNAS MUDA & RJTM (54-64 u/truk, rasio 50:50 trailer)
+    # 4. FM9 (Deltamas): Rasio 50:50 trailer standar TM & RJTM
     d_9 = do_clean.get("FM9", 0)
     if d_9 > 0:
         alloc_9 = _round_preserving_sum({"TUNAS MUDA": 0.5 * d_9, "RJTM": 0.5 * d_9}, d_9)
@@ -290,20 +265,25 @@ def solve_perfect_target_daily_quota(
             alloc[x]["FM9"] = alloc_9[x]
             rem_target[x] -= alloc_9[x]
 
-    # 6. FM6A (Cibitung): Ekspedisi Utama LBK, WSS, PUNINAR (54-64 u/truk)
-    tri_group = ["LBK", "WSS", "PUNINAR"]
+    # 5. FM6A (Cibitung): Ekspedisi Utama Group B (LBK, WSS, PUNINAR)
     d_6a = do_clean.get("FM6A", 0)
+    tri_group = ["LBK", "WSS", "PUNINAR"]
     if d_6a > 0:
-        tot_tri_pct = sum(target_pct[x] for x in tri_group)
-        alloc_6a = _round_preserving_sum({x: (target_pct[x] / tot_tri_pct) * d_6a for x in tri_group}, d_6a)
-        for x in tri_group:
-            alloc[x]["FM6A"] = alloc_6a[x]
-            rem_target[x] -= alloc_6a[x]
+        if d_6a <= 64:
+            chosen = "PUNINAR"
+            alloc[chosen]["FM6A"] = d_6a
+            rem_target[chosen] -= d_6a
+        else:
+            tot_tri = sum(target_pct[x] for x in tri_group)
+            alloc_6a = _round_preserving_sum({x: (target_pct[x] / tot_tri) * d_6a for x in tri_group}, d_6a)
+            for x in tri_group:
+                alloc[x]["FM6A"] = alloc_6a[x]
+                rem_target[x] -= alloc_6a[x]
 
-    # 7. FM8 (Dawuan): TUNAS MUDA, RJTM, LBK, WSS, PUNINAR (dijadwalkan 5 hari 1x)
-    # Standar: Trailer 54-64 u | Engkel 44 u
-    # - Kondisi DO Besar (> 5 Truk = > 270 u): Dibagi rata ke ekspedisi.
-    # - Kondisi DO Kecil (<= 270 u): Alokasi dikirimkan ke TUNAS MUDA armada engkel (44 u).
+    # 6. FM8 (Dawuan):
+    # - PUNINAR: 5 hari 1x (54 unit) jika eligible
+    # - DO Besar (> 270 u): TM & RJTM masing-masing 2 rit (118 u), LBK 1 rit (54 u), WSS 1 rit (55 u)
+    # - DO Kecil (<= 270 u): Prioritas TM armada engkel (44 u)
     d_8 = do_clean.get("FM8", 0)
     if d_8 > 0:
         pun_u = 0
@@ -314,8 +294,20 @@ def solve_perfect_target_daily_quota(
 
         rem_d8 = d_8 - pun_u
         if rem_d8 > 0:
-            is_do_besar = (d_8 > 270)
-            if not is_do_besar:
+            if d_8 > 270 and rem_target["TUNAS MUDA"] >= 100 and rem_target["RJTM"] >= 100 and rem_d8 >= 236:
+                tm_8 = 118
+                rj_8 = 118
+                alloc["TUNAS MUDA"]["FM8"] = tm_8
+                alloc["RJTM"]["FM8"] = rj_8
+                rem_target["TUNAS MUDA"] -= tm_8
+                rem_target["RJTM"] -= rj_8
+                rem_d8_b = rem_d8 - 236
+                alloc_b = _round_preserving_sum({"LBK": 0.5 * rem_d8_b, "WSS": 0.5 * rem_d8_b}, rem_d8_b)
+                alloc["LBK"]["FM8"] = alloc_b["LBK"]
+                alloc["WSS"]["FM8"] = alloc_b["WSS"]
+                rem_target["LBK"] -= alloc_b["LBK"]
+                rem_target["WSS"] -= alloc_b["WSS"]
+            else:
                 tm_engkel = min(rem_d8, (rem_d8 // 44) * 44)
                 if tm_engkel == 0 and rem_d8 >= 44:
                     tm_engkel = 44
@@ -325,32 +317,54 @@ def solve_perfect_target_daily_quota(
                     rem_target["TUNAS MUDA"] -= tm_engkel
                     rem_d8 -= tm_engkel
 
-            fm8_partners = ["TUNAS MUDA", "RJTM", "LBK", "WSS"]
-            w_8 = {x: max(0, rem_target[x]) for x in fm8_partners}
-            tot_w8 = sum(w_8.values())
-            if tot_w8 > 0:
-                alloc_8 = _round_preserving_sum({x: (w_8[x] / tot_w8) * rem_d8 for x in fm8_partners}, rem_d8)
-                for x in fm8_partners:
-                    alloc[x]["FM8"] += alloc_8[x]
-                    rem_target[x] -= alloc_8[x]
-            else:
-                alloc["TUNAS MUDA"]["FM8"] += rem_d8
-                rem_target["TUNAS MUDA"] -= rem_d8
+                fm8_partners = ["TUNAS MUDA", "RJTM", "LBK", "WSS"]
+                w_8 = {x: max(0, rem_target[x]) for x in fm8_partners}
+                tot_w8 = sum(w_8.values())
+                if tot_w8 > 0:
+                    alloc_8 = _round_preserving_sum({x: (w_8[x] / tot_w8) * rem_d8 for x in fm8_partners}, rem_d8)
+                    for x in fm8_partners:
+                        alloc[x]["FM8"] += alloc_8[x]
+                        rem_target[x] -= alloc_8[x]
+                else:
+                    alloc["TUNAS MUDA"]["FM8"] += rem_d8
+                    rem_target["TUNAS MUDA"] -= rem_d8
+
+    # 7. FM7 (Dawuan Lama): Alokasi eksklusif TM & RJTM
+    d_7 = do_clean.get("FM7", 0)
+    if d_7 > 0:
+        w7_tm = target_pct["TUNAS MUDA"] / (target_pct["TUNAS MUDA"] + target_pct["RJTM"])
+        alloc_7 = _round_preserving_sum({"TUNAS MUDA": w7_tm * d_7, "RJTM": (1.0 - w7_tm) * d_7}, d_7)
+        for x in ["TUNAS MUDA", "RJTM"]:
+            alloc[x]["FM7"] = alloc_7[x]
+            rem_target[x] -= alloc_7[x]
 
     # 8. FM6 (Cibitung Lama):
-    # Ekspedisi Utama: LBK, WSS, PUNINAR (54-64 u/truk).
-    # Aturan Auto-Balancing Tahap Akhir:
-    # "Jika setelah alokasi ke LBK, WSS, dan PUNINAR masih diperlukan balancing akhir,
-    # tambahkan ekspedisi TUNAS MUDA dan RJTM dengan perhitungan kapasitas minimal 54 unit dan maksimal 64 unit per truk"
+    # - Auto-Balancing Tahap Akhir: Menampung kebutuhan sisa TM & RJTM
+    # - Sisa kuota didistribusikan ke Group B (LBK, WSS, PUNINAR)
     d_6 = do_clean.get("FM6", 0)
-    for x in EXPEDITIONS:
-        alloc[x]["FM6"] = max(0, rem_target[x])
-        rem_target[x] -= alloc[x]["FM6"]
+    for x in ["TUNAS MUDA", "RJTM"]:
+        if rem_target[x] > 0:
+            alloc[x]["FM6"] = rem_target[x]
+            rem_target[x] = 0
 
     cur_fm6 = sum(alloc[x]["FM6"] for x in EXPEDITIONS)
-    gap_6 = d_6 - cur_fm6
+    rem_fm6 = max(0, d_6 - cur_fm6)
+
+    w_tri = {x: max(0, rem_target[x]) for x in tri_group}
+    tot_w_tri = sum(w_tri.values())
+    if tot_w_tri > 0:
+        alloc_tri = _round_preserving_sum({x: (w_tri[x] / tot_w_tri) * rem_fm6 for x in tri_group}, rem_fm6)
+    else:
+        alloc_tri = _round_preserving_sum({x: rem_fm6 / 3.0 for x in tri_group}, rem_fm6)
+
+    for x in tri_group:
+        alloc[x]["FM6"] = alloc_tri[x]
+        rem_target[x] -= alloc_tri[x]
+
+    # Rekonsiliasi akhir total FM6
+    gap_6 = d_6 - sum(alloc[x]["FM6"] for x in EXPEDITIONS)
     if gap_6 != 0:
-        top_exp = max(["LBK", "WSS", "PUNINAR"], key=lambda x: alloc[x]["FM6"])
+        top_exp = max(tri_group, key=lambda x: alloc[x]["FM6"])
         alloc[top_exp]["FM6"] += gap_6
 
     return alloc
