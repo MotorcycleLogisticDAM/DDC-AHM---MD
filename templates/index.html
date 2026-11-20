@@ -148,6 +148,20 @@
 
 
 
+<style>
+    .stepper-btn-up, .stepper-btn-down {
+      transition: all 0.15s ease-in-out;
+      user-select: none;
+    }
+    .stepper-btn-up:hover, .stepper-btn-down:hover {
+      background-color: #fee2e2 !important;
+      color: #b91c1c !important;
+    }
+    .stepper-btn-up:active, .stepper-btn-down:active {
+      background-color: #fecaca !important;
+      transform: scale(0.92);
+    }
+</style>
 </head>
 
 
@@ -3130,6 +3144,7 @@
 
 
           <div class="tab-pane" id="tab-summary">
+            <input type="date" id="sum-header-datepicker" class="no-capture" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="onHeaderDatepickerChange(this.value)">
 
 
 
@@ -3561,30 +3576,19 @@
 
 
 
-                  <!-- TANGGAL SUMMARY (MM/DD/YY) -->
-
-
-
-
-
+                                    <!-- TANGGAL SUMMARY (MM/DD/YY) DENGAN KURSOR STEPPER -->
                   <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
-
-
-
-
-
-                    <span class="me-2 fw-normal" style="font-size: 0.95rem;">up to date :</span>
-
-
-
-
-
-                    <span id="sum-header-date-topright" class="fw-bold text-dark font-monospace" style="font-size: 1.1rem; font-style: normal;">11/11/26</span>
-
-
-
-
-
+                    <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">up to date :</span>
+                    <span id="sum-header-date-topright" class="fw-bold text-dark font-monospace" style="font-size: 1.1rem; font-style: normal; cursor: pointer; text-decoration: underline dotted #b91c1c;" onclick="openSummaryDatePicker()" title="Klik untuk pilih tanggal Summary">11/11/26</span>
+                    <!-- KURSOR STEPPER (NAIK / TURUN TANGGAL) -->
+                    <div class="d-inline-flex flex-column ms-2 no-capture" style="vertical-align: middle; line-height: 1;" title="Ubah tanggal Summary">
+                      <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-up" style="height: 14px; width: 22px; font-size: 10px; border-radius: 3px 3px 0 0; line-height: 1; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepSummaryDate(1)" title="Maju 1 Hari (+1)">
+                        <i class="ti ti-chevron-up" style="font-size: 11px; font-weight: 800;"></i>
+                      </button>
+                      <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-down" style="height: 14px; width: 22px; font-size: 10px; border-radius: 0 0 3px 3px; line-height: 1; border-top: none; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepSummaryDate(-1)" title="Mundur 1 Hari (-1)">
+                        <i class="ti ti-chevron-down" style="font-size: 11px; font-weight: 800;"></i>
+                      </button>
+                    </div>
                   </div>
 
 
@@ -4221,30 +4225,19 @@
 
 
 
-                      <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS -->
-
-
-
-
-
+                                            <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS DENGAN KURSOR STEPPER -->
                       <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
-
-
-
-
-
                         <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">up to date :</span>
-
-
-
-
-
-                        <span id="perf-header-date-topright" class="fw-bold font-monospace" style="font-size: 1.1rem; font-style: normal; color: #000000;">11/11/26</span>
-
-
-
-
-
+                        <span id="perf-header-date-topright" class="fw-bold font-monospace text-dark" style="font-size: 1.1rem; font-style: normal; cursor: pointer; text-decoration: underline dotted #b91c1c;" onclick="openSummaryDatePicker()" title="Klik untuk pilih tanggal Summary">11/11/26</span>
+                        <!-- KURSOR STEPPER (NAIK / TURUN TANGGAL) -->
+                        <div class="d-inline-flex flex-column ms-2 no-capture" style="vertical-align: middle; line-height: 1;" title="Ubah tanggal Summary">
+                          <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-up" style="height: 14px; width: 22px; font-size: 10px; border-radius: 3px 3px 0 0; line-height: 1; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepSummaryDate(1)" title="Maju 1 Hari (+1)">
+                            <i class="ti ti-chevron-up" style="font-size: 11px; font-weight: 800;"></i>
+                          </button>
+                          <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-down" style="height: 14px; width: 22px; font-size: 10px; border-radius: 0 0 3px 3px; line-height: 1; border-top: none; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepSummaryDate(-1)" title="Mundur 1 Hari (-1)">
+                            <i class="ti ti-chevron-down" style="font-size: 11px; font-weight: 800;"></i>
+                          </button>
+                        </div>
                       </div>
 
 
@@ -7562,6 +7555,59 @@ function updateSummaryButtonState() {
 
 
 
+
+
+// ==============================================================================
+// KURSOR STEPPER TANGGAL DASHBOARD SUMMARY (UP / DOWN NAVIGATION)
+// ==============================================================================
+function stepSummaryDate(deltaDays) {
+  const sumDateEl = document.getElementById("sum-date");
+  if (!sumDateEl) return;
+  let curVal = sumDateEl.value;
+  if (!curVal) {
+    curVal = new Date().toISOString().slice(0, 10);
+  }
+  const parts = curVal.split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d);
+    dt.setDate(dt.getDate() + deltaDays);
+
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, "0");
+    const nd = String(dt.getDate()).padStart(2, "0");
+    const newDateStr = `${ny}-${nm}-${nd}`;
+
+    sumDateEl.value = newDateStr;
+    updateSummaryButtonState();
+    loadSummary();
+  }
+}
+
+function openSummaryDatePicker() {
+  const dp = document.getElementById("sum-header-datepicker");
+  const sumDateEl = document.getElementById("sum-date");
+  if (dp && sumDateEl) {
+    dp.value = sumDateEl.value;
+    if (typeof dp.showPicker === "function") {
+      dp.showPicker();
+    } else {
+      sumDateEl.focus();
+    }
+  }
+}
+
+function onHeaderDatepickerChange(val) {
+  if (!val) return;
+  const sumDateEl = document.getElementById("sum-date");
+  if (sumDateEl) {
+    sumDateEl.value = val;
+    updateSummaryButtonState();
+    loadSummary();
+  }
+}
 
 function setSummaryDate(d) {
 
