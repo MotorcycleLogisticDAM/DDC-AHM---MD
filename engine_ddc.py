@@ -1224,6 +1224,9 @@ def calculate_monthly_pacing_analysis(
         else:
             proj_eom = act_u + (pacing_u * rem_count)
 
+        ach_pct = round((act_u / tgt_u * 100.0), 1) if tgt_u > 0 else 0.0
+        prorata_daily_rit = round((tgt_u / total_workdays) / 58.0, 1) if total_workdays > 0 else 0.0
+
         if dev_pct < -0.20:
             status = "NEED BOOST"
             badge_bg = "#fef3c7"
@@ -1231,6 +1234,8 @@ def calculate_monthly_pacing_analysis(
             badge_class = "badge bg-warning text-dark"
             icon = "ti ti-arrow-up-right"
             note = "Tertinggal, prioritas kuota harian"
+            diff_rit = round(rit_u - prorata_daily_rit, 1)
+            arahan_aksi = f"+{diff_rit} Rit/hari" if diff_rit >= 0.5 else "Prioritas +Rit"
         elif dev_pct > 0.20:
             status = "SLOW DOWN"
             badge_bg = "#fee2e2"
@@ -1238,6 +1243,8 @@ def calculate_monthly_pacing_analysis(
             badge_class = "badge bg-danger text-white"
             icon = "ti ti-arrow-down-right"
             note = "Over-quota, kurangi kuota harian"
+            diff_rit = round(prorata_daily_rit - rit_u, 1)
+            arahan_aksi = f"-{diff_rit} Rit/hari" if diff_rit >= 0.5 else "Kurangi Rit"
         else:
             status = "ON TRACK"
             badge_bg = "#dcfce7"
@@ -1245,6 +1252,7 @@ def calculate_monthly_pacing_analysis(
             badge_class = "badge bg-success text-white"
             icon = "ti ti-check"
             note = "Sesuai target pacing bulanan"
+            arahan_aksi = "Pertahankan"
 
         rows.append({
             "XPDC": x,
@@ -1252,6 +1260,7 @@ def calculate_monthly_pacing_analysis(
             "TARGET_SHARE_PCT": round(tgt_pct, 2),
             "ACTUAL_MTD_UNIT": act_u,
             "ACTUAL_MTD_SHARE_PCT": round(act_pct, 2),
+            "ACHIEVEMENT_PCT": ach_pct,
             "PRORATA_TARGET_UNIT": prorata_tgt,
             "GAP_UNIT": gap_u,
             "DEVIASI_PCT": round(dev_pct, 2),
@@ -1260,6 +1269,7 @@ def calculate_monthly_pacing_analysis(
             "DAILY_PACING_RIT": rit_u,
             "PROJ_EOM_UNIT": proj_eom,
             "STATUS": status,
+            "ARAHAN_AKSI": arahan_aksi,
             "BADGE_BG": badge_bg,
             "BADGE_COLOR": badge_color,
             "BADGE_CLASS": badge_class,
@@ -1293,6 +1303,7 @@ def calculate_monthly_pacing_analysis(
             "TARGET_SHARE_PCT": 100.0,
             "ACTUAL_MTD_UNIT": tot_mtd_act,
             "ACTUAL_MTD_SHARE_PCT": 100.0 if tot_mtd_act > 0 else 0.0,
+            "ACHIEVEMENT_PCT": round((tot_mtd_act / tot_target * 100.0), 1) if tot_target > 0 else 0.0,
             "GAP_UNIT": tot_mtd_act - round(tot_target * (passed_count / total_workdays)),
             "DEVIASI_PCT": 0.0,
             "SISA_TARGET_UNIT": tot_sisa_u,

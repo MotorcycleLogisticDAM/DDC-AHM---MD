@@ -351,6 +351,8 @@ def api_daily_quota():
                     "pacing_unit": r["DAILY_PACING_UNIT"],
                     "pacing_rit": r["DAILY_PACING_RIT"],
                     "status": r["STATUS"],
+                    "arahan_aksi": r.get("ARAHAN_AKSI", ""),
+                    "achievement_pct": r.get("ACHIEVEMENT_PCT", 0.0),
                     "badge_class": r["BADGE_CLASS"],
                     "sisa_unit": r["SISA_TARGET_UNIT"],
                 }

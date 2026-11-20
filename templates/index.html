@@ -4400,13 +4400,22 @@
             <!-- CARD ANALISA PACING & KESEIMBANGAN TARGET S.D. AKHIR BULAN -->
             <div class="card shadow-sm mt-3 mb-3" id="card-pacing-analysis" style="border: 1px solid #b0c4de; overflow: hidden;">
               <!-- HEADER RED BANNER SEPERTI DISTRIBUTION SUMMARY -->
-              <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+              <div class="d-flex flex-wrap justify-content-between align-items-stretch" style="background-color: #d00000;">
                 <div class="px-3 py-2 fw-bold d-flex align-items-center text-white" style="font-size: 1.15rem; letter-spacing: 0.5px; font-weight: 800;">
-                  ANALISA PACING &amp; KESEIMBANGAN TARGET S.D. AKHIR BULAN
+                  <i class="ti ti-chart-arrows me-2 fs-2"></i> ANALISA PACING &amp; KESEIMBANGAN TARGET S.D. AKHIR BULAN
                 </div>
-                <div class="d-flex align-items-center">
+                <div class="d-flex flex-wrap align-items-center">
+                  <!-- TOMBOL SWITCH MODE RINGKAS VS DETAIL (no-capture) -->
+                  <div class="btn-group btn-group-sm no-capture me-2 my-1" role="group" aria-label="Pacing View Switcher">
+                    <button type="button" class="btn btn-sm btn-light active fw-bold py-1 px-2 d-flex align-items-center" id="btn-pacing-simple" onclick="switchPacingView('simple')" title="Tampilan Ringkas 6 Kolom">
+                      <i class="ti ti-layout-grid me-1"></i> Mode Ringkas
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light text-white py-1 px-2 d-flex align-items-center" id="btn-pacing-detailed" onclick="switchPacingView('detailed')" title="Tampilan Detail Deviasi Matematis (12 Kolom)">
+                      <i class="ti ti-table me-1"></i> Mode Detail (12 Kolom)
+                    </button>
+                  </div>
                   <!-- TOMBOL EXPORT WA (no-capture) -->
-                  <div class="btn-group no-capture me-2">
+                  <div class="btn-group no-capture me-2 my-1">
                     <button type="button" class="btn btn-sm btn-outline-light text-white d-flex align-items-center py-1 px-2" onclick="sharePacingAnalysisToWhatsApp('copy')" title="Salin Gambar ke Clipboard (Ctrl+V di WA)">
                       <i class="ti ti-brand-whatsapp me-1 text-white fs-4"></i> Salin Gambar (WA)
                     </button>
@@ -4437,18 +4446,46 @@
                   </div>
                   <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS -->
                   <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
-                    <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">s.d. akhir bulan :</span>
-                    <span class="fw-bold font-monospace text-dark" id="pacing-header-eom" style="font-size: 1.05rem; font-style: normal; color: #000000;">30-Nov-2026</span>
+                    <span class="me-2 fw-normal" style="font-size: 0.92rem; color: #000000;">s.d. akhir bulan :</span>
+                    <span class="fw-bold font-monospace text-dark" id="pacing-header-eom" style="font-size: 1.0rem; font-style: normal; color: #000000;">30-Nov-2026</span>
                   </div>
                 </div>
               </div>
 
-              <!-- TABLE CONTAINER -->
-              <div class="table-responsive">
+              <!-- INFO ALERT BAR -->
+              <div class="bg-light p-2 px-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2" style="font-size: 0.82rem;">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge bg-blue-lt text-blue fw-bold" id="pacing-view-label">Mode Ringkas Operasional (6 Kolom)</span>
+                  <span class="text-secondary" id="pacing-workdays-info">Sisa Hari Kerja: <strong class="text-dark" id="pacing-workdays-num">11 Hari</strong> (Senin–Sabtu, Minggu Libur)</span>
+                </div>
+                <div class="text-muted" style="font-size: 0.78rem;">
+                  <i class="ti ti-truck me-1 text-primary"></i> Standar konversi armada trailer acuan: <strong>58 Unit / Rit</strong>
+                </div>
+              </div>
+
+              <!-- VIEW 1: TABLE PACING SIMPLE (6 KOLOM) -->
+              <div class="table-responsive" id="table-pacing-simple">
+                <table class="table table-bordered table-sm mb-0" style="border: 2px solid #366092; font-size: 0.86rem; text-align: center; vertical-align: middle;">
+                  <thead style="background-color: #366092; color: #ffffff;">
+                    <tr style="font-size: 0.82rem; font-weight: 700;">
+                      <th style="width: 17%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff; text-align: left;">EKSPEDISI</th>
+                      <th style="width: 16%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">TARGET BULANAN</th>
+                      <th style="width: 21%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">REALISASI S.D. H-1</th>
+                      <th style="width: 14%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">SISA TARGET</th>
+                      <th style="width: 17%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #1e3a5f; color: #ffffff;">KEBUTUHAN HARIAN</th>
+                      <th style="width: 15%; padding: 8px 10px; border: 1px solid #244b7a; background-color: #1e3a5f; color: #ffffff;">ARAHAN OPERASI</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-pacing-simple"></tbody>
+                </table>
+              </div>
+
+              <!-- VIEW 2: TABLE PACING DETAILED (12 KOLOM) -->
+              <div class="table-responsive" id="table-pacing-detailed" style="display: none;">
                 <table class="table table-bordered table-sm mb-0" style="border: 2px solid #366092; font-size: 0.84rem; text-align: center;">
                   <thead style="background-color: #366092; color: #ffffff;">
                     <tr style="font-size: 0.82rem; font-weight: 700;">
-                      <th rowspan="2" style="padding: 6px 10px; border: 1px solid #244b7a; vertical-align: middle; background-color: #366092; color: #ffffff;">EKSPEDISI</th>
+                      <th rowspan="2" style="padding: 6px 10px; border: 1px solid #244b7a; vertical-align: middle; background-color: #366092; color: #ffffff; text-align: left;">EKSPEDISI</th>
                       <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">TARGET BULANAN</th>
                       <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">REALISASI MTD (H-1)</th>
                       <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">GAP BERJALAN</th>
@@ -4471,7 +4508,7 @@
                       <th style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">STATUS</th>
                     </tr>
                   </thead>
-                  <tbody id="tbody-pacing-summary"></tbody>
+                  <tbody id="tbody-pacing-detailed"></tbody>
                 </table>
               </div>
             </div>
@@ -9557,9 +9594,97 @@ async function loadSummary() {
     if (eomHeader) {
       eomHeader.textContent = `${pa.end_of_month_fmt} (${pa.remaining_workdays} Hari Kerja Tersisa)`;
     }
-    const tbPacing = document.getElementById("tbody-pacing-summary");
-    if (tbPacing && pa.rows) {
-      tbPacing.innerHTML = "";
+    const daysNumEl = document.getElementById("pacing-workdays-num");
+    if (daysNumEl) {
+      daysNumEl.textContent = `${pa.remaining_workdays} Hari`;
+    }
+
+    // 1. Render Mode Ringkas (6 Kolom)
+    const tbSimple = document.getElementById("tbody-pacing-simple");
+    if (tbSimple && pa.rows) {
+      tbSimple.innerHTML = "";
+      pa.rows.forEach(r => {
+        const achPct = r.ACHIEVEMENT_PCT || ((r.TARGET_UNIT > 0 ? (r.ACTUAL_MTD_UNIT / r.TARGET_UNIT * 100) : 0));
+        let barColor = "bg-primary";
+        if (r.STATUS === "NEED BOOST") barColor = "bg-warning";
+        else if (r.STATUS === "SLOW DOWN") barColor = "bg-danger";
+        else barColor = "bg-success";
+
+        let arahanText = r.ARAHAN_AKSI || (r.STATUS === "NEED BOOST" ? "Prioritas +Rit" : (r.STATUS === "SLOW DOWN" ? "Kurangi Rit" : "Pertahankan"));
+        let arahanColor = r.STATUS === "NEED BOOST" ? "color: #92400e;" : (r.STATUS === "SLOW DOWN" ? "color: #991b1b;" : "color: #166534;");
+
+        tbSimple.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 8px 10px; border: 1px solid #cbd5e1; font-size: 0.90rem;">${r.XPDC}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <div class="fw-bold text-dark" style="font-size: 0.90rem;">${fmtNum(r.TARGET_UNIT)} <small class="text-muted fw-normal">u</small></div>
+            <span class="badge bg-blue-lt text-blue px-1 py-0 fw-bold" style="font-size: 0.74rem;">${r.TARGET_SHARE_PCT.toFixed(2)}% target</span>
+          </td>
+          <td style="padding: 6px 10px; border: 1px solid #cbd5e1;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold text-dark" style="font-size: 0.88rem;">${fmtNum(r.ACTUAL_MTD_UNIT)} <small class="text-muted fw-normal">u</small></span>
+              <span class="fw-bold" style="font-size: 0.80rem; ${arahanColor}">${achPct.toFixed(1)}% tercapai</span>
+            </div>
+            <div class="progress shadow-none" style="height: 7px; background-color: #e2e8f0; border-radius: 4px;">
+              <div class="progress-bar ${barColor}" role="progressbar" style="width: ${Math.min(100, Math.max(0, achPct))}%;" aria-valuenow="${achPct}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="text-muted text-start mt-1" style="font-size: 0.72rem;">Share MTD: ${r.ACTUAL_MTD_SHARE_PCT.toFixed(2)}%</div>
+          </td>
+          <td class="num-col fw-bold text-danger" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #fef2f2;">
+            <div style="font-size: 0.92rem;">${fmtNum(r.SISA_TARGET_UNIT)} <small class="text-muted fw-normal">u</small></div>
+            <small class="text-secondary fw-normal" style="font-size: 0.72rem;">${r.SISA_SHARE_PCT.toFixed(2)}% sisa</small>
+          </td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #eff6ff;">
+            <div class="fw-bold text-primary" style="font-size: 0.98rem;">${fmtNum(r.DAILY_PACING_UNIT)} <small class="text-dark fw-bold" style="font-size: 0.78rem;">u/hari</small></div>
+            <span class="badge bg-primary text-white px-2 py-0 mt-1 shadow-xs" style="font-size: 0.76rem; font-weight: 700;">~${r.DAILY_PACING_RIT.toFixed(1)} rit / hari</span>
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <div class="d-flex flex-column align-items-center gap-1">
+              <span class="${r.BADGE_CLASS} px-2 py-1 shadow-xs d-inline-flex align-items-center" style="font-size: 0.78rem; font-weight: 700;">
+                <i class="${r.ICON} me-1"></i>${r.STATUS}
+              </span>
+              <small class="fw-bold" style="font-size: 0.76rem; ${arahanColor}">${arahanText}</small>
+            </div>
+          </td>
+        </tr>`;
+      });
+
+      const pt = pa.totals;
+      const totAchPct = pt.ACHIEVEMENT_PCT || ((pt.TARGET_UNIT > 0 ? (pt.ACTUAL_MTD_UNIT / pt.TARGET_UNIT * 100) : 0));
+      tbSimple.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+        <td class="text-start" style="padding: 8px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">
+          <div style="font-size: 0.90rem;">${fmtNum(pt.TARGET_UNIT)} u</div>
+          <span class="badge bg-blue-lt text-blue px-1 py-0 fw-bold" style="font-size: 0.74rem;">100.00% target</span>
+        </td>
+        <td style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold">${fmtNum(pt.ACTUAL_MTD_UNIT)} u</span>
+            <span class="fw-bold text-primary" style="font-size: 0.80rem;">${totAchPct.toFixed(1)}% tercapai</span>
+          </div>
+          <div class="progress shadow-none" style="height: 7px; background-color: #cbd5e1; border-radius: 4px;">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: ${Math.min(100, Math.max(0, totAchPct))}%;"></div>
+          </div>
+          <div class="text-muted text-start mt-1" style="font-size: 0.72rem;">Share MTD: 100.00%</div>
+        </td>
+        <td class="num-col fw-bold text-danger" style="padding: 6px 8px; border: 1px solid #b0c4de; background-color: #fce7e7;">
+          <div style="font-size: 0.92rem;">${fmtNum(pt.SISA_TARGET_UNIT)} u</div>
+          <small class="text-secondary fw-normal" style="font-size: 0.72rem;">100.00% sisa</small>
+        </td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; background-color: #dbeafe;">
+          <div class="fw-bold text-primary" style="font-size: 0.98rem;">${fmtNum(pt.DAILY_PACING_UNIT)} u/hari</div>
+          <span class="badge bg-primary text-white px-2 py-0 mt-1 shadow-xs" style="font-size: 0.76rem; font-weight: 700;">~${pt.DAILY_PACING_RIT.toFixed(1)} rit / hari</span>
+        </td>
+        <td style="padding: 6px 8px; border: 1px solid #b0c4de; color: #155724; font-size: 0.78rem;">
+          <span class="badge bg-success text-white px-2 py-1 shadow-xs mb-1">100% BALANCED</span>
+          <div class="fw-bold text-muted" style="font-size: 0.74rem;">${pa.remaining_workdays} Hari Kerja</div>
+        </td>
+      </tr>`;
+    }
+
+    // 2. Render Mode Detail (12 Kolom)
+    const tbDetailed = document.getElementById("tbody-pacing-detailed");
+    if (tbDetailed && pa.rows) {
+      tbDetailed.innerHTML = "";
       pa.rows.forEach(r => {
         const gapFmt = (r.GAP_UNIT > 0 ? "+" : "") + fmtNum(r.GAP_UNIT);
         const devFmt = (r.DEVIASI_PCT > 0 ? "+" : "") + r.DEVIASI_PCT.toFixed(2) + "%";
@@ -9568,7 +9693,7 @@ async function loadSummary() {
           <i class="${r.ICON} me-1"></i>${r.STATUS}
         </span>`;
 
-        tbPacing.innerHTML += `<tr>
+        tbDetailed.innerHTML += `<tr>
           <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
           <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.TARGET_UNIT)}</td>
           <td class="num-col fw-bold text-primary" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.TARGET_SHARE_PCT.toFixed(2)}%</td>
@@ -9586,7 +9711,7 @@ async function loadSummary() {
       });
 
       const pt = pa.totals;
-      tbPacing.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+      tbDetailed.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
         <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
         <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.TARGET_UNIT)}</td>
         <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
@@ -21286,6 +21411,42 @@ window.addEventListener("DOMContentLoaded", () => {
 // ==============================================================================
 // MODUL PACING HARIAN & EOM TRACKING
 // ==============================================================================
+function switchPacingView(mode) {
+  const tblSimple = document.getElementById("table-pacing-simple");
+  const tblDetailed = document.getElementById("table-pacing-detailed");
+  const btnSimple = document.getElementById("btn-pacing-simple");
+  const btnDetailed = document.getElementById("btn-pacing-detailed");
+  const lblView = document.getElementById("pacing-view-label");
+
+  if (mode === "simple") {
+    if (tblSimple) tblSimple.style.display = "";
+    if (tblDetailed) tblDetailed.style.display = "none";
+    if (btnSimple) {
+      btnSimple.classList.add("btn-light", "active", "fw-bold");
+      btnSimple.classList.remove("btn-outline-light", "text-white");
+    }
+    if (btnDetailed) {
+      btnDetailed.classList.remove("btn-light", "active", "fw-bold");
+      btnDetailed.classList.add("btn-outline-light", "text-white");
+    }
+    if (lblView) lblView.textContent = "Mode Ringkas Operasional (6 Kolom)";
+    window._pacingViewMode = "simple";
+  } else {
+    if (tblSimple) tblSimple.style.display = "none";
+    if (tblDetailed) tblDetailed.style.display = "";
+    if (btnDetailed) {
+      btnDetailed.classList.add("btn-light", "active", "fw-bold");
+      btnDetailed.classList.remove("btn-outline-light", "text-white");
+    }
+    if (btnSimple) {
+      btnSimple.classList.remove("btn-light", "active", "fw-bold");
+      btnSimple.classList.add("btn-outline-light", "text-white");
+    }
+    if (lblView) lblView.textContent = "Mode Detail Teknis (12 Kolom Deviasi)";
+    window._pacingViewMode = "detailed";
+  }
+}
+
 function updatePacingWidget(ps) {
   if (!ps) return;
   const daysEl = document.getElementById("lbl-pacing-days");
@@ -21313,6 +21474,11 @@ function updatePacingWidget(ps) {
       const sName = shortNames[x] || x;
       let badgeStyle = "background-color: #ffffff; color: #1e293b; border: 1px solid #cbd5e1;";
       let statusIcon = "";
+      let arahanNote = "";
+      if (info.arahan_aksi) {
+        arahanNote = ` &bull; ${info.arahan_aksi}`;
+      }
+
       if (info.status === "NEED BOOST") {
         badgeStyle = "background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;";
         statusIcon = "<i class='ti ti-arrow-up-right ms-1 text-warning' title='Tertinggal'></i>";
@@ -21325,7 +21491,7 @@ function updatePacingWidget(ps) {
       }
 
       container.innerHTML += `
-        <span class="badge px-2 py-1 shadow-xs d-flex align-items-center gap-1" style="${badgeStyle}; font-size: 0.82rem;" title="${x}: Sisa Target ${fmtNum(info.sisa_unit)} Unit (~${info.pacing_rit} rit/hari)">
+        <span class="badge px-2 py-1 shadow-xs d-flex align-items-center gap-1" style="${badgeStyle}; font-size: 0.82rem;" title="${x}: Sisa Target ${fmtNum(info.sisa_unit)} Unit (~${info.pacing_rit} rit/hari)${arahanNote}">
           <strong style="letter-spacing: 0.2px;">${sName}:</strong> ${fmtNum(info.pacing_unit)} u
           <small class="text-muted" style="font-size: 0.75rem;">(~${info.pacing_rit} rit)</small>
           ${statusIcon}
@@ -21377,14 +21543,15 @@ async function sharePacingAnalysisToWhatsApp(action = 'copy') {
     hideLoading();
 
     const rawDate = document.getElementById("sum-date") ? document.getElementById("sum-date").value : "";
-    const safeFilename = `ANALISA_PACING_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+    const viewName = (window._pacingViewMode === 'detailed') ? 'DETAIL' : 'RINGKAS';
+    const safeFilename = `ANALISA_PACING_${viewName}_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
 
     if (action === "copy") {
       canvas.toBlob(async (blob) => {
         try {
           const item = new ClipboardItem({ "image/png": blob });
           await navigator.clipboard.write([item]);
-          showAlert("✓ Gambar Analisa Pacing berhasil disalin ke Clipboard! Silakan buka WhatsApp dan tekan Ctrl+V untuk mengirim.", "success");
+          showAlert("✓ Gambar Analisa Pacing (" + viewName + ") berhasil disalin ke Clipboard! Silakan buka WhatsApp dan tekan Ctrl+V untuk mengirim.", "success");
         } catch (err) {
           const link = document.createElement("a");
           link.download = safeFilename;
