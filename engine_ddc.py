@@ -1291,7 +1291,8 @@ def calculate_mtd_gap_monitoring(
 
         table_rows.append({
             "Ekspedisi": x,
-            "MTD_Quota_Teoritis": round(teo_u, 2),
+            "MTD_Quota": int(round(teo_u)),
+            "MTD_Quota_Teoritis": int(round(teo_u)),
             "Quota_Pct": round(target_pct_100, 2),
             "MTD_Quota_Per_Day": act_u,
             "Actual_Pct": round(act_pct, 2),
@@ -1324,7 +1325,8 @@ def calculate_mtd_gap_monitoring(
 
     totals = {
         "Ekspedisi": "TOTAL",
-        "MTD_Quota_Teoritis": round(tot_teoritis, 2),
+        "MTD_Quota": int(round(tot_teoritis)),
+        "MTD_Quota_Teoritis": int(round(tot_teoritis)),
         "Quota_Pct": 100.00,
         "MTD_Quota_Per_Day": tot_actual,
         "Actual_Pct": 100.00 if tot_actual > 0 else 0.00,

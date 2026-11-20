@@ -6112,7 +6112,7 @@
                   <thead style="background-color: #2563eb; color: #ffffff;">
                     <tr style="font-size: 0.85rem; font-weight: 700; text-align: center;">
                       <th style="width: 20%; padding: 6px 10px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb; text-align: left;">EKSPEDISI</th>
-                      <th class="num-col" style="width: 15%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">MTD QUOTA TEORITIS</th>
+                      <th class="num-col" style="width: 15%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">MTD QUOTA</th>
                       <th class="num-col" style="width: 12%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">TARGET (%)</th>
                       <th class="num-col" style="width: 15%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">MTD QUOTA PER DAY</th>
                       <th class="num-col" style="width: 12%; padding: 6px 8px; border: 1px solid #1d4ed8; color: white; background-color: #2563eb;">ACTUAL (%)</th>
@@ -21276,7 +21276,7 @@ function renderMtdGapTable(mtdData) {
 
     tbody.innerHTML += `<tr>
       <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.Ekspedisi}</td>
-      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Teoritis.toFixed(2))}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(Math.round(r.MTD_Quota !== undefined ? r.MTD_Quota : r.MTD_Quota_Teoritis))}</td>
       <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Quota_Pct.toFixed(2)}%</td>
       <td class="num-col fw-bold text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.MTD_Quota_Per_Day)}</td>
       <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.Actual_Pct.toFixed(2)}%</td>
@@ -21291,7 +21291,7 @@ function renderMtdGapTable(mtdData) {
     const tot = mtdData.totals;
     tfoot.innerHTML = `<tr style="background-color: #e0e7ff; font-weight: bold; border-top: 2px solid #1e3a8a;">
       <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #1e3a8a;">TOTAL</td>
-      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Teoritis.toFixed(2))}</td>
+      <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(Math.round(tot.MTD_Quota !== undefined ? tot.MTD_Quota : tot.MTD_Quota_Teoritis))}</td>
       <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Quota_Pct.toFixed(2)}%</td>
       <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${fmtNum(tot.MTD_Quota_Per_Day)}</td>
       <td class="num-col text-end" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #1e3a8a;">${tot.Actual_Pct.toFixed(2)}%</td>

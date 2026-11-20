@@ -354,7 +354,7 @@ def api_mtd_gap_monitoring():
     Kalkulasi Monitoring MTD GAP (Pengganti Sheet DETAIL - MTD QUOTA PER DAY):
     Agregasi Month-to-Date (MTD) dari tanggal 1 s.d. tanggal cut-off terpilih:
     - Ekspedisi
-    - MTD_Quota_Teoritis (Desimal 2 Digit: DO Plant * % Quota Ekspedisi)
+    - MTD_Quota (Bilangan bulat tanpa desimal: DO Plant * % Quota Ekspedisi)
     - Quota_Pct (% target kuota bulanan)
     - MTD_Quota_Per_Day (Total akumulasi final_allocated_qty rilis)
     - Actual_Pct (MTD_Quota_Per_Day / Total MTD_Quota_Per_Day %)
