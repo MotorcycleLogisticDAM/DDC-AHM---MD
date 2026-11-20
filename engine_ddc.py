@@ -1092,3 +1092,332 @@ def calculate_summary_and_performance(
             else 0.0,
         },
     }
+
+
+# ==============================================================================
+# ALGORITMA ALOKASI HARIAN & AUTO-BALANCING PRIORITAS SALDO MTD DEFICIT
+# ==============================================================================
+def auto_balance_plant_allocation(
+    plant: str,
+    total_do_plant: int,
+    plant_quota_pcts: dict,
+    mtd_gap_prior: dict = None,
+    manual_adjs: dict = None,
+) -> dict:
+    """
+    Menghitung alokasi unit per ekspedisi untuk 1 Plant dengan auto-balancing rounding gap:
+    a. raw_qty desimal eksak = Total DO Plant * % Quota Ekspedisi
+    b. initial_qty = round(raw_qty), daily_plant_gap = Total DO - SUM(initial_qty)
+    c. Auto-Balancing dengan Prioritas Saldo MTD Deficit:
+       - daily_plant_gap > 0: tambahkan +1 unit secara bertahap kepada ekspedisi (% Quota > 0)
+         1) mtd_gap_unit paling minus (defisit MTD terbesar)
+         2) Tie-breaker: sisa desimal positif terbesar (raw_qty - initial_qty)
+       - daily_plant_gap < 0: kurangi -1 unit secara bertahap dari ekspedisi (initial_qty > 0)
+         1) mtd_gap_unit paling plus (surplus MTD terbesar)
+         2) Tie-breaker: sisa desimal negatif terbesar
+    d. Simpan hasil akhir:
+       - system_allocated_qty, manual_adj_qty, final_allocated_qty
+       - residual_gap = Total DO - SUM(final_allocated_qty) (Wajib == 0)
+    """
+    mtd_gap_prior = mtd_gap_prior or {}
+    manual_adjs = manual_adjs or {}
+    total_do_plant = int(total_do_plant)
+
+    raw_qty = {}
+    initial_qty = {}
+    remainders = {}
+
+    for x in EXPEDITIONS:
+        pct = float(plant_quota_pcts.get(x, 0.0))
+        raw = total_do_plant * pct
+        raw_qty[x] = raw
+        init = int(round(raw))
+        initial_qty[x] = init
+        remainders[x] = raw - init
+
+    sum_init = sum(initial_qty.values())
+    daily_plant_gap = total_do_plant - sum_init
+
+    allocated = dict(initial_qty)
+
+    if daily_plant_gap > 0:
+        eligible = [x for x in EXPEDITIONS if float(plant_quota_pcts.get(x, 0.0)) > 0]
+        # Prioritas 1: mtd_gap_unit paling minus, Prioritas 2: sisa desimal positif terbesar
+        eligible.sort(
+            key=lambda x: (
+                float(mtd_gap_prior.get(x, 0.0)),
+                -remainders[x],
+            )
+        )
+        step = 0
+        while daily_plant_gap > 0 and eligible:
+            target_x = eligible[step % len(eligible)]
+            allocated[target_x] += 1
+            daily_plant_gap -= 1
+            step += 1
+
+    elif daily_plant_gap < 0:
+        eligible = [x for x in EXPEDITIONS if allocated[x] > 0]
+        # Prioritas 1: mtd_gap_unit paling plus, Prioritas 2: sisa desimal negatif terbesar
+        eligible.sort(
+            key=lambda x: (
+                -float(mtd_gap_prior.get(x, 0.0)),
+                remainders[x],
+            )
+        )
+        step = 0
+        while daily_plant_gap < 0 and eligible:
+            avail = [x for x in eligible if allocated[x] > 0]
+            if not avail:
+                break
+            target_x = avail[step % len(avail)]
+            allocated[target_x] -= 1
+            daily_plant_gap += 1
+            step += 1
+
+    rows = []
+    tot_system = 0
+    tot_manual = 0
+    tot_final = 0
+
+    for x in EXPEDITIONS:
+        sys_qty = allocated[x]
+        man_adj = int(manual_adjs.get(x, 0))
+        fin_qty = sys_qty + man_adj
+
+        tot_system += sys_qty
+        tot_manual += man_adj
+        tot_final += fin_qty
+
+        rows.append({
+            "plant": plant,
+            "xpdc": x,
+            "quota_pct": round(float(plant_quota_pcts.get(x, 0.0)), 4),
+            "raw_qty": round(raw_qty[x], 4),
+            "initial_qty": initial_qty[x],
+            "system_allocated_qty": sys_qty,
+            "manual_adj_qty": man_adj,
+            "final_allocated_qty": fin_qty,
+        })
+
+    residual_gap = total_do_plant - tot_final
+
+    return {
+        "plant": plant,
+        "total_do": total_do_plant,
+        "rows": rows,
+        "total_system_allocated": tot_system,
+        "total_manual_adj": tot_manual,
+        "total_final_allocated": tot_final,
+        "residual_gap": residual_gap,
+        "is_valid": (residual_gap == 0),
+    }
+
+
+# ==============================================================================
+# KALKULASI MONITORING MTD GAP (PENGGANTI SHEET DETAIL - MTD QUOTA PER DAY)
+# ==============================================================================
+def calculate_mtd_gap_monitoring(
+    expeditions: list,
+    daily_allocations_history: list,
+    daily_do_history: list,
+    quota_pct_matrix: dict,
+    monthly_target_quota_pct: dict,
+    cutoff_date: str,
+) -> dict:
+    """
+    Agregasi Month-to-Date (MTD) dari tanggal 1 s.d. tanggal cut-off terpilih:
+    - MTD_Quota_Teoritis: Total akumulasi (Total DO Plant * % Quota Ekspedisi Plant)
+    - Quota_Pct: Persentase target kuota bulanan (%)
+    - MTD_Quota_Per_Day: Total akumulasi final_allocated_qty harian
+    - Actual_Pct: MTD_Quota_Per_Day / Total MTD_Quota_Per_Day (%)
+    - GAP_UNIT: ROUND(MTD_Quota_Per_Day - MTD_Quota_Teoritis) (Zero-sum balance)
+    - GAP_PCT: Actual_Pct - Quota_Pct (format 4 desimal)
+    """
+    clean_cutoff = str(cutoff_date)[:10]
+
+    # 1. Akumulasi Realisasi Alokasi Harian (MTD_Quota_Per_Day)
+    mtd_actual = {x: 0 for x in expeditions}
+    for rec in (daily_allocations_history or []):
+        tgl = str(rec.get("TANGGAL", rec.get("tanggal", "")))[:10]
+        st = str(rec.get("STATUS", rec.get("status", "RELEASED"))).upper()
+        if tgl and tgl <= clean_cutoff and st in ["RELEASED", "NORMAL", "SAVED"]:
+            x = rec.get("XPDC", rec.get("xpdc"))
+            if x in mtd_actual:
+                mtd_actual[x] += int(rec.get("GRAND_TOTAL", rec.get("final_allocated_qty", 0)))
+
+    # 2. Akumulasi Kuota Teoritis Eksak per Ekspedisi (MTD_Quota_Teoritis)
+    # Catatan: Akumulasi DO dilakukan pada tanggal-tanggal yang alokasinya sudah dirilis
+    # agar total teoritis dan total aktual setara (zero-sum balance tercapai)
+    released_dates = {
+        str(rec.get("TANGGAL", rec.get("tanggal", "")))[:10]
+        for rec in (daily_allocations_history or [])
+        if str(rec.get("STATUS", rec.get("status", "RELEASED"))).upper() in ["RELEASED", "NORMAL", "SAVED"]
+    }
+
+    mtd_teoritis = {x: 0.0 for x in expeditions}
+    for do_rec in (daily_do_history or []):
+        tgl = str(do_rec.get("TANGGAL_STR", do_rec.get("tanggal", "")))[:10]
+        if tgl and tgl <= clean_cutoff:
+            if released_dates and (tgl not in released_dates):
+                continue
+            p = str(do_rec.get("PLANT", do_rec.get("plant", "")))
+            qty_do = int(do_rec.get("QTY_FINAL", do_rec.get("QTY", do_rec.get("qty", 0))))
+            for x in expeditions:
+                pct = 0.0
+                if x in quota_pct_matrix:
+                    pct = float(quota_pct_matrix[x].get(p, 0.0))
+                elif p in quota_pct_matrix:
+                    pct = float(quota_pct_matrix[p].get(x, 0.0))
+                mtd_teoritis[x] += (qty_do * pct)
+
+    tot_actual = sum(mtd_actual.values())
+    tot_teoritis = sum(mtd_teoritis.values())
+
+    table_rows = []
+    raw_gaps = {}
+
+    for x in expeditions:
+        act_u = mtd_actual[x]
+        teo_u = mtd_teoritis[x]
+        q_pct = float(monthly_target_quota_pct.get(x, 0.0))
+
+        act_pct = (act_u / tot_actual * 100.0) if tot_actual > 0 else 0.0
+        target_pct_100 = q_pct * 100.0 if q_pct <= 1.0 else q_pct
+
+        gap_u_raw = act_u - teo_u
+        raw_gaps[x] = gap_u_raw
+        gap_pct = act_pct - target_pct_100
+
+        table_rows.append({
+            "Ekspedisi": x,
+            "MTD_Quota_Teoritis": round(teo_u, 2),
+            "Quota_Pct": round(target_pct_100, 2),
+            "MTD_Quota_Per_Day": act_u,
+            "Actual_Pct": round(act_pct, 2),
+            "GAP_UNIT_RAW": gap_u_raw,
+            "GAP_UNIT": int(round(gap_u_raw)),
+            "GAP_PCT": round(gap_pct, 4),
+        })
+
+    # Verifikasi Zero-Sum: Sesuaikan pembulatan selisih agar tepat 0 jika ada desimal
+    sum_gap_round = sum(r["GAP_UNIT"] for r in table_rows)
+    if sum_gap_round != 0 and tot_actual > 0:
+        diff = sum_gap_round
+        sorted_indices = sorted(
+            range(len(table_rows)),
+            key=lambda i: abs(table_rows[i]["GAP_UNIT_RAW"] - table_rows[i]["GAP_UNIT"]),
+            reverse=True,
+        )
+        for idx in sorted_indices:
+            r = table_rows[idx]
+            if diff > 0 and r["GAP_UNIT"] > r["GAP_UNIT_RAW"]:
+                r["GAP_UNIT"] -= 1
+                diff -= 1
+                if diff == 0:
+                    break
+            elif diff < 0 and r["GAP_UNIT"] < r["GAP_UNIT_RAW"]:
+                r["GAP_UNIT"] += 1
+                diff += 1
+                if diff == 0:
+                    break
+
+    totals = {
+        "Ekspedisi": "TOTAL",
+        "MTD_Quota_Teoritis": round(tot_teoritis, 2),
+        "Quota_Pct": 100.00,
+        "MTD_Quota_Per_Day": tot_actual,
+        "Actual_Pct": 100.00 if tot_actual > 0 else 0.00,
+        "GAP_UNIT": sum(r["GAP_UNIT"] for r in table_rows),
+        "GAP_PCT": round(sum(r["GAP_PCT"] for r in table_rows), 4),
+    }
+
+    return {
+        "cutoff_date": clean_cutoff,
+        "rows": table_rows,
+        "totals": totals,
+        "is_zero_sum": (totals["GAP_UNIT"] == 0),
+    }
+
+
+def calculate_all_plants_daily_allocation(
+    do_per_plant: dict,
+    quota_pct_matrix: dict,
+    mtd_gap_prior: dict = None,
+    manual_adjs_matrix: dict = None,
+) -> dict:
+    """
+    Menghitung alokasi harian per plant untuk seluruh 7 plant (FM1 s.d. FM9)
+    menggunakan auto_balance_plant_allocation berbasis prioritas saldo MTD deficit.
+    """
+    mtd_gap_prior = mtd_gap_prior or {x: 0 for x in EXPEDITIONS}
+    manual_adjs_matrix = manual_adjs_matrix or {}
+
+    plant_results = {}
+    tot_do_all = 0
+    tot_sys_all = 0
+    tot_man_all = 0
+    tot_fin_all = 0
+    tot_res_gap = 0
+
+    xpdc_totals = {x: {"system": 0, "manual": 0, "final": 0} for x in EXPEDITIONS}
+
+    for p in PLANTS:
+        do_val = int(do_per_plant.get(p, 0))
+        pcts = quota_pct_matrix.get(p, {x: 0.0 for x in EXPEDITIONS})
+        adjs = manual_adjs_matrix.get(p, {x: 0 for x in EXPEDITIONS})
+
+        res_p = auto_balance_plant_allocation(
+            plant=p,
+            total_do_plant=do_val,
+            plant_quota_pcts=pcts,
+            mtd_gap_prior=mtd_gap_prior,
+            manual_adjs=adjs,
+        )
+        plant_results[p] = res_p
+        tot_do_all += do_val
+        tot_sys_all += res_p["total_system_allocated"]
+        tot_man_all += res_p["total_manual_adj"]
+        tot_fin_all += res_p["total_final_allocated"]
+        tot_res_gap += res_p["residual_gap"]
+
+        for r in res_p["rows"]:
+            x = r["xpdc"]
+            xpdc_totals[x]["system"] += r["system_allocated_qty"]
+            xpdc_totals[x]["manual"] += r["manual_adj_qty"]
+            xpdc_totals[x]["final"] += r["final_allocated_qty"]
+
+    # Matriks baris per ekspedisi
+    rekap_rows = []
+    for x in EXPEDITIONS:
+        fin_u = xpdc_totals[x]["final"]
+        pct = (fin_u / tot_fin_all * 100.0) if tot_fin_all > 0 else 0.0
+        row_dict = {
+            "xpdc": x,
+            "XPDC": x,
+            "system_total": xpdc_totals[x]["system"],
+            "manual_total": xpdc_totals[x]["manual"],
+            "final_total": fin_u,
+            "GRAND_TOTAL": fin_u,
+            "share_pct": round(pct, 2),
+            "PCT": round(pct, 2),
+        }
+        for p in PLANTS:
+            p_row = next((r for r in plant_results[p]["rows"] if r["xpdc"] == x), None)
+            row_dict[p] = p_row["final_allocated_qty"] if p_row else 0
+            row_dict[f"{p}_sys"] = p_row["system_allocated_qty"] if p_row else 0
+            row_dict[f"{p}_man"] = p_row["manual_adj_qty"] if p_row else 0
+        rekap_rows.append(row_dict)
+
+    is_all_valid = (tot_res_gap == 0) and all(res["is_valid"] for res in plant_results.values())
+
+    return {
+        "plant_results": plant_results,
+        "rekap_rows": rekap_rows,
+        "total_do": tot_do_all,
+        "total_system_allocated": tot_sys_all,
+        "total_manual_adj": tot_man_all,
+        "total_final_allocated": tot_fin_all,
+        "residual_gap": tot_res_gap,
+        "is_all_valid": is_all_valid,
+    }

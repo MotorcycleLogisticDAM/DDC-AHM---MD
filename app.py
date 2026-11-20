@@ -12,6 +12,9 @@ from engine_ddc import (
     calculate_monthly_quota,
     calculate_and_balance_daily_quota,
     calculate_summary_and_performance,
+    auto_balance_plant_allocation,
+    calculate_all_plants_daily_allocation,
+    calculate_mtd_gap_monitoring,
 )
 
 app = Flask(__name__)
@@ -313,6 +316,15 @@ def api_daily_quota():
 
     eff_target_pct = target_pct_dict if target_pct_dict else {x: float(mq["pct_matrix"][x]["TARGET_PCT"]) for x in EXPEDITIONS}
 
+    mtd_monitoring_data = calculate_mtd_gap_monitoring(
+        expeditions=EXPEDITIONS,
+        daily_allocations_history=saved_all,
+        daily_do_history=db.get_do_data(),
+        quota_pct_matrix=mq["pct_matrix"],
+        monthly_target_quota_pct={x: round(eff_target_pct[x] * 100, 2) for x in EXPEDITIONS},
+        cutoff_date=tanggal,
+    )
+
     return jsonify({
         "status": "ok",
         "tanggal": tanggal,
@@ -331,6 +343,83 @@ def api_daily_quota():
             "mode": puninar_fm8_param,
             "reason": puninar_fm8_reason,
         },
+        "mtd_monitoring": mtd_monitoring_data,
+    })
+
+
+
+@app.route("/api/mtd_gap_monitoring", methods=["GET"])
+def api_mtd_gap_monitoring():
+    """
+    Kalkulasi Monitoring MTD GAP (Pengganti Sheet DETAIL - MTD QUOTA PER DAY):
+    Agregasi Month-to-Date (MTD) dari tanggal 1 s.d. tanggal cut-off terpilih:
+    - Ekspedisi
+    - MTD_Quota_Teoritis (Desimal 2 Digit: DO Plant * % Quota Ekspedisi)
+    - Quota_Pct (% target kuota bulanan)
+    - MTD_Quota_Per_Day (Total akumulasi final_allocated_qty rilis)
+    - Actual_Pct (MTD_Quota_Per_Day / Total MTD_Quota_Per_Day %)
+    - GAP_UNIT (ROUND(MTD_Quota_Per_Day - MTD_Quota_Teoritis), Zero-Sum = 0)
+    - GAP_PCT (Actual_Pct - Quota_Pct, 4 Desimal)
+    """
+    from datetime import date
+    cutoff_param = request.args.get("cutoff_date", "").strip()
+    if not cutoff_param:
+        cutoff_param = date.today().isoformat()
+    clean_cutoff = parse_date_str(cutoff_param) or date.today().isoformat()
+
+    c_year = int(clean_cutoff[:4])
+    c_month = int(clean_cutoff[5:7])
+
+    # 1. Ambil target bulanan %
+    target_bulanan_plan = db.get_target_bulanan(tahun=c_year, bulan=c_month)
+    monthly_target_pct = {}
+    if target_bulanan_plan and target_bulanan_plan.get("TOTAL_TARGET"):
+        tot_tb = float(target_bulanan_plan.get("TOTAL_TARGET"))
+        if tot_tb > 0 and target_bulanan_plan.get("TARGETS"):
+            monthly_target_pct = {
+                x: round(float(target_bulanan_plan["TARGETS"].get(x, 0)) / tot_tb * 100.0, 2)
+                for x in EXPEDITIONS
+            }
+    if not monthly_target_pct:
+        monthly_target_pct = {
+            "TUNAS MUDA": 30.41,
+            "RJTM": 25.36,
+            "LBK": 14.77,
+            "WSS": 17.61,
+            "PUNINAR": 11.85,
+        }
+
+    # 2. Ambil Quota % Matrix
+    mq = calculate_monthly_quota(db.get_sl_data(), target_month=c_month, target_year=c_year)
+    pct_matrix = mq.get("pct_matrix", {})
+
+    # 3. Ambil data histori alokasi harian yang sudah dirilis & DO
+    alloc_history = db.get_saved_daily_allocations()
+    month_alloc_hist = [
+        r for r in alloc_history
+        if int(r.get("TAHUN", 0)) == c_year and int(r.get("BULAN", 0)) == c_month
+    ]
+
+    do_history = db.get_do_data()
+    month_do_hist = [
+        r for r in do_history
+        if int(r.get("TAHUN", r.get("YEAR", 0))) == c_year and int(r.get("BULAN", 0)) == c_month
+    ]
+
+    res = calculate_mtd_gap_monitoring(
+        expeditions=EXPEDITIONS,
+        daily_allocations_history=month_alloc_hist,
+        daily_do_history=month_do_hist,
+        quota_pct_matrix=pct_matrix,
+        monthly_target_quota_pct=monthly_target_pct,
+        cutoff_date=clean_cutoff,
+    )
+
+    return jsonify({
+        "status": "ok",
+        "cutoff_date": clean_cutoff,
+        "cutoff_date_fmt": format_date_d_mmm_yy(parse_date_str(clean_cutoff)),
+        "data": res,
     })
 
 
@@ -338,6 +427,17 @@ def api_daily_quota():
 def api_save_daily_quota():
     payload = request.get_json(force=True)
     tanggal = payload.get("tanggal")
+    
+    # Validasi residual_gap wajib == 0 sebelum data harian disimpan / dirilis
+    residual_gaps = payload.get("residual_gaps", {})
+    if residual_gaps:
+        non_zero = {p: int(gap) for p, gap in residual_gaps.items() if int(gap) != 0}
+        if non_zero:
+            err_msg = ", ".join(f"{p}: {gap:+d}" for p, gap in non_zero.items())
+            return jsonify({
+                "status": "error",
+                "message": f"Alokasi belum seimbang! Terdapat Residual Gap pada plant: {err_msg}. Harap seimbangkan alokasi hingga Residual Gap = 0 sebelum merilis.",
+            }), 400
     do_per_plant = payload.get("do_per_plant", {})
     alloc_matrix = payload.get("alloc_matrix", {})
 
