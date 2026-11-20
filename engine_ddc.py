@@ -1091,4 +1091,215 @@ def calculate_summary_and_performance(
             if tot_upto_tgt > 0
             else 0.0,
         },
+        "pacing_analysis": calculate_monthly_pacing_analysis(
+            report_date_str=rep_str,
+            sl_records=sl_records,
+            alloc_records=alloc_records,
+            planned_monthly_target=planned_monthly_target,
+            monthly_quota_pct=monthly_quota_pct,
+        ),
+    }
+
+
+def calculate_monthly_pacing_analysis(
+    report_date_str,
+    sl_records=None,
+    alloc_records=None,
+    planned_monthly_target=None,
+    monthly_quota_pct=None,
+):
+    """
+    Menghitung Analisa Pacing Keseimbangan Target Bulanan (Unit & %) vs Kuota Harian s.d. Akhir Bulan:
+    - Sisa hari kerja operasional (Senin - Sabtu, Minggu libur operasional)
+    - Realisasi MTD unit & share %
+    - Gap berjalan MTD terhadap target pro-rata
+    - Sisa target bulanan (unit & share %)
+    - Pacing kuota harian ideal per hari kerja tersisa (unit/hari & rit trailer @ 58 u)
+    - Proyeksi akhir bulan (EOM forecast) dan status ketercapaian (ON TRACK / NEED BOOST / SLOW DOWN)
+    """
+    import calendar
+    from datetime import date
+
+    rep_str = parse_date_str(report_date_str) or "2026-11-18"
+    rep_year = int(rep_str[:4])
+    rep_month = int(rep_str[5:7])
+    rep_day = int(rep_str[8:10])
+
+    num_days = calendar.monthrange(rep_year, rep_month)[1]
+    workdays = [
+        date(rep_year, rep_month, d)
+        for d in range(1, num_days + 1)
+        if date(rep_year, rep_month, d).weekday() < 6
+    ]
+    total_workdays = len(workdays)
+    rep_dt = date(rep_year, rep_month, rep_day)
+
+    workdays_passed = [d for d in workdays if d < rep_dt]
+    passed_count = len(workdays_passed)
+
+    workdays_remaining = [d for d in workdays if d >= rep_dt]
+    rem_count = max(1, len(workdays_remaining))
+
+    end_of_month_str = format_date_d_mmm_yy(date(rep_year, rep_month, num_days))
+
+    # Target bulanan
+    has_plan = bool(
+        planned_monthly_target
+        and isinstance(planned_monthly_target, dict)
+        and any(int(v) > 0 for v in planned_monthly_target.values())
+    )
+
+    target_units = {}
+    tot_target = 0
+    if has_plan:
+        target_units = {x: int(planned_monthly_target.get(x, 0)) for x in EXPEDITIONS}
+        tot_target = sum(target_units.values())
+
+    if tot_target <= 0:
+        base_tot = 73524
+        default_pcts = {
+            "TUNAS MUDA": 0.3041,
+            "RJTM": 0.2536,
+            "LBK": 0.1477,
+            "WSS": 0.1761,
+            "PUNINAR": 0.1185,
+        }
+        if monthly_quota_pct:
+            target_units = _round_preserving_sum(
+                {x: float(monthly_quota_pct.get(x, default_pcts[x])) * base_tot for x in EXPEDITIONS},
+                base_tot,
+            )
+        else:
+            target_units = _round_preserving_sum(
+                {x: default_pcts[x] * base_tot for x in EXPEDITIONS}, base_tot
+            )
+        tot_target = base_tot
+
+    target_shares = {
+        x: (target_units[x] / tot_target * 100.0) if tot_target > 0 else 0.0
+        for x in EXPEDITIONS
+    }
+
+    # Realisasi MTD s.d. H-1 (sebelum rep_str)
+    mtd_actual = {x: 0 for x in EXPEDITIONS}
+    if sl_records:
+        for r in sl_records:
+            if int(r.get("YEAR", 0)) == rep_year and int(r.get("MONTH", 0)) == rep_month:
+                t_str = str(r.get("TANGGAL_STR", ""))
+                if t_str and t_str < rep_str and r.get("XPDC") in mtd_actual:
+                    mtd_actual[r["XPDC"]] += int(r.get("QTY", 0))
+
+    if sum(mtd_actual.values()) == 0 and alloc_records:
+        for r in alloc_records:
+            if int(r.get("TAHUN", 0)) == rep_year and int(r.get("BULAN", 0)) == rep_month:
+                t_str = str(r.get("TANGGAL", ""))
+                if t_str and t_str < rep_str and r.get("XPDC") in mtd_actual:
+                    mtd_actual[r["XPDC"]] += int(r.get("GRAND_TOTAL", 0))
+
+    tot_mtd_act = sum(mtd_actual.values())
+
+    rows = []
+    tot_sisa_u = 0
+    tot_pacing_u = 0
+    tot_pacing_rit = 0.0
+    tot_proj_eom = 0
+
+    for x in EXPEDITIONS:
+        tgt_u = target_units[x]
+        tgt_pct = target_shares[x]
+        act_u = mtd_actual[x]
+        act_pct = (act_u / tot_mtd_act * 100.0) if tot_mtd_act > 0 else 0.0
+
+        prorata_tgt = round(tgt_u * (passed_count / total_workdays))
+        gap_u = act_u - prorata_tgt
+        dev_pct = (act_pct - tgt_pct) if tot_mtd_act > 0 else 0.0
+
+        sisa_u = max(0, tgt_u - act_u)
+        pacing_u = int(round(sisa_u / rem_count))
+        rit_u = round(pacing_u / 58.0, 1)
+
+        if passed_count > 0 and act_u > 0:
+            run_rate = act_u / passed_count
+            proj_eom = int(round(act_u + (run_rate * rem_count)))
+        else:
+            proj_eom = act_u + (pacing_u * rem_count)
+
+        if dev_pct < -0.20:
+            status = "NEED BOOST"
+            badge_bg = "#fef3c7"
+            badge_color = "#92400e"
+            badge_class = "badge bg-warning text-dark"
+            icon = "ti ti-arrow-up-right"
+            note = "Tertinggal, prioritas kuota harian"
+        elif dev_pct > 0.20:
+            status = "SLOW DOWN"
+            badge_bg = "#fee2e2"
+            badge_color = "#991b1b"
+            badge_class = "badge bg-danger text-white"
+            icon = "ti ti-arrow-down-right"
+            note = "Over-quota, kurangi kuota harian"
+        else:
+            status = "ON TRACK"
+            badge_bg = "#dcfce7"
+            badge_color = "#166534"
+            badge_class = "badge bg-success text-white"
+            icon = "ti ti-check"
+            note = "Sesuai target pacing bulanan"
+
+        rows.append({
+            "XPDC": x,
+            "TARGET_UNIT": tgt_u,
+            "TARGET_SHARE_PCT": round(tgt_pct, 2),
+            "ACTUAL_MTD_UNIT": act_u,
+            "ACTUAL_MTD_SHARE_PCT": round(act_pct, 2),
+            "PRORATA_TARGET_UNIT": prorata_tgt,
+            "GAP_UNIT": gap_u,
+            "DEVIASI_PCT": round(dev_pct, 2),
+            "SISA_TARGET_UNIT": sisa_u,
+            "DAILY_PACING_UNIT": pacing_u,
+            "DAILY_PACING_RIT": rit_u,
+            "PROJ_EOM_UNIT": proj_eom,
+            "STATUS": status,
+            "BADGE_BG": badge_bg,
+            "BADGE_COLOR": badge_color,
+            "BADGE_CLASS": badge_class,
+            "ICON": icon,
+            "NOTE": note,
+        })
+
+        tot_sisa_u += sisa_u
+        tot_pacing_u += pacing_u
+        tot_pacing_rit += rit_u
+        tot_proj_eom += proj_eom
+
+    for r in rows:
+        r["SISA_SHARE_PCT"] = (
+            round(r["SISA_TARGET_UNIT"] / tot_sisa_u * 100.0, 2)
+            if tot_sisa_u > 0
+            else 0.0
+        )
+
+    return {
+        "report_date": rep_str,
+        "report_date_fmt": format_date_d_mmm_yy(rep_dt),
+        "year": rep_year,
+        "month": rep_month,
+        "total_workdays": total_workdays,
+        "passed_workdays": passed_count,
+        "remaining_workdays": rem_count,
+        "end_of_month_fmt": end_of_month_str,
+        "totals": {
+            "TARGET_UNIT": tot_target,
+            "TARGET_SHARE_PCT": 100.0,
+            "ACTUAL_MTD_UNIT": tot_mtd_act,
+            "ACTUAL_MTD_SHARE_PCT": 100.0 if tot_mtd_act > 0 else 0.0,
+            "GAP_UNIT": tot_mtd_act - round(tot_target * (passed_count / total_workdays)),
+            "DEVIASI_PCT": 0.0,
+            "SISA_TARGET_UNIT": tot_sisa_u,
+            "SISA_SHARE_PCT": 100.0 if tot_sisa_u > 0 else 0.0,
+            "DAILY_PACING_UNIT": tot_pacing_u,
+            "DAILY_PACING_RIT": round(tot_pacing_rit, 1),
+            "PROJ_EOM_UNIT": tot_proj_eom,
+        },
+        "rows": rows,
     }

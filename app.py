@@ -12,6 +12,7 @@ from engine_ddc import (
     calculate_monthly_quota,
     calculate_and_balance_daily_quota,
     calculate_summary_and_performance,
+    calculate_monthly_pacing_analysis,
 )
 
 app = Flask(__name__)
@@ -313,6 +314,14 @@ def api_daily_quota():
 
     eff_target_pct = target_pct_dict if target_pct_dict else {x: float(mq["pct_matrix"][x]["TARGET_PCT"]) for x in EXPEDITIONS}
 
+    pacing_data = calculate_monthly_pacing_analysis(
+        report_date_str=tanggal,
+        sl_records=sl_records,
+        alloc_records=saved_all,
+        planned_monthly_target=(target_bulanan_plan.get("TARGETS") if target_bulanan_plan else None),
+        monthly_quota_pct=target_pct_dict,
+    )
+
     return jsonify({
         "status": "ok",
         "tanggal": tanggal,
@@ -330,6 +339,23 @@ def api_daily_quota():
             "eligible": puninar_fm8_eligible,
             "mode": puninar_fm8_param,
             "reason": puninar_fm8_reason,
+        },
+        "pacing_summary": {
+            "remaining_workdays": pacing_data["remaining_workdays"],
+            "total_workdays": pacing_data["total_workdays"],
+            "end_of_month_fmt": pacing_data["end_of_month_fmt"],
+            "total_pacing_unit": pacing_data["totals"]["DAILY_PACING_UNIT"],
+            "total_pacing_rit": pacing_data["totals"]["DAILY_PACING_RIT"],
+            "expeditions": {
+                r["XPDC"]: {
+                    "pacing_unit": r["DAILY_PACING_UNIT"],
+                    "pacing_rit": r["DAILY_PACING_RIT"],
+                    "status": r["STATUS"],
+                    "badge_class": r["BADGE_CLASS"],
+                    "sisa_unit": r["SISA_TARGET_UNIT"],
+                }
+                for r in pacing_data["rows"]
+            },
         },
     })
 

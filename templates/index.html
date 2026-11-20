@@ -4397,6 +4397,86 @@
 
             </div>
 
+            <!-- CARD ANALISA PACING & KESEIMBANGAN TARGET S.D. AKHIR BULAN -->
+            <div class="card shadow-sm mt-3 mb-3" id="card-pacing-analysis" style="border: 1px solid #b0c4de; overflow: hidden;">
+              <!-- HEADER RED BANNER SEPERTI DISTRIBUTION SUMMARY -->
+              <div class="d-flex justify-content-between align-items-stretch" style="background-color: #d00000;">
+                <div class="px-3 py-2 fw-bold d-flex align-items-center text-white" style="font-size: 1.15rem; letter-spacing: 0.5px; font-weight: 800;">
+                  ANALISA PACING &amp; KESEIMBANGAN TARGET S.D. AKHIR BULAN
+                </div>
+                <div class="d-flex align-items-center">
+                  <!-- TOMBOL EXPORT WA (no-capture) -->
+                  <div class="btn-group no-capture me-2">
+                    <button type="button" class="btn btn-sm btn-outline-light text-white d-flex align-items-center py-1 px-2" onclick="sharePacingAnalysisToWhatsApp('copy')" title="Salin Gambar ke Clipboard (Ctrl+V di WA)">
+                      <i class="ti ti-brand-whatsapp me-1 text-white fs-4"></i> Salin Gambar (WA)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light text-white dropdown-toggle dropdown-toggle-split py-1 px-1" data-bs-toggle="dropdown" aria-expanded="false">
+                      <span class="visually-hidden">Opsi</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="sharePacingAnalysisToWhatsApp('copy')">
+                          <i class="ti ti-copy me-2 text-teal fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Salin Gambar (Clipboard)</div>
+                            <small class="text-muted">Langsung Ctrl+V di WhatsApp</small>
+                          </div>
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider my-1"></li>
+                      <li>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="sharePacingAnalysisToWhatsApp('download')">
+                          <i class="ti ti-download me-2 text-primary fs-4"></i>
+                          <div>
+                            <div class="fw-bold">Download File PNG</div>
+                            <small class="text-muted">Simpan gambar kualitas tinggi</small>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <!-- TANGGAL SIMPAN / UP TO DATE DI KANAN ATAS -->
+                  <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
+                    <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">s.d. akhir bulan :</span>
+                    <span class="fw-bold font-monospace text-dark" id="pacing-header-eom" style="font-size: 1.05rem; font-style: normal; color: #000000;">30-Nov-2026</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TABLE CONTAINER -->
+              <div class="table-responsive">
+                <table class="table table-bordered table-sm mb-0" style="border: 2px solid #366092; font-size: 0.84rem; text-align: center;">
+                  <thead style="background-color: #366092; color: #ffffff;">
+                    <tr style="font-size: 0.82rem; font-weight: 700;">
+                      <th rowspan="2" style="padding: 6px 10px; border: 1px solid #244b7a; vertical-align: middle; background-color: #366092; color: #ffffff;">EKSPEDISI</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">TARGET BULANAN</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">REALISASI MTD (H-1)</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">GAP BERJALAN</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">SISA TARGET S.D EOM</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #1e3a5f; color: #ffffff;">PACING HARIAN IDEAL</th>
+                      <th colspan="2" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #1e3a5f; color: #ffffff;">PROYEKSI AKHIR BULAN</th>
+                    </tr>
+                    <tr style="font-size: 0.78rem; font-weight: 600;">
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">UNIT</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">SHARE %</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">UNIT</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">SHARE %</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">UNIT</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">DEV %</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">UNIT</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #366092; color: #ffffff;">SHARE %</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">UNIT/HARI</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">RIT/HARI</th>
+                      <th class="num-col" style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">EOM PROJ</th>
+                      <th style="padding: 4px 8px; border: 1px solid #244b7a; background-color: #2b4e77; color: #ffffff;">STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-pacing-summary"></tbody>
+                </table>
+              </div>
+            </div>
+
+
 
 
 
@@ -5329,6 +5409,43 @@
 
 
           <div class="tab-pane" id="tab-daily">
+            <!-- WIDGET PANDUAN CEPAT PACING HARIAN (TARGET S.D. AKHIR BULAN) -->
+            <div class="card mb-3 shadow-xs" id="widget-pacing-guide" style="border: 1px solid #93c5fd; background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);">
+              <div class="card-body p-2 px-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary text-white p-1 px-2 d-flex align-items-center shadow-xs" style="font-size: 0.82rem; letter-spacing: 0.3px; font-weight: 700;">
+                      <i class="ti ti-target me-1 fs-3"></i> PANDUAN KUOTA PACING HARIAN
+                    </span>
+                    <span class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.88rem;" id="pacing-workdays-badge">
+                      <i class="ti ti-calendar-event me-1 text-primary"></i>Sisa Hari Kerja: <strong class="text-primary ms-1" id="lbl-pacing-days">11 Hari</strong> <span class="text-muted ms-1" id="lbl-pacing-eom">(s.d. 30-Nov-2026)</span>
+                    </span>
+                  </div>
+                  <div>
+                    <a href="#tab-summary" class="btn btn-xs btn-outline-primary py-1 px-2 d-flex align-items-center shadow-xs" onclick="switchToTabSummaryPacing()" style="font-size: 0.78rem; font-weight: 600;">
+                      <i class="ti ti-chart-bar me-1"></i>Lihat Analisa Penuh &raquo;
+                    </a>
+                  </div>
+                </div>
+                
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2 pt-2 border-top" style="border-color: #bfdbfe !important;">
+                  <span class="text-secondary fw-bold" style="font-size: 0.80rem;">Kebutuhan Pacing Hari Ini:</span>
+                  <div class="d-flex flex-wrap gap-2 align-items-center" id="pacing-badges-container">
+                    <span class="badge bg-white text-dark border px-2 py-1 shadow-xs" style="font-size: 0.82rem;">TM: <strong>--</strong></span>
+                    <span class="badge bg-white text-dark border px-2 py-1 shadow-xs" style="font-size: 0.82rem;">RJTM: <strong>--</strong></span>
+                    <span class="badge bg-white text-dark border px-2 py-1 shadow-xs" style="font-size: 0.82rem;">LBK: <strong>--</strong></span>
+                    <span class="badge bg-white text-dark border px-2 py-1 shadow-xs" style="font-size: 0.82rem;">WSS: <strong>--</strong></span>
+                    <span class="badge bg-white text-dark border px-2 py-1 shadow-xs" style="font-size: 0.82rem;">PUN: <strong>--</strong></span>
+                  </div>
+                  <div class="ms-auto d-flex align-items-center gap-2">
+                    <span class="badge bg-blue-lt text-blue px-2 py-1 fw-bold shadow-xs" id="pacing-total-badge" style="font-size: 0.82rem;">
+                      Total Pacing: <strong>-- u/hari</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
 
 
 
@@ -9433,6 +9550,62 @@ async function loadSummary() {
 
   </tr>`;
 
+  // Render Tabel Analisa Pacing & Keseimbangan Target s.d. Akhir Bulan
+  const pa = d.pacing_analysis;
+  if (pa) {
+    const eomHeader = document.getElementById("pacing-header-eom");
+    if (eomHeader) {
+      eomHeader.textContent = `${pa.end_of_month_fmt} (${pa.remaining_workdays} Hari Kerja Tersisa)`;
+    }
+    const tbPacing = document.getElementById("tbody-pacing-summary");
+    if (tbPacing && pa.rows) {
+      tbPacing.innerHTML = "";
+      pa.rows.forEach(r => {
+        const gapFmt = (r.GAP_UNIT > 0 ? "+" : "") + fmtNum(r.GAP_UNIT);
+        const devFmt = (r.DEVIASI_PCT > 0 ? "+" : "") + r.DEVIASI_PCT.toFixed(2) + "%";
+        const devColor = Math.abs(r.DEVIASI_PCT) <= 0.20 ? "color: #155724;" : (r.DEVIASI_PCT < -0.20 ? "color: #92400e;" : "color: #991b1b;");
+        const statusBadge = `<span class="${r.BADGE_CLASS} px-2 py-1 shadow-xs d-inline-flex align-items-center" style="font-size: 0.78rem; font-weight: 700;">
+          <i class="${r.ICON} me-1"></i>${r.STATUS}
+        </span>`;
+
+        tbPacing.innerHTML += `<tr>
+          <td class="fw-bold text-dark text-start" style="padding: 6px 10px; border: 1px solid #cbd5e1;">${r.XPDC}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.TARGET_UNIT)}</td>
+          <td class="num-col fw-bold text-primary" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.TARGET_SHARE_PCT.toFixed(2)}%</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.ACTUAL_MTD_UNIT)}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.ACTUAL_MTD_SHARE_PCT.toFixed(2)}%</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${gapFmt}</td>
+          <td class="num-col fw-bold" style="padding: 6px 8px; border: 1px solid #cbd5e1; ${devColor}">${devFmt}</td>
+          <td class="num-col fw-bold" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #f8fafc;">${fmtNum(r.SISA_TARGET_UNIT)}</td>
+          <td class="num-col" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #f8fafc;">${r.SISA_SHARE_PCT.toFixed(2)}%</td>
+          <td class="num-col fw-bold text-dark" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #eff6ff;">${fmtNum(r.DAILY_PACING_UNIT)}</td>
+          <td class="num-col text-muted" style="padding: 6px 8px; border: 1px solid #cbd5e1; background-color: #eff6ff;">~${r.DAILY_PACING_RIT.toFixed(1)} rit</td>
+          <td class="num-col fw-bold" style="padding: 6px 8px; border: 1px solid #cbd5e1;">${fmtNum(r.PROJ_EOM_UNIT)}</td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${statusBadge}</td>
+        </tr>`;
+      });
+
+      const pt = pa.totals;
+      tbPacing.innerHTML += `<tr style="background-color: #dce6f1; font-weight: bold; border: 1px solid #b0c4de;">
+        <td class="text-start" style="padding: 6px 10px; border: 1px solid #b0c4de; color: #000000;">TOTAL</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.TARGET_UNIT)}</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.ACTUAL_MTD_UNIT)}</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${pt.ACTUAL_MTD_SHARE_PCT.toFixed(2)}%</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${(pt.GAP_UNIT > 0 ? "+" : "") + fmtNum(pt.GAP_UNIT)}</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">0.00%</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.SISA_TARGET_UNIT)}</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">100.00%</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.DAILY_PACING_UNIT)}</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">~${pt.DAILY_PACING_RIT.toFixed(1)} rit</td>
+        <td class="num-col" style="padding: 6px 8px; border: 1px solid #b0c4de; color: #000000;">${fmtNum(pt.PROJ_EOM_UNIT)}</td>
+        <td style="padding: 6px 8px; border: 1px solid #b0c4de; color: #155724; font-size: 0.78rem;">100% BALANCED</td>
+      </tr>`;
+    }
+  }
+
+
+
 
 
 
@@ -12178,6 +12351,10 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
     const d = await res.json();
     window._dqTargetShares = d.target_shares || {};
+    // Update Widget Panduan Cepat Pacing di Kuota Harian
+    if (d.pacing_summary) {
+      updatePacingWidget(d.pacing_summary);
+    }
     // Update Badge Status Rule FM8 PUNINAR
     const pfm8 = d.puninar_fm8;
     const pfm8Container = document.getElementById("puninar-fm8-status-container");
@@ -21103,6 +21280,131 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+
+
+// ==============================================================================
+// MODUL PACING HARIAN & EOM TRACKING
+// ==============================================================================
+function updatePacingWidget(ps) {
+  if (!ps) return;
+  const daysEl = document.getElementById("lbl-pacing-days");
+  const eomEl = document.getElementById("lbl-pacing-eom");
+  const container = document.getElementById("pacing-badges-container");
+  const totBadge = document.getElementById("pacing-total-badge");
+
+  if (daysEl) daysEl.textContent = `${ps.remaining_workdays} Hari`;
+  if (eomEl) eomEl.textContent = `(s.d. ${ps.end_of_month_fmt})`;
+  if (totBadge) {
+    totBadge.innerHTML = `Total Pacing: <strong>${fmtNum(ps.total_pacing_unit)} u/hari</strong> (~${ps.total_pacing_rit} rit)`;
+  }
+
+  if (container && ps.expeditions) {
+    const shortNames = {
+      "TUNAS MUDA": "TM",
+      "RJTM": "RJTM",
+      "LBK": "LBK",
+      "WSS": "WSS",
+      "PUNINAR": "PUN"
+    };
+    container.innerHTML = "";
+    Object.keys(ps.expeditions).forEach(x => {
+      const info = ps.expeditions[x];
+      const sName = shortNames[x] || x;
+      let badgeStyle = "background-color: #ffffff; color: #1e293b; border: 1px solid #cbd5e1;";
+      let statusIcon = "";
+      if (info.status === "NEED BOOST") {
+        badgeStyle = "background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;";
+        statusIcon = "<i class='ti ti-arrow-up-right ms-1 text-warning' title='Tertinggal'></i>";
+      } else if (info.status === "SLOW DOWN") {
+        badgeStyle = "background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;";
+        statusIcon = "<i class='ti ti-arrow-down-right ms-1 text-danger' title='Over Quota'></i>";
+      } else {
+        badgeStyle = "background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;";
+        statusIcon = "<i class='ti ti-check ms-1 text-success' title='On Track'></i>";
+      }
+
+      container.innerHTML += `
+        <span class="badge px-2 py-1 shadow-xs d-flex align-items-center gap-1" style="${badgeStyle}; font-size: 0.82rem;" title="${x}: Sisa Target ${fmtNum(info.sisa_unit)} Unit (~${info.pacing_rit} rit/hari)">
+          <strong style="letter-spacing: 0.2px;">${sName}:</strong> ${fmtNum(info.pacing_unit)} u
+          <small class="text-muted" style="font-size: 0.75rem;">(~${info.pacing_rit} rit)</small>
+          ${statusIcon}
+        </span>
+      `;
+    });
+  }
+}
+
+function switchToTabSummaryPacing() {
+  const tabTrigger = document.querySelector('a[href="#tab-summary"]');
+  if (tabTrigger) {
+    const tab = new bootstrap.Tab(tabTrigger);
+    tab.show();
+    setTimeout(() => {
+      const card = document.getElementById("card-pacing-analysis");
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.style.transition = 'box-shadow 0.3s ease';
+        card.style.boxShadow = '0 0 0 4px rgba(208, 0, 0, 0.4)';
+        setTimeout(() => card.style.boxShadow = '', 1500);
+      }
+    }, 250);
+  }
+}
+
+async function sharePacingAnalysisToWhatsApp(action = 'copy') {
+  if (typeof html2canvas === "undefined") {
+    showAlert("Library html2canvas belum termuat. Harap refresh halaman.");
+    return;
+  }
+  const card = document.getElementById("card-pacing-analysis");
+  if (!card) {
+    showAlert("Elemen Analisa Pacing tidak ditemukan.");
+    return;
+  }
+  showLoading("Memproses Gambar...", "Mengambil tangkapan layar Analisa Pacing untuk WhatsApp...");
+  try {
+    const noCaptureEls = card.querySelectorAll(".no-capture");
+    noCaptureEls.forEach(el => el.style.visibility = "hidden");
+
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false
+    });
+    noCaptureEls.forEach(el => el.style.visibility = "visible");
+    hideLoading();
+
+    const rawDate = document.getElementById("sum-date") ? document.getElementById("sum-date").value : "";
+    const safeFilename = `ANALISA_PACING_${rawDate || new Date().toISOString().slice(0, 10)}.png`;
+
+    if (action === "copy") {
+      canvas.toBlob(async (blob) => {
+        try {
+          const item = new ClipboardItem({ "image/png": blob });
+          await navigator.clipboard.write([item]);
+          showAlert("✓ Gambar Analisa Pacing berhasil disalin ke Clipboard! Silakan buka WhatsApp dan tekan Ctrl+V untuk mengirim.", "success");
+        } catch (err) {
+          const link = document.createElement("a");
+          link.download = safeFilename;
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+          showAlert("Clipboard otomatis tidak diizinkan oleh browser. Gambar telah didownload ke folder Download Anda.", "info");
+        }
+      }, "image/png");
+    } else {
+      const link = document.createElement("a");
+      link.download = safeFilename;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showAlert(`✓ File ${safeFilename} berhasil didownload!`, "success");
+    }
+  } catch (err) {
+    hideLoading();
+    showAlert("Gagal membuat gambar analisa pacing: " + err.message, "danger");
+  }
+}
 
 </script>
 
