@@ -5351,7 +5351,7 @@
                   </div>
                   <div class="col-md-2">
                     <label class="form-label mb-1">Atau Tanggal Baru</label>
-                    <input type="date" id="dq-date-input" class="form-control form-control-sm" value="2026-10-30">
+                    <input type="date" id="dq-date-input" class="form-control form-control-sm" value="2026-10-30" onchange="setDailyQuotaDate(this.value)">
                   </div>
                   <div class="col-md-2">
                     <label class="form-label mb-1">Rolling FM1 & FM2</label>
@@ -5677,6 +5677,8 @@
 
 
             <div class="card mb-3 shadow-sm" id="card-new-quota-harian" style="border: 1px solid #b0c4de; overflow: hidden;">
+              <!-- DATEPICKER TERSEMBUNYI UNTUK KLIK TANGGAL HEADER KUOTA HARIAN -->
+              <input type="date" id="dq-header-datepicker" class="no-capture" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" onchange="onDqHeaderDatepickerChange(this.value)">
 
 
 
@@ -5994,30 +5996,19 @@
 
 
 
-                  <!-- TANGGAL DO KANAN ATAS (MM/DD/YY) -->
-
-
-
-
-
+                  <!-- TANGGAL DO KANAN ATAS (MM/DD/YY) DENGAN KURSOR STEPPER -->
                   <div class="px-3 py-2 text-dark d-flex align-items-center justify-content-center" style="background-color: #fca5a5; font-style: italic; min-height: 100%;">
-
-
-
-
-
                     <span class="me-2 fw-normal" style="font-size: 0.95rem; color: #000000;">Tanggal DO :</span>
-
-
-
-
-
-                    <span id="dq-header-date-topright" class="fw-bold font-monospace" style="font-size: 1.1rem; font-style: normal; color: #000000;">11/06/26</span>
-
-
-
-
-
+                    <span id="dq-header-date-topright" class="fw-bold text-dark font-monospace" style="font-size: 1.1rem; font-style: normal; cursor: pointer; text-decoration: underline dotted #b91c1c;" onclick="openDailyQuotaDatePicker()" title="Klik untuk pilih tanggal Kuota Harian (H-1)">11/06/26</span>
+                    <!-- KURSOR STEPPER (NAIK / TURUN TANGGAL) -->
+                    <div class="d-inline-flex flex-column ms-2 no-capture" style="vertical-align: middle; line-height: 1;" title="Ubah tanggal Kuota Harian (H-1)">
+                      <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-up" style="height: 14px; width: 22px; font-size: 10px; border-radius: 3px 3px 0 0; line-height: 1; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepDailyQuotaDate(1)" title="Maju 1 Hari (+1)">
+                        <i class="ti ti-chevron-up" style="font-size: 11px; font-weight: 800;"></i>
+                      </button>
+                      <button type="button" class="btn btn-xs p-0 px-1 border bg-white text-dark shadow-xs stepper-btn-down" style="height: 14px; width: 22px; font-size: 10px; border-radius: 0 0 3px 3px; line-height: 1; border-top: none; border-color: #f87171 !important; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="stepDailyQuotaDate(-1)" title="Mundur 1 Hari (-1)">
+                        <i class="ti ti-chevron-down" style="font-size: 11px; font-weight: 800;"></i>
+                      </button>
+                    </div>
                   </div>
 
 
@@ -12044,35 +12035,91 @@ function formatDateMMDDYY(dateStr) {
 
 
 function updateDqHeaderDateBadge(dateStr) {
-
-
-
-
-
   const el = document.getElementById("dq-header-date-topright");
-
-
-
-
-
   if (el) {
-
-
-
-
-
     el.textContent = formatDateMMDDYY(dateStr);
+  }
+  const dp = document.getElementById("dq-header-datepicker");
+  if (dp && dateStr) {
+    dp.value = dateStr;
+  }
+}
 
+// ==============================================================================
+// KURSOR STEPPER TANGGAL KUOTA HARIAN (QUOTA PER EXPEDITION PER DAY H-1)
+// ==============================================================================
+function stepDailyQuotaDate(deltaDays) {
+  const dqDateInput = document.getElementById("dq-date-input");
+  if (!dqDateInput) return;
+  let curVal = dqDateInput.value;
+  if (!curVal) {
+    const selDate = document.getElementById("dq-date-select");
+    curVal = (selDate && selDate.value) ? selDate.value : new Date().toISOString().slice(0, 10);
+  }
+  const parts = curVal.split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d);
+    dt.setDate(dt.getDate() + deltaDays);
 
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, "0");
+    const nd = String(dt.getDate()).padStart(2, "0");
+    const newDateStr = `${ny}-${nm}-${nd}`;
 
+    setDailyQuotaDate(newDateStr);
+  }
+}
 
+function openDailyQuotaDatePicker() {
+  const dp = document.getElementById("dq-header-datepicker");
+  const dqDateInput = document.getElementById("dq-date-input");
+  if (dp && dqDateInput) {
+    dp.value = dqDateInput.value;
+    if (typeof dp.showPicker === "function") {
+      dp.showPicker();
+    } else {
+      dqDateInput.focus();
+    }
+  }
+}
 
+function onDqHeaderDatepickerChange(val) {
+  if (!val) return;
+  setDailyQuotaDate(val);
+}
+
+function setDailyQuotaDate(dateStr) {
+  if (!dateStr) return;
+  const dqDateInput = document.getElementById("dq-date-input");
+  if (dqDateInput) {
+    dqDateInput.value = dateStr;
   }
 
+  // Sinkronkan dq-date-select dropdown
+  const selDate = document.getElementById("dq-date-select");
+  if (selDate) {
+    let found = false;
+    for (let i = 0; i < selDate.options.length; i++) {
+      if (selDate.options[i].value === dateStr) {
+        selDate.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const opt = document.createElement("option");
+      opt.value = dateStr;
+      opt.textContent = dateStr;
+      opt.selected = true;
+      selDate.appendChild(opt);
+    }
+  }
 
-
-
-
+  updateDqHeaderDateBadge(dateStr);
+  calculateDailyQuota(false);
 }
 
 
