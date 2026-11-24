@@ -7547,6 +7547,14 @@ function onOpenDashboardSummaryTab() {
   loadSummary();
 }
 
+let _dailyQuotaPrefetchTimer = null;
+function scheduleDailyQuotaPrefetch(targetDqDate) {
+  if (_dailyQuotaPrefetchTimer) clearTimeout(_dailyQuotaPrefetchTimer);
+  _dailyQuotaPrefetchTimer = setTimeout(() => {
+    calculateDailyQuota(false, false, true); // isSilent = true (background prefetch tanpa modal)
+  }, 250);
+}
+
 function onOpenDailyQuotaTab() {
   const sumDateEl = document.getElementById("sum-date");
   const curSumDate = sumDateEl ? sumDateEl.value : "";
@@ -7560,9 +7568,13 @@ function onOpenDailyQuotaTab() {
     }
   }
 
-  // Jika tanggal sudah selaras, pastikan data alokasi dan monitoring MTD Gap ter-refresh
-  calculateDailyQuota(false);
-  refreshMtdGapMonitoring();
+  // Jika kalkulasi tanggal ini sudah selesai (misal hasil background prefetch), langsung tampil tanpa freeze/delay
+  const targetDate = dqDateInput ? dqDateInput.value : "";
+  if (window._lastCalculatedDqDate === targetDate) {
+    return;
+  }
+
+  calculateDailyQuota(false, false, false);
 }
 
 function syncDailyQuotaDomOnly(targetDqDate) {
@@ -7705,6 +7717,7 @@ function setSummaryDate(d, syncToKuota = true) {
   if (syncToKuota) {
     const targetDqDate = getHPlus1Date(d);
     syncDailyQuotaDomOnly(targetDqDate);
+    scheduleDailyQuotaPrefetch(targetDqDate);
   }
 
   updateSummaryButtonState();
@@ -12129,7 +12142,7 @@ function onChangeDoDate() {
   setDailyQuotaDate(val, true);
 }
 
-async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
+async function calculateDailyQuota(useCustomInputs, forceRebalance = false, isSilent = false) {
   if (forceRebalance) {
     try {
       let cs = JSON.parse(localStorage.getItem(DDC_STATE_KEY) || "{}");
@@ -12141,42 +12154,16 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
   }
   const tanggal = document.getElementById("dq-date-input").value;
 
-
-
-
-
   updateDqHeaderDateBadge(tanggal);
 
-
-
-
-
   const rolling = document.getElementById("dq-rolling").value;
-
-
-
-
-
   const mode = document.getElementById("dq-mode").value;
-
-
-
-
-
   const cutoff = document.getElementById("mq-cutoff").value;
   const puninar_fm8 = document.getElementById("dq-puninar-fm8") ? document.getElementById("dq-puninar-fm8").value : "auto";
 
-
-
-
-
-
-
-
-
-
-
-  showLoading("Menghitung & Auto-Balancing Kuota...", "Sedang mengalkulasi alokasi 7 plant dan menyeimbangkan toleransi deviasi (±0.1%)...");
+  if (!isSilent) {
+    showLoading("Menghitung & Auto-Balancing Kuota...", "Sedang mengalkulasi alokasi 7 plant dan menyeimbangkan toleransi deviasi (±0.1%)...");
+  }
 
 
 
@@ -12267,6 +12254,7 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
     const d = await res.json();
+    window._lastCalculatedDqDate = tanggal;
     window._dqTargetShares = d.target_shares || {};
     if (d.mtd_monitoring) {
       renderMtdGapTable(d.mtd_monitoring);
@@ -12743,17 +12731,9 @@ async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
 
 
   } finally {
-
-
-
-
-
-    hideLoading("Kalkulasi Kuota Selesai");
-
-
-
-
-
+    if (!isSilent) {
+      hideLoading("Kalkulasi Kuota Selesai");
+    }
   }
 
 

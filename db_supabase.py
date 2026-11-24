@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import time
+import pickle
+import tempfile
 import urllib.request
 import urllib.error
 from datetime import datetime
@@ -11,6 +13,11 @@ EXPEDITIONS = ["TUNAS MUDA", "RJTM", "LBK", "WSS", "PUNINAR"]
 
 DEFAULT_SUPABASE_URL = "https://jpquejyuuhwzudwodbth.supabase.co"
 DEFAULT_SUPABASE_KEY = "sb_publishable_XXS_kSxECzJIlD_dUjJflA_v4pAnc4n"
+
+CACHE_DIR = os.environ.get("CACHE_DIR", os.path.dirname(os.path.abspath(__file__)))
+if not os.access(CACHE_DIR, os.W_OK):
+    CACHE_DIR = tempfile.gettempdir()
+SL_DISK_CACHE_PATH = os.path.join(CACHE_DIR, ".sl_cache.pkl")
 
 class SupabaseDatabase:
     """
@@ -28,6 +35,8 @@ class SupabaseDatabase:
         self._do_cache_time = 0
         self._alloc_cache = None
         self._alloc_cache_time = 0
+        self._tb_cache = {}
+        self._tb_cache_time = {}
 
     def _headers(self, prefer=None):
         h = {
@@ -73,7 +82,7 @@ class SupabaseDatabase:
     # =========================================================
     def get_do_data(self):
         """Mengambil seluruh data DO dari tabel delivery_orders (dengan cache pintar)."""
-        if self._do_cache is not None and (time.time() - self._do_cache_time < 30):
+        if self._do_cache is not None and (time.time() - self._do_cache_time < 300):
             return self._do_cache
 
         try:
@@ -223,11 +232,26 @@ class SupabaseDatabase:
     # =========================================================
     # 2. SHIPPING LIST (SL)
     # =========================================================
-    def get_sl_data(self):
-        """Mengambil data SL dari tabel shipping_lists dengan pagination dan cache efisien."""
-        if self._sl_cache is not None and (time.time() - self._sl_cache_time < 120):
+    def get_sl_data(self, force_refresh=False):
+        """Mengambil data SL dari cache memori/disk atau tabel shipping_lists dengan pagination dan cache efisien."""
+        # 1. In-memory cache (instant, < 0.001s, TTL 1 jam jika tidak ada upload baru)
+        if not force_refresh and self._sl_cache is not None and (time.time() - self._sl_cache_time < 3600):
             return self._sl_cache
 
+        # 2. Disk cache (.sl_cache.pkl, ~0.015s, valid 24 jam)
+        if not force_refresh and os.path.exists(SL_DISK_CACHE_PATH):
+            try:
+                if (time.time() - os.path.getmtime(SL_DISK_CACHE_PATH)) < 86400:
+                    with open(SL_DISK_CACHE_PATH, "rb") as f:
+                        cached_data = pickle.load(f)
+                    if cached_data and isinstance(cached_data, list) and len(cached_data) > 0:
+                        self._sl_cache = cached_data
+                        self._sl_cache_time = time.time()
+                        return self._sl_cache
+            except Exception as e:
+                print(f"[Supabase] Gagal membaca disk cache SL: {e}")
+
+        # 3. Fetch dari Supabase REST API dengan pagination
         try:
             records = []
             page_size = 1000
@@ -266,6 +290,13 @@ class SupabaseDatabase:
                 })
             self._sl_cache = formatted
             self._sl_cache_time = time.time()
+
+            try:
+                with open(SL_DISK_CACHE_PATH, "wb") as f:
+                    pickle.dump(formatted, f)
+            except Exception as e:
+                print(f"[Supabase] Gagal menyimpan disk cache SL: {e}")
+
             return formatted
         except Exception as e:
             print(f"[Supabase] Error get_sl_data: {e}")
@@ -300,7 +331,12 @@ class SupabaseDatabase:
         for i in range(0, total, 200):
             batch = to_insert[i:i + 200]
             self._post("shipping_lists", batch)
-        self._sl_cache = None  # Invalidate cache
+        self._sl_cache = None  # Invalidate in-memory cache
+        if os.path.exists(SL_DISK_CACHE_PATH):
+            try:
+                os.remove(SL_DISK_CACHE_PATH)
+            except Exception:
+                pass
         return total
 
     def append_sl_row(self, row_dict):
@@ -311,7 +347,7 @@ class SupabaseDatabase:
     # =========================================================
     def get_saved_daily_allocations(self):
         """Mengambil data alokasi harian dari tabel daily_allocations."""
-        if self._alloc_cache is not None and (time.time() - self._alloc_cache_time < 30):
+        if self._alloc_cache is not None and (time.time() - self._alloc_cache_time < 300):
             return self._alloc_cache
 
         try:
@@ -662,6 +698,10 @@ class SupabaseDatabase:
         th = int(tahun) if tahun is not None else 2026
         bl = int(bulan) if bulan is not None else 10
 
+        cache_k = (th, bl)
+        if cache_k in self._tb_cache and (time.time() - self._tb_cache_time.get(cache_k, 0) < 300):
+            return self._tb_cache[cache_k]
+
         # 1. Cek langsung ke Supabase monthly_targets untuk target aktif
         try:
             records = self._get(f"monthly_targets?bulan=eq.{bl}&tahun=eq.{th}")
@@ -669,7 +709,7 @@ class SupabaseDatabase:
                 targets_dict = {r["xpdc"]: int(r.get("target_unit", 0)) for r in records}
                 tot = sum(targets_dict.values())
                 upd = str(records[0].get("created_at", "")).replace("T", " ")[:19]
-                return {
+                res = {
                     "TAHUN": th,
                     "BULAN": bl,
                     "TARGETS": targets_dict,
@@ -677,6 +717,9 @@ class SupabaseDatabase:
                     "UPDATED_AT": upd,
                     "CATATAN": f"Perencanaan Target {bl}/{th}"
                 }
+                self._tb_cache[cache_k] = res
+                self._tb_cache_time[cache_k] = time.time()
+                return res
         except Exception as e:
             print(f"[Supabase] Warning direct get target: {e}")
 
@@ -684,6 +727,8 @@ class SupabaseDatabase:
         all_t = self.get_all_target_bulanan()
         for t in all_t:
             if int(t.get("TAHUN", 0)) == th and int(t.get("BULAN", 0)) == bl:
+                self._tb_cache[cache_k] = t
+                self._tb_cache_time[cache_k] = time.time()
                 return t
         return None
 
@@ -692,6 +737,8 @@ class SupabaseDatabase:
         Menyimpan / Men-submit Target Bulanan Perencanaan langsung ke Supabase Cloud Database (monthly_targets)
         serta mempertahankan riwayat (history) perencanaan sebelumnya di target_bulanan.json & DDC.xlsx tanpa menimpa.
         """
+        self._tb_cache.clear()
+        self._tb_cache_time.clear()
         th = int(tahun)
         bl = int(bulan)
         t_dict = target_per_xpdc_dict if target_per_xpdc_dict is not None else (targets_dict or kwargs.get("targets") or {})
