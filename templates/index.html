@@ -7452,8 +7452,10 @@ let currentCalendarInfo = null;
 
 
 // ==============================================================================
+// ==============================================================================
 // ATURAN TANGGAL DASHBOARD SUMMARY (H-1 DARI KUOTA HARIAN)
 // DISTRIBUTION SUMMARY & ANALISA PERFORMANCE PER EKSPEDISI = H-1 KUOTA HARIAN
+// KURSOR STEPPER SALING TERHUBUNG: SUMMARY = H-1 KUOTA HARIAN (KUOTA = H+1 SUMMARY)
 // ==============================================================================
 function getHMinus1Date(dateStr) {
   if (!dateStr) return "";
@@ -7463,6 +7465,22 @@ function getHMinus1Date(dateStr) {
     const m = parseInt(parts[1], 10) - 1;
     const d = parseInt(parts[2], 10);
     const dt = new Date(y, m, d - 1);
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, "0");
+    const nd = String(dt.getDate()).padStart(2, "0");
+    return `${ny}-${nm}-${nd}`;
+  }
+  return dateStr;
+}
+
+function getHPlus1Date(dateStr) {
+  if (!dateStr) return "";
+  const parts = String(dateStr).trim().split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d + 1);
     const ny = dt.getFullYear();
     const nm = String(dt.getMonth() + 1).padStart(2, "0");
     const nd = String(dt.getDate()).padStart(2, "0");
@@ -7483,7 +7501,7 @@ function formatShortDate(val) {
   return val;
 }
 
-function syncSummaryDateFromDailyQuota(targetDqDate) {
+function syncSummaryDateFromDailyQuota(targetDqDate, reloadSummary = false) {
   let dqDate = targetDqDate;
   if (!dqDate) {
     const dqInput = document.getElementById("dq-date-input");
@@ -7514,17 +7532,14 @@ function syncSummaryDateFromDailyQuota(targetDqDate) {
     perfHeaderDate.textContent = formatDateMMDDYY(h1Date);
   }
   updateSummaryButtonState();
+  if (reloadSummary) {
+    loadSummary();
+  }
 }
 
 function onSumDateInputChange(val) {
   if (!val) return;
-  const dp = document.getElementById("sum-header-datepicker");
-  if (dp) dp.value = val;
-  const sumHeaderDate = document.getElementById("sum-header-date-topright");
-  if (sumHeaderDate) sumHeaderDate.textContent = formatDateMMDDYY(val);
-  const perfHeaderDate = document.getElementById("perf-header-date-topright");
-  if (perfHeaderDate) perfHeaderDate.textContent = formatDateMMDDYY(val);
-  updateSummaryButtonState();
+  setSummaryDate(val, true);
 }
 
 function onOpenDashboardSummaryTab() {
@@ -7564,31 +7579,35 @@ function updateSummaryButtonState() {
 }
 
 // ==============================================================================
-// KURSOR STEPPER TANGGAL DASHBOARD SUMMARY (UP / DOWN NAVIGATION)
+// KURSOR STEPPER TANGGAL DASHBOARD SUMMARY (DISTRIBUTION SUMMARY & ANALISA PERFORMANCE)
+// SALING TERHUBUNG DENGAN KOMPOSISI: SUMMARY = H-1 KUOTA HARIAN
 // ==============================================================================
 function stepSummaryDate(deltaDays) {
   const sumDateEl = document.getElementById("sum-date");
   if (!sumDateEl) return;
   let curVal = sumDateEl.value;
   if (!curVal) {
-    curVal = new Date().toISOString().slice(0, 10);
+    const dqInput = document.getElementById("dq-date-input");
+    if (dqInput && dqInput.value) {
+      curVal = getHMinus1Date(dqInput.value);
+    } else {
+      curVal = new Date().toISOString().slice(0, 10);
+    }
   }
   const parts = curVal.split("-");
   if (parts.length === 3) {
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10) - 1;
     const d = parseInt(parts[2], 10);
-    const dt = new Date(y, m, d);
-    dt.setDate(dt.getDate() + deltaDays);
+    const dt = new Date(y, m, d + deltaDays);
 
     const ny = dt.getFullYear();
     const nm = String(dt.getMonth() + 1).padStart(2, "0");
     const nd = String(dt.getDate()).padStart(2, "0");
-    const newDateStr = `${ny}-${nm}-${nd}`;
+    const newSummaryDate = `${ny}-${nm}-${nd}`;
 
-    sumDateEl.value = newDateStr;
-    updateSummaryButtonState();
-    loadSummary();
+    // Jalankan stepper Summary dan otomatis hubungkan Kuota Harian (syncToKuota = true)
+    setSummaryDate(newSummaryDate, true);
   }
 }
 
@@ -7607,67 +7626,37 @@ function openSummaryDatePicker() {
 
 function onHeaderDatepickerChange(val) {
   if (!val) return;
-  const sumDateEl = document.getElementById("sum-date");
-  if (sumDateEl) {
-    sumDateEl.value = val;
-    updateSummaryButtonState();
-    loadSummary();
-  }
+  setSummaryDate(val, true);
 }
 
-function setSummaryDate(d) {
-
-
-
-
-
+function setSummaryDate(d, syncToKuota = true) {
+  if (!d) return;
   const sumDateEl = document.getElementById("sum-date");
-
-
-
-
-
   if (sumDateEl) {
-
-
-
-
-
     sumDateEl.value = d;
-
-
-
-
-
+  }
+  const dp = document.getElementById("sum-header-datepicker");
+  if (dp) {
+    dp.value = d;
+  }
+  const sumHeaderDate = document.getElementById("sum-header-date-topright");
+  if (sumHeaderDate) {
+    sumHeaderDate.textContent = formatDateMMDDYY(d);
+  }
+  const perfHeaderDate = document.getElementById("perf-header-date-topright");
+  if (perfHeaderDate) {
+    perfHeaderDate.textContent = formatDateMMDDYY(d);
   }
 
-
-
-
+  // Komposisi: Summary = H-1 Kuota Harian -> Kuota Harian = H+1 Summary
+  if (syncToKuota) {
+    const targetDqDate = getHPlus1Date(d);
+    setDailyQuotaDate(targetDqDate, false);
+  }
 
   updateSummaryButtonState();
-
-
-
-
-
   loadSummary();
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
 
 function setSummaryDateToH1Kuota() {
   const dqInput = document.getElementById("dq-date-input");
@@ -11999,7 +11988,19 @@ function updateDqHeaderDateBadge(dateStr) {
 
 // ==============================================================================
 // KURSOR STEPPER TANGGAL KUOTA HARIAN (QUOTA PER EXPEDITION PER DAY H-1)
+// SALING TERHUBUNG DENGAN KOMPOSISI: SUMMARY = H-1 KUOTA HARIAN
 // ==============================================================================
+function updateDqHeaderDateBadge(dateStr) {
+  const el = document.getElementById("dq-header-date-topright");
+  if (el) {
+    el.textContent = formatDateMMDDYY(dateStr);
+  }
+  const dp = document.getElementById("dq-header-datepicker");
+  if (dp && dateStr) {
+    dp.value = dateStr;
+  }
+}
+
 function stepDailyQuotaDate(deltaDays) {
   const dqDateInput = document.getElementById("dq-date-input");
   if (!dqDateInput) return;
@@ -12013,15 +12014,15 @@ function stepDailyQuotaDate(deltaDays) {
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10) - 1;
     const d = parseInt(parts[2], 10);
-    const dt = new Date(y, m, d);
-    dt.setDate(dt.getDate() + deltaDays);
+    const dt = new Date(y, m, d + deltaDays);
 
     const ny = dt.getFullYear();
     const nm = String(dt.getMonth() + 1).padStart(2, "0");
     const nd = String(dt.getDate()).padStart(2, "0");
     const newDateStr = `${ny}-${nm}-${nd}`;
 
-    setDailyQuotaDate(newDateStr);
+    // Jalankan stepper Kuota Harian dan otomatis hubungkan Summary (syncToSummary = true)
+    setDailyQuotaDate(newDateStr, true);
   }
 }
 
@@ -12040,10 +12041,10 @@ function openDailyQuotaDatePicker() {
 
 function onDqHeaderDatepickerChange(val) {
   if (!val) return;
-  setDailyQuotaDate(val);
+  setDailyQuotaDate(val, true);
 }
 
-function setDailyQuotaDate(dateStr) {
+function setDailyQuotaDate(dateStr, syncToSummary = true) {
   if (!dateStr) return;
   const dqDateInput = document.getElementById("dq-date-input");
   if (dqDateInput) {
@@ -12071,24 +12072,19 @@ function setDailyQuotaDate(dateStr) {
   }
 
   updateDqHeaderDateBadge(dateStr);
-  // Sinkronkan Tanggal Dashboard Summary (DISTRIBUTION SUMMARY & ANALISA PERFORMANCE = H-1 Kuota Harian)
-  syncSummaryDateFromDailyQuota(dateStr);
+
+  // Komposisi: Summary = H-1 Kuota Harian
+  if (syncToSummary) {
+    const targetSumDate = getHMinus1Date(dateStr);
+    setSummaryDate(targetSumDate, false);
+  }
+
   calculateDailyQuota(false);
 }
 
-
-
-
-
-
-
-
-
-
-
 function onChangeDoDate() {
   const val = document.getElementById("dq-date-select").value;
-  setDailyQuotaDate(val);
+  setDailyQuotaDate(val, true);
 }
 
 async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
