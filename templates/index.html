@@ -558,7 +558,7 @@
 
 
 
-            <a href="#tab-summary" class="nav-link" data-bs-toggle="tab" role="tab" onclick="loadSummary()">
+            <a href="#tab-summary" class="nav-link" data-bs-toggle="tab" role="tab" onclick="onOpenDashboardSummaryTab()">
 
 
 
@@ -3180,13 +3180,13 @@
 
 
 
-                      <label class="form-label mb-0 fw-bold">Tanggal Laporan (Up to Date H-1 Kalender)</label>
+                      <label class="form-label mb-0 fw-bold">Tanggal Laporan (H-1 Kuota Harian)</label>
 
 
 
 
 
-                      <span class="badge bg-yellow-lt py-0 px-1 text-dark" style="font-size: 11px;">Rule: DO H-1</span>
+                      <span class="badge bg-yellow-lt py-0 px-1 text-dark" style="font-size: 11px;">Rule: H-1 Kuota Harian</span>
 
 
 
@@ -3198,7 +3198,7 @@
 
 
 
-                    <input type="date" id="sum-date" class="form-control form-control-sm mb-1" value="2026-11-08">
+                    <input type="date" id="sum-date" class="form-control form-control-sm mb-1" value="2026-11-18" onchange="onSumDateInputChange(this.value)">
 
 
 
@@ -3210,13 +3210,13 @@
 
 
 
-                      <button type="button" class="btn btn-primary btn-sm py-0 px-2 fw-bold" id="btn-sum-h1-kalender" onclick="setSummaryDateToCalendarH1()">
+                      <button type="button" class="btn btn-primary btn-sm py-0 px-2 fw-bold" id="btn-sum-h1-kalender" onclick="setSummaryDateToH1Kuota()">
 
 
 
 
 
-                        <i class="ti ti-calendar me-1"></i>H-1 Kalender (<span id="lbl-btn-cal-h1">08-Nov</span>)
+                        <i class="ti ti-calendar me-1"></i>H-1 Kuota Harian (<span id="lbl-btn-cal-h1">08-Nov</span>)
 
 
 
@@ -7451,144 +7451,117 @@ let currentCalendarInfo = null;
 
 
 
-function updateSummaryButtonState() {
-
-
-
-
-
-  const sumDateEl = document.getElementById("sum-date");
-
-
-
-
-
-  const btnH1 = document.getElementById("btn-sum-h1-kalender");
-
-
-
-
-
-  const btnLast = document.getElementById("btn-sum-last-data");
-
-
-
-
-
-  if (!sumDateEl) return;
-
-
-
-
-
-  const val = sumDateEl.value;
-
-
-
-
-
-  const h1Val = currentCalendarInfo ? currentCalendarInfo.do_date_h_minus_1 : "";
-
-
-
-
-
-  if (btnH1) {
-
-
-
-
-
-    if (val === h1Val) {
-
-
-
-
-
-      btnH1.className = "btn btn-primary btn-sm py-0 px-2 fw-bold";
-
-
-
-
-
-    } else {
-
-
-
-
-
-      btnH1.className = "btn btn-outline-primary btn-sm py-0 px-2";
-
-
-
-
-
-    }
-
-
-
-
-
+// ==============================================================================
+// ATURAN TANGGAL DASHBOARD SUMMARY (H-1 DARI KUOTA HARIAN)
+// DISTRIBUTION SUMMARY & ANALISA PERFORMANCE PER EKSPEDISI = H-1 KUOTA HARIAN
+// ==============================================================================
+function getHMinus1Date(dateStr) {
+  if (!dateStr) return "";
+  const parts = String(dateStr).trim().split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d - 1);
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, "0");
+    const nd = String(dt.getDate()).padStart(2, "0");
+    return `${ny}-${nm}-${nd}`;
   }
-
-
-
-
-
-  if (btnLast) {
-
-
-
-
-
-    if (val === "2026-10-31") {
-
-
-
-
-
-      btnLast.className = "btn btn-secondary btn-sm py-0 px-2 fw-bold";
-
-
-
-
-
-    } else {
-
-
-
-
-
-      btnLast.className = "btn btn-outline-secondary btn-sm py-0 px-2";
-
-
-
-
-
-    }
-
-
-
-
-
-  }
-
-
-
-
-
+  return dateStr;
 }
 
+function formatShortDate(val) {
+  if (!val) return "";
+  const parts = String(val).trim().split("-");
+  if (parts.length === 3) {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const d = parts[2].padStart(2, "0");
+    const mIdx = parseInt(parts[1], 10) - 1;
+    return `${d}-${months[mIdx] || parts[1]}`;
+  }
+  return val;
+}
 
+function syncSummaryDateFromDailyQuota(targetDqDate) {
+  let dqDate = targetDqDate;
+  if (!dqDate) {
+    const dqInput = document.getElementById("dq-date-input");
+    dqDate = dqInput ? dqInput.value : "";
+  }
+  if (!dqDate) return;
+  const h1Date = getHMinus1Date(dqDate);
+  if (!h1Date) return;
 
+  const sumDateEl = document.getElementById("sum-date");
+  if (sumDateEl) {
+    sumDateEl.value = h1Date;
+  }
+  const dp = document.getElementById("sum-header-datepicker");
+  if (dp) {
+    dp.value = h1Date;
+  }
+  const elLblBtnCalH1 = document.getElementById("lbl-btn-cal-h1");
+  if (elLblBtnCalH1) {
+    elLblBtnCalH1.textContent = formatShortDate(h1Date);
+  }
+  const sumHeaderDate = document.getElementById("sum-header-date-topright");
+  if (sumHeaderDate) {
+    sumHeaderDate.textContent = formatDateMMDDYY(h1Date);
+  }
+  const perfHeaderDate = document.getElementById("perf-header-date-topright");
+  if (perfHeaderDate) {
+    perfHeaderDate.textContent = formatDateMMDDYY(h1Date);
+  }
+  updateSummaryButtonState();
+}
 
+function onSumDateInputChange(val) {
+  if (!val) return;
+  const dp = document.getElementById("sum-header-datepicker");
+  if (dp) dp.value = val;
+  const sumHeaderDate = document.getElementById("sum-header-date-topright");
+  if (sumHeaderDate) sumHeaderDate.textContent = formatDateMMDDYY(val);
+  const perfHeaderDate = document.getElementById("perf-header-date-topright");
+  if (perfHeaderDate) perfHeaderDate.textContent = formatDateMMDDYY(val);
+  updateSummaryButtonState();
+}
 
+function onOpenDashboardSummaryTab() {
+  syncSummaryDateFromDailyQuota();
+  loadSummary();
+}
 
+function updateSummaryButtonState() {
+  const sumDateEl = document.getElementById("sum-date");
+  const btnH1 = document.getElementById("btn-sum-h1-kalender");
+  const btnLast = document.getElementById("btn-sum-last-data");
+  if (!sumDateEl) return;
+  const val = sumDateEl.value;
+  const dqInput = document.getElementById("dq-date-input");
+  const dqDate = dqInput ? dqInput.value : "";
+  const h1Val = dqDate ? getHMinus1Date(dqDate) : (currentCalendarInfo ? currentCalendarInfo.do_date_h_minus_1 : "");
 
+  const elLblBtnCalH1 = document.getElementById("lbl-btn-cal-h1");
+  if (elLblBtnCalH1 && h1Val) {
+    elLblBtnCalH1.textContent = formatShortDate(h1Val);
+  }
 
-
-
-
+  if (btnH1) {
+    if (val === h1Val) {
+      btnH1.className = "btn btn-primary btn-sm py-0 px-2 fw-bold";
+    } else {
+      btnH1.className = "btn btn-outline-primary btn-sm py-0 px-2";
+    }
+  }
+  if (btnLast) {
+    if (val === "2026-10-31") {
+      btnLast.className = "btn btn-secondary btn-sm py-0 px-2 fw-bold";
+    } else {
+      btnLast.className = "btn btn-outline-secondary btn-sm py-0 px-2";
+    }
+  }
+}
 
 // ==============================================================================
 // KURSOR STEPPER TANGGAL DASHBOARD SUMMARY (UP / DOWN NAVIGATION)
@@ -7696,41 +7669,18 @@ function setSummaryDate(d) {
 
 
 
-function setSummaryDateToCalendarH1() {
-
-
-
-
-
-  if (currentCalendarInfo && currentCalendarInfo.do_date_h_minus_1) {
-
-
-
-
-
-    setSummaryDate(currentCalendarInfo.do_date_h_minus_1);
-
-
-
-
-
+function setSummaryDateToH1Kuota() {
+  const dqInput = document.getElementById("dq-date-input");
+  const dqDate = dqInput && dqInput.value ? dqInput.value : "";
+  const h1Val = dqDate ? getHMinus1Date(dqDate) : (currentCalendarInfo ? currentCalendarInfo.do_date_h_minus_1 : "");
+  if (h1Val) {
+    setSummaryDate(h1Val);
   }
-
-
-
-
-
 }
 
-
-
-
-
-
-
-
-
-
+function setSummaryDateToCalendarH1() {
+  setSummaryDateToH1Kuota();
+}
 
 async function initApp() {
 
@@ -8429,6 +8379,8 @@ async function initApp() {
 
 
   updateDqHeaderDateBadge(targetDqDate);
+  // Sinkronkan Tanggal Dashboard Summary (DISTRIBUTION SUMMARY & ANALISA PERFORMANCE = H-1 Kuota Harian)
+  syncSummaryDateFromDailyQuota(targetDqDate);
 
 
 
@@ -12119,6 +12071,8 @@ function setDailyQuotaDate(dateStr) {
   }
 
   updateDqHeaderDateBadge(dateStr);
+  // Sinkronkan Tanggal Dashboard Summary (DISTRIBUTION SUMMARY & ANALISA PERFORMANCE = H-1 Kuota Harian)
+  syncSummaryDateFromDailyQuota(dateStr);
   calculateDailyQuota(false);
 }
 
@@ -12133,46 +12087,9 @@ function setDailyQuotaDate(dateStr) {
 
 
 function onChangeDoDate() {
-
-
-
-
-
   const val = document.getElementById("dq-date-select").value;
-
-
-
-
-
-  document.getElementById("dq-date-input").value = val;
-
-
-
-
-
-  updateDqHeaderDateBadge(val);
-
-
-
-
-
-  calculateDailyQuota(false);
-
-
-
-
-
+  setDailyQuotaDate(val);
 }
-
-
-
-
-
-
-
-
-
-
 
 async function calculateDailyQuota(useCustomInputs, forceRebalance = false) {
   if (forceRebalance) {
