@@ -630,7 +630,7 @@
 
 
 
-            <a href="#tab-daily" class="nav-link" data-bs-toggle="tab" role="tab" onclick="refreshMtdGapMonitoring()">
+            <a href="#tab-daily" class="nav-link" data-bs-toggle="tab" role="tab" onclick="onOpenDailyQuotaTab()">
 
 
 
@@ -7547,6 +7547,58 @@ function onOpenDashboardSummaryTab() {
   loadSummary();
 }
 
+function onOpenDailyQuotaTab() {
+  const sumDateEl = document.getElementById("sum-date");
+  const curSumDate = sumDateEl ? sumDateEl.value : "";
+  const dqDateInput = document.getElementById("dq-date-input");
+
+  if (curSumDate) {
+    const expectedDqDate = getHPlus1Date(curSumDate);
+    if (dqDateInput && dqDateInput.value !== expectedDqDate) {
+      setDailyQuotaDate(expectedDqDate, false);
+      return;
+    }
+  }
+
+  // Jika tanggal sudah selaras, pastikan data alokasi dan monitoring MTD Gap ter-refresh
+  calculateDailyQuota(false);
+  refreshMtdGapMonitoring();
+}
+
+function syncDailyQuotaDomOnly(targetDqDate) {
+  if (!targetDqDate) return;
+  const dqDateInput = document.getElementById("dq-date-input");
+  if (dqDateInput) {
+    dqDateInput.value = targetDqDate;
+  }
+  const dp = document.getElementById("dq-header-datepicker");
+  if (dp) {
+    dp.value = targetDqDate;
+  }
+  const headerDate = document.getElementById("dq-header-date-topright");
+  if (headerDate) {
+    headerDate.textContent = formatDateMMDDYY(targetDqDate);
+  }
+  const selDate = document.getElementById("dq-date-select");
+  if (selDate) {
+    let found = false;
+    for (let i = 0; i < selDate.options.length; i++) {
+      if (selDate.options[i].value === targetDqDate) {
+        selDate.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const opt = document.createElement("option");
+      opt.value = targetDqDate;
+      opt.textContent = targetDqDate;
+      opt.selected = true;
+      selDate.appendChild(opt);
+    }
+  }
+}
+
 function updateSummaryButtonState() {
   const sumDateEl = document.getElementById("sum-date");
   const btnH1 = document.getElementById("btn-sum-h1-kalender");
@@ -7649,9 +7701,10 @@ function setSummaryDate(d, syncToKuota = true) {
   }
 
   // Komposisi: Summary = H-1 Kuota Harian -> Kuota Harian = H+1 Summary
+  // Selaraskan DOM Kuota Harian seketika tanpa race condition / network blocking
   if (syncToKuota) {
     const targetDqDate = getHPlus1Date(d);
-    setDailyQuotaDate(targetDqDate, false);
+    syncDailyQuotaDomOnly(targetDqDate);
   }
 
   updateSummaryButtonState();
@@ -11974,17 +12027,6 @@ function formatDateMMDDYY(dateStr) {
 
 
 
-
-function updateDqHeaderDateBadge(dateStr) {
-  const el = document.getElementById("dq-header-date-topright");
-  if (el) {
-    el.textContent = formatDateMMDDYY(dateStr);
-  }
-  const dp = document.getElementById("dq-header-datepicker");
-  if (dp && dateStr) {
-    dp.value = dateStr;
-  }
-}
 
 // ==============================================================================
 // KURSOR STEPPER TANGGAL KUOTA HARIAN (QUOTA PER EXPEDITION PER DAY H-1)
