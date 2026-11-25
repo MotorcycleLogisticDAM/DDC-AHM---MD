@@ -6087,9 +6087,6 @@
                   <span id="mtd-zero-sum-badge" class="badge bg-success text-white fw-bold px-2 py-1">
                     <i class="ti ti-check me-1"></i> Zero-Sum Balance (Gap = 0)
                   </span>
-                  <button class="btn btn-sm btn-outline-light py-1 px-2" onclick="refreshMtdGapMonitoring()" title="Refresh MTD Gap">
-                    <i class="ti ti-refresh me-1"></i> Refresh MTD
-                  </button>
                   <button class="btn btn-sm btn-outline-light py-1 px-2" onclick="shareMtdGapTable('copy')" title="Salin Gambar ke Clipboard WA">
                     <i class="ti ti-clipboard-copy me-1"></i> Salin WA
                   </button>
@@ -7568,9 +7565,12 @@ function onOpenDailyQuotaTab() {
     }
   }
 
-  // Jika kalkulasi tanggal ini sudah selesai (misal hasil background prefetch), langsung tampil tanpa freeze/delay
+  // Jika kalkulasi tanggal ini sudah selesai dan tabel MTD sudah ter-render, langsung tampil tanpa freeze/delay
   const targetDate = dqDateInput ? dqDateInput.value : "";
-  if (window._lastCalculatedDqDate === targetDate) {
+  const tbodyMtd = document.getElementById("tbody-mtd-gap");
+  const isMtdRendered = tbodyMtd && tbodyMtd.children.length > 0 && !tbodyMtd.innerHTML.includes("Memuat data");
+
+  if (window._lastCalculatedDqDate === targetDate && isMtdRendered) {
     return;
   }
 
