@@ -1235,30 +1235,34 @@ def calculate_mtd_gap_monitoring(
     - GAP_PCT: Actual_Pct - Quota_Pct (format 4 desimal)
     """
     clean_cutoff = str(cutoff_date)[:10]
+    cutoff_month_str = clean_cutoff[:7]  # Format 'YYYY-MM', misal '2026-11'
+    start_of_month = f"{cutoff_month_str}-01"  # Awal bulan berjalan, misal '2026-11-01'
 
-    # 1. Akumulasi Realisasi Alokasi Harian (MTD_Quota_Per_Day)
+    # 1. Akumulasi Realisasi Alokasi Harian Bulan Berjalan (MTD_Quota_Per_Day)
+    # Filter HANYA data distribusi bulan berjalan (tanggal 1 s.d. cut-off terpilih)
     mtd_actual = {x: 0 for x in expeditions}
     for rec in (daily_allocations_history or []):
         tgl = str(rec.get("TANGGAL", rec.get("tanggal", "")))[:10]
         st = str(rec.get("STATUS", rec.get("status", "RELEASED"))).upper()
-        if tgl and tgl <= clean_cutoff and st in ["RELEASED", "NORMAL", "SAVED"]:
+        if tgl and (start_of_month <= tgl <= clean_cutoff) and st in ["RELEASED", "NORMAL", "SAVED"]:
             x = rec.get("XPDC", rec.get("xpdc"))
             if x in mtd_actual:
                 mtd_actual[x] += int(rec.get("GRAND_TOTAL", rec.get("final_allocated_qty", 0)))
 
-    # 2. Akumulasi Kuota Teoritis Eksak per Ekspedisi (MTD_Quota_Teoritis)
-    # Catatan: Akumulasi DO dilakukan pada tanggal-tanggal yang alokasinya sudah dirilis
+    # 2. Akumulasi Kuota Teoritis Eksak per Ekspedisi Bulan Berjalan (MTD_Quota_Teoritis)
+    # Catatan: Akumulasi DO dilakukan pada tanggal-tanggal bulan berjalan yang alokasinya sudah dirilis
     # agar total teoritis dan total aktual setara (zero-sum balance tercapai)
     released_dates = {
         str(rec.get("TANGGAL", rec.get("tanggal", "")))[:10]
         for rec in (daily_allocations_history or [])
         if str(rec.get("STATUS", rec.get("status", "RELEASED"))).upper() in ["RELEASED", "NORMAL", "SAVED"]
+        and (start_of_month <= str(rec.get("TANGGAL", rec.get("tanggal", "")))[:10] <= clean_cutoff)
     }
 
     mtd_teoritis = {x: 0.0 for x in expeditions}
     for do_rec in (daily_do_history or []):
         tgl = str(do_rec.get("TANGGAL_STR", do_rec.get("tanggal", "")))[:10]
-        if tgl and tgl <= clean_cutoff:
+        if tgl and (start_of_month <= tgl <= clean_cutoff):
             if released_dates and (tgl not in released_dates):
                 continue
             p = str(do_rec.get("PLANT", do_rec.get("plant", "")))

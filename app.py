@@ -316,13 +316,26 @@ def api_daily_quota():
 
     eff_target_pct = target_pct_dict if target_pct_dict else {x: float(mq["pct_matrix"][x]["TARGET_PCT"]) for x in EXPEDITIONS}
 
+    # Filter HANYA distribusi bulan berjalan (tanggal DO)
+    clean_tgl = str(tanggal)[:10]
+    m_alloc_hist = [
+        r for r in saved_all
+        if str(r.get("TANGGAL", r.get("tanggal", "")))[:7] == clean_tgl[:7]
+        or (int(r.get("TAHUN", 0)) == target_year and int(r.get("BULAN", 0)) == target_month)
+    ]
+    m_do_hist = [
+        r for r in db.get_do_data()
+        if str(r.get("TANGGAL_STR", r.get("tanggal", "")))[:7] == clean_tgl[:7]
+        or (int(r.get("TAHUN", r.get("YEAR", 0))) == target_year and int(r.get("BULAN", 0)) == target_month)
+    ]
+
     mtd_monitoring_data = calculate_mtd_gap_monitoring(
         expeditions=EXPEDITIONS,
-        daily_allocations_history=saved_all,
-        daily_do_history=db.get_do_data(),
+        daily_allocations_history=m_alloc_hist,
+        daily_do_history=m_do_hist,
         quota_pct_matrix=mq["pct_matrix"],
         monthly_target_quota_pct={x: round(eff_target_pct[x] * 100, 2) for x in EXPEDITIONS},
-        cutoff_date=tanggal,
+        cutoff_date=clean_tgl,
     )
 
     return jsonify({
@@ -397,13 +410,15 @@ def api_mtd_gap_monitoring():
     alloc_history = db.get_saved_daily_allocations()
     month_alloc_hist = [
         r for r in alloc_history
-        if int(r.get("TAHUN", 0)) == c_year and int(r.get("BULAN", 0)) == c_month
+        if str(r.get("TANGGAL", r.get("tanggal", "")))[:7] == clean_cutoff[:7]
+        or (int(r.get("TAHUN", 0)) == c_year and int(r.get("BULAN", 0)) == c_month)
     ]
 
     do_history = db.get_do_data()
     month_do_hist = [
         r for r in do_history
-        if int(r.get("TAHUN", r.get("YEAR", 0))) == c_year and int(r.get("BULAN", 0)) == c_month
+        if str(r.get("TANGGAL_STR", r.get("tanggal", "")))[:7] == clean_cutoff[:7]
+        or (int(r.get("TAHUN", r.get("YEAR", 0))) == c_year and int(r.get("BULAN", 0)) == c_month)
     ]
 
     res = calculate_mtd_gap_monitoring(
